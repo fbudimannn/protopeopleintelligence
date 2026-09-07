@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-spartan: 'League Spartan', sans-serif;
+  --font-poppins: 'Poppins', sans-serif;
+}
+
+body {
+  color: #111111;
+  background-color: #F6FAFA;
+  font-family: var(--font-poppins);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #F6FAFA;
+}
+::-webkit-scrollbar-thumb {
+  background: #DDE5E6;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #23C9D3;
+}

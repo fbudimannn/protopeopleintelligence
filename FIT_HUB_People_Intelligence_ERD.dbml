@@ -1,0 +1,748 @@
+Project FIT_HUB_People_Intelligence {
+  database_type: 'PostgreSQL'
+  Note: 'Future-state People Intelligence data model for FIT HUB. Current case-study datasets remain source inputs. Missing lifecycle identifiers should be modeled with clearly labeled synthetic demo data in a prototype, not inferred as real historical linkages.'
+}
+
+Enum hiring_type { NEW REPLACEMENT }
+Enum requisition_status { DRAFT OPEN ON_HOLD FILLED CANCELLED CLOSED }
+Enum candidate_status { ACTIVE INACTIVE HIRED WITHDRAWN }
+Enum application_status { APPLIED IN_PROCESS OFFERED HIRED REJECTED WITHDRAWN }
+Enum offer_status { PENDING ACCEPTED DECLINED WITHDRAWN EXPIRED }
+Enum employment_status { ACTIVE INACTIVE TERMINATED }
+Enum exit_type { VOLUNTARY INVOLUNTARY }
+Enum regrettability { REGRETTABLE NON_REGRETTABLE NOT_ASSESSED }
+Enum mobility_type { PROMOTION LATERAL_TRANSFER LOCATION_TRANSFER FUNCTION_TRANSFER DEMOTION }
+Enum proficiency_code { L1 L2 L3 L4 }
+Enum survey_type { ENGAGEMENT DAY_30 DAY_60 DAY_90 EXIT PULSE }
+Enum coding_method { HUMAN RULE_BASED LLM }
+Enum probation_outcome { PASS EXTEND FAIL }
+Enum readiness_status { POTENTIAL PRE_QUALIFIED INTERVIEW_READY PREVIOUS_FINALIST INACTIVE }
+Enum development_action_type { COACHING TRAINING STRETCH_ASSIGNMENT MENTORING CERTIFICATION OTHER }
+Enum source_data_status { OBSERVED SYNTHETIC DERIVED }
+
+//////////////////////////////////////////////////////////////
+// RAW / CURRENT STATE
+//////////////////////////////////////////////////////////////
+
+Table raw.raw_hiring {
+  raw_hiring_id bigint [pk, increment]
+  source_row_number int
+  position_text varchar
+  gender_text varchar
+  hiring_status_text varchar
+  request_date date
+  need_by_date date
+  location_text varchar
+  join_date date
+  source_text varchar
+  gym_experience_text varchar
+  sla_text varchar
+  time_to_fill_days int
+  loaded_at timestamp [not null]
+
+  Note: 'Immutable landing table for the current Hiring dataset.'
+}
+
+Table raw.raw_turnover {
+  raw_turnover_id bigint [pk, increment]
+  source_row_number int
+  position_text varchar
+  gender_text varchar
+  age int
+  join_date date
+  exit_date date
+  length_of_service_text varchar
+  location_text varchar
+  resign_type_text varchar
+  regrettability_text varchar
+  role_replaced_text varchar
+  exit_survey_text text
+  remarks_text text
+  exit_interview_remarks_text text
+  loaded_at timestamp [not null]
+
+  Note: 'Immutable landing table for the current Turnover dataset.'
+}
+
+Table raw.raw_engagement {
+  raw_engagement_id bigint [pk, increment]
+  source_row_number int
+  position_text varchar
+  age int
+  gender_text varchar
+  length_of_service_text varchar
+  location_text varchar
+  organisation_alignment numeric(5,2)
+  career_growth numeric(5,2)
+  work_clarity numeric(5,2)
+  supportive_workplace numeric(5,2)
+  fair_performance numeric(5,2)
+  compensation_benefit numeric(5,2)
+  enps_response_score int
+  positive_feedback text
+  improvement_feedback text
+  loaded_at timestamp [not null]
+
+  Note: 'Immutable landing table for the current Engagement dataset.'
+}
+
+//////////////////////////////////////////////////////////////
+// IDENTITY AND EMPLOYMENT
+//////////////////////////////////////////////////////////////
+
+Table core.person {
+  person_id uuid [pk]
+  gender varchar
+  birth_date date
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table core.employee {
+  employee_id uuid [pk]
+  person_id uuid [not null, unique]
+  employee_code varchar [not null, unique]
+  employee_status employment_status [not null]
+  created_at timestamp [not null]
+  updated_at timestamp [not null]
+}
+
+Table core.employment {
+  employment_id uuid [pk]
+  employee_id uuid [not null]
+  join_date date [not null]
+  exit_date date
+  employment_type varchar
+  employment_status employment_status [not null]
+  probation_end_date date
+  fte numeric(5,2)
+  created_at timestamp [not null]
+
+  indexes {
+    (employee_id, join_date)
+  }
+
+  Note: 'One employee can have multiple employment periods, preserving rehire history.'
+}
+
+//////////////////////////////////////////////////////////////
+// ORGANIZATION
+//////////////////////////////////////////////////////////////
+
+Table core.job_family {
+  job_family_id uuid [pk]
+  job_family_name varchar [not null, unique]
+  active_flag boolean [not null]
+}
+
+Table core.job_role {
+  job_role_id uuid [pk]
+  job_family_id uuid [not null]
+  role_name varchar [not null]
+  role_level varchar
+  grade varchar
+  active_flag boolean [not null]
+
+  indexes {
+    (job_family_id, role_name) [unique]
+  }
+}
+
+Table core.location {
+  location_id uuid [pk]
+  club_name varchar
+  city varchar
+  province varchar
+  region_cluster varchar
+  country varchar [not null]
+  active_flag boolean [not null]
+}
+
+Table core.org_unit {
+  org_unit_id uuid [pk]
+  parent_org_unit_id uuid
+  org_unit_name varchar [not null]
+  org_unit_type varchar
+  active_flag boolean [not null]
+}
+
+Table core.employee_assignment {
+  assignment_id uuid [pk]
+  employment_id uuid [not null]
+  job_role_id uuid [not null]
+  org_unit_id uuid
+  location_id uuid [not null]
+  manager_employee_id uuid
+  valid_from date [not null]
+  valid_to date
+  assignment_type varchar
+  source_data_status source_data_status [not null]
+
+  indexes {
+    (employment_id, valid_from)
+    (job_role_id, location_id, valid_from)
+  }
+
+  Note: 'Effective-dated role, manager, org unit, and location history.'
+}
+
+//////////////////////////////////////////////////////////////
+// RECRUITMENT
+//////////////////////////////////////////////////////////////
+
+Table recruiting.requisition {
+  requisition_id uuid [pk]
+  requisition_code varchar [not null, unique]
+  job_role_id uuid [not null]
+  org_unit_id uuid
+  location_id uuid [not null]
+  requested_by_employee_id uuid
+  recruiter_employee_id uuid
+  hiring_type hiring_type [not null]
+  request_date date [not null]
+  need_by_date date
+  openings_requested int [not null]
+  requisition_status requisition_status [not null]
+  created_at timestamp [not null]
+  source_data_status source_data_status [not null]
+}
+
+Table recruiting.candidate {
+  candidate_id uuid [pk]
+  person_id uuid [not null, unique]
+  candidate_status candidate_status [not null]
+  created_at timestamp [not null]
+}
+
+Table recruiting.recruitment_source {
+  source_id uuid [pk]
+  source_name varchar [not null, unique]
+  source_group varchar
+  active_flag boolean [not null]
+}
+
+Table recruiting.application {
+  application_id uuid [pk]
+  candidate_id uuid [not null]
+  requisition_id uuid [not null]
+  source_id uuid
+  application_date date [not null]
+  gym_experience_flag boolean
+  application_status application_status [not null]
+  source_data_status source_data_status [not null]
+
+  indexes {
+    (candidate_id, requisition_id) [unique]
+  }
+}
+
+Table recruiting.recruitment_stage {
+  stage_id uuid [pk]
+  stage_name varchar [not null, unique]
+  stage_order int [not null, unique]
+}
+
+Table recruiting.application_stage_event {
+  stage_event_id uuid [pk]
+  application_id uuid [not null]
+  stage_id uuid [not null]
+  entered_at timestamp [not null]
+  exited_at timestamp
+  stage_outcome varchar
+}
+
+Table recruiting.offer {
+  offer_id uuid [pk]
+  application_id uuid [not null, unique]
+  offer_date date [not null]
+  decision_date date
+  offer_status offer_status [not null]
+  planned_join_date date
+}
+
+Table recruiting.hire {
+  hire_id uuid [pk]
+  application_id uuid [not null, unique]
+  employment_id uuid [not null, unique]
+  actual_join_date date [not null]
+
+  Note: 'Bridge from recruitment to employee lifecycle.'
+}
+
+Table recruiting.requisition_replacement {
+  replacement_link_id uuid [pk]
+  requisition_id uuid [not null]
+  exit_event_id uuid [not null]
+  replacement_sequence int
+  source_data_status source_data_status [not null]
+
+  indexes {
+    (requisition_id, exit_event_id) [unique]
+  }
+
+  Note: 'Explicit exit-to-replacement linkage. This linkage is missing from the current case data.'
+}
+
+Table recruiting.talent_pool {
+  talent_pool_id uuid [pk]
+  pool_name varchar [not null]
+  job_role_id uuid
+  location_id uuid
+  active_flag boolean [not null]
+}
+
+Table recruiting.talent_pool_member {
+  pool_member_id uuid [pk]
+  talent_pool_id uuid [not null]
+  candidate_id uuid [not null]
+  application_id uuid
+  readiness_status readiness_status [not null]
+  added_at timestamp [not null]
+  last_contacted_at timestamp
+
+  indexes {
+    (talent_pool_id, candidate_id) [unique]
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// RETENTION AND EXIT
+//////////////////////////////////////////////////////////////
+
+Table retention.exit_event {
+  exit_event_id uuid [pk]
+  employment_id uuid [not null, unique]
+  exit_date date [not null]
+  exit_type exit_type [not null]
+  regrettability regrettability [not null]
+  procedure_completed boolean
+  replacement_required boolean
+  created_at timestamp [not null]
+  source_data_status source_data_status [not null]
+}
+
+Table retention.exit_reason {
+  exit_reason_id uuid [pk]
+  reason_category varchar [not null]
+  reason_detail varchar
+  active_flag boolean [not null]
+}
+
+Table retention.exit_event_reason {
+  exit_event_id uuid [not null]
+  exit_reason_id uuid [not null]
+  is_primary boolean [not null]
+
+  indexes {
+    (exit_event_id, exit_reason_id) [pk]
+  }
+}
+
+Table retention.exit_interview {
+  exit_interview_id uuid [pk]
+  exit_event_id uuid [not null, unique]
+  interviewer_employee_id uuid
+  interview_date date
+  interview_completed boolean [not null]
+  remarks text
+}
+
+//////////////////////////////////////////////////////////////
+// ENGAGEMENT AND LISTENING
+//////////////////////////////////////////////////////////////
+
+Table experience.survey {
+  survey_id uuid [pk]
+  survey_name varchar [not null]
+  survey_type survey_type [not null]
+  anonymous_flag boolean [not null]
+  active_flag boolean [not null]
+}
+
+Table experience.survey_cycle {
+  survey_cycle_id uuid [pk]
+  survey_id uuid [not null]
+  cycle_name varchar [not null]
+  start_date date [not null]
+  end_date date [not null]
+
+  indexes {
+    (survey_id, cycle_name) [unique]
+  }
+}
+
+Table experience.engagement_dimension {
+  dimension_id uuid [pk]
+  dimension_name varchar [not null, unique]
+  description text
+}
+
+Table experience.survey_question {
+  question_id uuid [pk]
+  survey_id uuid [not null]
+  dimension_id uuid
+  question_text text [not null]
+  response_type varchar [not null]
+  scale_min numeric(5,2)
+  scale_max numeric(5,2)
+  is_enps_question boolean [not null]
+  active_flag boolean [not null]
+}
+
+Table experience.survey_response {
+  response_id uuid [pk]
+  survey_cycle_id uuid [not null]
+  employee_id uuid
+  anonymous_person_key varchar
+  employment_id uuid
+  assignment_id uuid
+  submitted_at timestamp [not null]
+  source_data_status source_data_status [not null]
+
+  Note: 'For anonymous surveys, employee linkage should be restricted or pseudonymized.'
+}
+
+Table experience.survey_answer {
+  answer_id uuid [pk]
+  response_id uuid [not null]
+  question_id uuid [not null]
+  numeric_answer numeric(10,4)
+  text_answer text
+
+  indexes {
+    (response_id, question_id) [unique]
+  }
+}
+
+Table experience.feedback_theme {
+  theme_id uuid [pk]
+  theme_name varchar [not null, unique]
+  theme_type varchar
+  active_flag boolean [not null]
+}
+
+Table experience.answer_theme {
+  answer_id uuid [not null]
+  theme_id uuid [not null]
+  confidence_score numeric(5,4)
+  coding_method coding_method [not null]
+
+  indexes {
+    (answer_id, theme_id) [pk]
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// PERFORMANCE AND PROBATION
+//////////////////////////////////////////////////////////////
+
+Table performance.performance_cycle {
+  performance_cycle_id uuid [pk]
+  cycle_name varchar [not null, unique]
+  start_date date [not null]
+  end_date date [not null]
+}
+
+Table performance.performance_review {
+  review_id uuid [pk]
+  employee_id uuid [not null]
+  performance_cycle_id uuid [not null]
+  manager_employee_id uuid
+  overall_rating numeric(5,2)
+  review_date date
+  review_status varchar [not null]
+  source_data_status source_data_status [not null]
+
+  indexes {
+    (employee_id, performance_cycle_id) [unique]
+  }
+}
+
+Table performance.performance_metric {
+  metric_id uuid [pk]
+  metric_name varchar [not null, unique]
+  metric_type varchar
+  unit varchar
+  active_flag boolean [not null]
+}
+
+Table performance.performance_result {
+  result_id uuid [pk]
+  review_id uuid [not null]
+  metric_id uuid [not null]
+  actual_value numeric(18,4)
+  target_value numeric(18,4)
+  rating numeric(5,2)
+
+  indexes {
+    (review_id, metric_id) [unique]
+  }
+}
+
+Table performance.probation_review {
+  probation_review_id uuid [pk]
+  employment_id uuid [not null]
+  review_date date [not null]
+  manager_employee_id uuid
+  performance_rating numeric(5,2)
+  role_fit_rating numeric(5,2)
+  outcome probation_outcome [not null]
+  remarks text
+  source_data_status source_data_status [not null]
+}
+
+//////////////////////////////////////////////////////////////
+// CAPABILITY, DEVELOPMENT, MOBILITY
+//////////////////////////////////////////////////////////////
+
+Table talent.capability {
+  capability_id uuid [pk]
+  capability_name varchar [not null, unique]
+  capability_category varchar
+  description text
+  active_flag boolean [not null]
+}
+
+Table talent.proficiency_level {
+  level_id uuid [pk]
+  level_code proficiency_code [not null, unique]
+  level_name varchar [not null]
+  level_rank int [not null, unique]
+  level_description text
+}
+
+Table talent.role_capability_requirement {
+  job_role_id uuid [not null]
+  capability_id uuid [not null]
+  target_level_id uuid [not null]
+  required_flag boolean [not null]
+
+  indexes {
+    (job_role_id, capability_id) [pk]
+  }
+}
+
+Table talent.capability_assessment {
+  assessment_id uuid [pk]
+  employee_id uuid [not null]
+  capability_id uuid [not null]
+  assessed_level_id uuid [not null]
+  assessor_employee_id uuid
+  assessment_date date [not null]
+  evidence text
+  source_data_status source_data_status [not null]
+}
+
+Table talent.development_plan {
+  development_plan_id uuid [pk]
+  employee_id uuid [not null]
+  target_job_role_id uuid
+  start_date date [not null]
+  target_date date
+  plan_status varchar [not null]
+}
+
+Table talent.development_action {
+  action_id uuid [pk]
+  development_plan_id uuid [not null]
+  capability_id uuid
+  action_type development_action_type [not null]
+  action_description text [not null]
+  due_date date
+  completed_at timestamp
+}
+
+Table talent.mobility_event {
+  mobility_event_id uuid [pk]
+  employee_id uuid [not null]
+  from_assignment_id uuid [not null]
+  to_assignment_id uuid [not null]
+  requisition_id uuid
+  mobility_type mobility_type [not null]
+  effective_date date [not null]
+  source_data_status source_data_status [not null]
+}
+
+//////////////////////////////////////////////////////////////
+// ANALYTICS
+//////////////////////////////////////////////////////////////
+
+Table analytics.monthly_headcount {
+  snapshot_month date [not null]
+  employee_id uuid [not null]
+  employment_id uuid [not null]
+  assignment_id uuid [not null]
+  job_role_id uuid [not null]
+  location_id uuid [not null]
+  org_unit_id uuid
+  active_flag boolean [not null]
+  fte numeric(5,2)
+
+  indexes {
+    (snapshot_month, employment_id) [pk]
+  }
+
+  Note: 'Required for true turnover and retention denominators.'
+}
+
+Table analytics.quality_of_hire {
+  hire_id uuid [pk]
+  employee_id uuid [not null]
+  employment_id uuid [not null]
+  requisition_id uuid [not null]
+  source_id uuid
+  probation_outcome probation_outcome
+  performance_6m numeric(5,2)
+  retained_6m boolean
+  retained_12m boolean
+  quality_of_hire_score numeric(5,2)
+  calculated_at timestamp [not null]
+
+  Note: 'Derived analytical mart.'
+}
+
+Table analytics.retention_cohort {
+  cohort_month date [not null]
+  employee_id uuid [not null]
+  employment_id uuid [not null]
+  job_role_id uuid [not null]
+  location_id uuid [not null]
+  tenure_month int [not null]
+  active_at_month_end boolean [not null]
+  exited_in_month boolean [not null]
+
+  indexes {
+    (cohort_month, employment_id, tenure_month) [pk]
+  }
+}
+
+Table analytics.workforce_lifecycle {
+  employee_id uuid [not null]
+  employment_id uuid [not null]
+  hire_id uuid
+  requisition_id uuid
+  source_id uuid
+  latest_assignment_id uuid
+  latest_performance_review_id uuid
+  latest_capability_assessment_date date
+  latest_survey_response_date date
+  latest_mobility_event_id uuid
+  exit_event_id uuid
+  updated_at timestamp [not null]
+
+  indexes {
+    (employee_id, employment_id) [pk]
+  }
+
+  Note: 'Lifecycle mart built from core domain tables.'
+}
+
+//////////////////////////////////////////////////////////////
+// RELATIONSHIPS
+//////////////////////////////////////////////////////////////
+
+Ref: core.employee.person_id - core.person.person_id
+Ref: core.employment.employee_id > core.employee.employee_id
+
+Ref: core.job_role.job_family_id > core.job_family.job_family_id
+Ref: core.org_unit.parent_org_unit_id > core.org_unit.org_unit_id
+Ref: core.employee_assignment.employment_id > core.employment.employment_id
+Ref: core.employee_assignment.job_role_id > core.job_role.job_role_id
+Ref: core.employee_assignment.org_unit_id > core.org_unit.org_unit_id
+Ref: core.employee_assignment.location_id > core.location.location_id
+Ref: core.employee_assignment.manager_employee_id > core.employee.employee_id
+
+Ref: recruiting.requisition.job_role_id > core.job_role.job_role_id
+Ref: recruiting.requisition.org_unit_id > core.org_unit.org_unit_id
+Ref: recruiting.requisition.location_id > core.location.location_id
+Ref: recruiting.requisition.requested_by_employee_id > core.employee.employee_id
+Ref: recruiting.requisition.recruiter_employee_id > core.employee.employee_id
+
+Ref: recruiting.candidate.person_id - core.person.person_id
+Ref: recruiting.application.candidate_id > recruiting.candidate.candidate_id
+Ref: recruiting.application.requisition_id > recruiting.requisition.requisition_id
+Ref: recruiting.application.source_id > recruiting.recruitment_source.source_id
+Ref: recruiting.application_stage_event.application_id > recruiting.application.application_id
+Ref: recruiting.application_stage_event.stage_id > recruiting.recruitment_stage.stage_id
+Ref: recruiting.offer.application_id - recruiting.application.application_id
+Ref: recruiting.hire.application_id - recruiting.application.application_id
+Ref: recruiting.hire.employment_id - core.employment.employment_id
+
+Ref: recruiting.requisition_replacement.requisition_id > recruiting.requisition.requisition_id
+Ref: recruiting.requisition_replacement.exit_event_id > retention.exit_event.exit_event_id
+
+Ref: recruiting.talent_pool.job_role_id > core.job_role.job_role_id
+Ref: recruiting.talent_pool.location_id > core.location.location_id
+Ref: recruiting.talent_pool_member.talent_pool_id > recruiting.talent_pool.talent_pool_id
+Ref: recruiting.talent_pool_member.candidate_id > recruiting.candidate.candidate_id
+Ref: recruiting.talent_pool_member.application_id > recruiting.application.application_id
+
+Ref: retention.exit_event.employment_id - core.employment.employment_id
+Ref: retention.exit_event_reason.exit_event_id > retention.exit_event.exit_event_id
+Ref: retention.exit_event_reason.exit_reason_id > retention.exit_reason.exit_reason_id
+Ref: retention.exit_interview.exit_event_id - retention.exit_event.exit_event_id
+Ref: retention.exit_interview.interviewer_employee_id > core.employee.employee_id
+
+Ref: experience.survey_cycle.survey_id > experience.survey.survey_id
+Ref: experience.survey_question.survey_id > experience.survey.survey_id
+Ref: experience.survey_question.dimension_id > experience.engagement_dimension.dimension_id
+Ref: experience.survey_response.survey_cycle_id > experience.survey_cycle.survey_cycle_id
+Ref: experience.survey_response.employee_id > core.employee.employee_id
+Ref: experience.survey_response.employment_id > core.employment.employment_id
+Ref: experience.survey_response.assignment_id > core.employee_assignment.assignment_id
+Ref: experience.survey_answer.response_id > experience.survey_response.response_id
+Ref: experience.survey_answer.question_id > experience.survey_question.question_id
+Ref: experience.answer_theme.answer_id > experience.survey_answer.answer_id
+Ref: experience.answer_theme.theme_id > experience.feedback_theme.theme_id
+
+Ref: performance.performance_review.employee_id > core.employee.employee_id
+Ref: performance.performance_review.performance_cycle_id > performance.performance_cycle.performance_cycle_id
+Ref: performance.performance_review.manager_employee_id > core.employee.employee_id
+Ref: performance.performance_result.review_id > performance.performance_review.review_id
+Ref: performance.performance_result.metric_id > performance.performance_metric.metric_id
+Ref: performance.probation_review.employment_id > core.employment.employment_id
+Ref: performance.probation_review.manager_employee_id > core.employee.employee_id
+
+Ref: talent.role_capability_requirement.job_role_id > core.job_role.job_role_id
+Ref: talent.role_capability_requirement.capability_id > talent.capability.capability_id
+Ref: talent.role_capability_requirement.target_level_id > talent.proficiency_level.level_id
+Ref: talent.capability_assessment.employee_id > core.employee.employee_id
+Ref: talent.capability_assessment.capability_id > talent.capability.capability_id
+Ref: talent.capability_assessment.assessed_level_id > talent.proficiency_level.level_id
+Ref: talent.capability_assessment.assessor_employee_id > core.employee.employee_id
+Ref: talent.development_plan.employee_id > core.employee.employee_id
+Ref: talent.development_plan.target_job_role_id > core.job_role.job_role_id
+Ref: talent.development_action.development_plan_id > talent.development_plan.development_plan_id
+Ref: talent.development_action.capability_id > talent.capability.capability_id
+Ref: talent.mobility_event.employee_id > core.employee.employee_id
+Ref: talent.mobility_event.from_assignment_id > core.employee_assignment.assignment_id
+Ref: talent.mobility_event.to_assignment_id > core.employee_assignment.assignment_id
+Ref: talent.mobility_event.requisition_id > recruiting.requisition.requisition_id
+
+Ref: analytics.monthly_headcount.employee_id > core.employee.employee_id
+Ref: analytics.monthly_headcount.employment_id > core.employment.employment_id
+Ref: analytics.monthly_headcount.assignment_id > core.employee_assignment.assignment_id
+Ref: analytics.monthly_headcount.job_role_id > core.job_role.job_role_id
+Ref: analytics.monthly_headcount.location_id > core.location.location_id
+Ref: analytics.monthly_headcount.org_unit_id > core.org_unit.org_unit_id
+
+Ref: analytics.quality_of_hire.hire_id - recruiting.hire.hire_id
+Ref: analytics.quality_of_hire.employee_id > core.employee.employee_id
+Ref: analytics.quality_of_hire.employment_id > core.employment.employment_id
+Ref: analytics.quality_of_hire.requisition_id > recruiting.requisition.requisition_id
+Ref: analytics.quality_of_hire.source_id > recruiting.recruitment_source.source_id
+
+Ref: analytics.retention_cohort.employee_id > core.employee.employee_id
+Ref: analytics.retention_cohort.employment_id > core.employment.employment_id
+Ref: analytics.retention_cohort.job_role_id > core.job_role.job_role_id
+Ref: analytics.retention_cohort.location_id > core.location.location_id
+
+Ref: analytics.workforce_lifecycle.employee_id > core.employee.employee_id
+Ref: analytics.workforce_lifecycle.employment_id > core.employment.employment_id
+Ref: analytics.workforce_lifecycle.hire_id > recruiting.hire.hire_id
+Ref: analytics.workforce_lifecycle.requisition_id > recruiting.requisition.requisition_id
+Ref: analytics.workforce_lifecycle.source_id > recruiting.recruitment_source.source_id
+Ref: analytics.workforce_lifecycle.latest_assignment_id > core.employee_assignment.assignment_id
+Ref: analytics.workforce_lifecycle.latest_performance_review_id > performance.performance_review.review_id
+Ref: analytics.workforce_lifecycle.latest_mobility_event_id > talent.mobility_event.mobility_event_id
+Ref: analytics.workforce_lifecycle.exit_event_id > retention.exit_event.exit_event_id
