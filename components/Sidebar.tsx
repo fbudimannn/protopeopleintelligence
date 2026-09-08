@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  TrendingDown,
   Target,
   Sparkles,
   GitBranch,
@@ -20,6 +21,7 @@ import {
   Award,
   HeartHandshake,
   Repeat,
+  Layers,
 } from "lucide-react";
 
 function SidebarNavItems() {
@@ -70,12 +72,12 @@ function SidebarNavItems() {
       title: "VACANCY (PRE-HIRE)",
       items: [
         {
-          label: "Vacancy Overview",
+          label: "Requisition Health",
           href: "/vacancy?tab=overview",
           icon: <Briefcase className="w-5 h-5 flex-shrink-0" />,
         },
         {
-          label: "Demand & SLA Matrix",
+          label: "Demand & SLA Heatmap",
           href: "/vacancy?tab=matrix",
           icon: <Target className="w-5 h-5 flex-shrink-0" />,
         },
@@ -84,25 +86,45 @@ function SidebarNavItems() {
           href: "/vacancy?tab=funnel",
           icon: <TrendingUp className="w-5 h-5 flex-shrink-0" />,
         },
+        {
+          label: "Frontline Ready Pool",
+          href: "/vacancy?tab=talent-pool",
+          icon: <Sparkles className="w-5 h-5 flex-shrink-0 text-status-attention" />,
+        },
+        {
+          label: "Quality & SLA Outcomes",
+          href: "/vacancy?tab=outcomes",
+          icon: <Layers className="w-5 h-5 flex-shrink-0" />,
+        },
       ],
     },
     {
       title: "TEAM (POST-HIRE)",
       items: [
         {
-          label: "Team Overview",
+          label: "Retention & Cohorts",
           href: "/team?tab=overview",
-          icon: <Users className="w-5 h-5 flex-shrink-0" />,
+          icon: <GitBranch className="w-5 h-5 flex-shrink-0" />,
         },
         {
-          label: "Retention & Cohorts",
+          label: "Tenure Cliff Curve",
           href: "/team?tab=cliff",
-          icon: <GitBranch className="w-5 h-5 flex-shrink-0" />,
+          icon: <TrendingDown className="w-5 h-5 flex-shrink-0" />,
+        },
+        {
+          label: "Voice of Employee & eNPS",
+          href: "/team?tab=engagement",
+          icon: <HeartHandshake className="w-5 h-5 flex-shrink-0" />,
         },
         {
           label: "Internal Mobility Match",
           href: "/team?tab=mobility",
           icon: <Sparkles className="w-5 h-5 flex-shrink-0 text-status-attention" />,
+        },
+        {
+          label: "Exit-to-Vacancy Loop",
+          href: "/team?tab=exits",
+          icon: <Repeat className="w-5 h-5 flex-shrink-0" />,
         },
       ],
     },

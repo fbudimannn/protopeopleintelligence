@@ -200,6 +200,29 @@ function TeamContent() {
     });
   }, [cohorts, selectedLocation, selectedRole, riskFilter, searchQuery]);
 
+  // Dynamic Team KPIs based on active location & role filters
+  const teamKpis = useMemo(() => {
+    const isFiltered = selectedLocation !== "All Locations";
+    const headcount = isFiltered
+      ? Math.max(14, Math.round(filteredCohorts.reduce((acc, c) => acc + c.headcount, 0) * 0.8))
+      : 408;
+
+    const turnover = filteredCohorts.length > 0
+      ? filteredCohorts.reduce((acc, c) => acc + c.annualized_turnover_pct, 0) / filteredCohorts.length
+      : 44.8;
+
+    const earlyAttrition = filteredCohorts.length > 0
+      ? filteredCohorts.reduce((acc, c) => acc + c.early_attrition_pct, 0) / filteredCohorts.length
+      : 57.4;
+
+    return {
+      headcount,
+      turnover: Math.round(turnover * 10) / 10,
+      earlyAttrition: Math.round(earlyAttrition * 10) / 10,
+      isFiltered,
+    };
+  }, [filteredCohorts, selectedLocation]);
+
   // Active Target Benchmark for Dynamic Mobility Engine
   const activeBenchmark = useMemo(() => {
     return (
@@ -421,9 +444,11 @@ function TeamContent() {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-display font-black text-ink-primary">
-              408
+              {teamKpis.headcount}
             </span>
-            <span className="text-[11px] font-semibold text-status-healthy">13 Clubs</span>
+            <span className="text-[11px] font-semibold text-brand-teal">
+              {teamKpis.isFiltered ? selectedLocation : "13 Clubs"}
+            </span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>Active Frontline</span>
@@ -447,9 +472,13 @@ function TeamContent() {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-display font-black text-status-danger">
-              44.8%
+              {teamKpis.turnover}%
             </span>
-            <span className="text-[11px] font-semibold text-status-danger">Bali: 62.5%</span>
+            {teamKpis.isFiltered ? (
+              <span className="text-[11px] font-semibold text-brand-teal">vs Nat. 44.8%</span>
+            ) : (
+              <span className="text-[11px] font-semibold text-status-danger">Bali: 62.5%</span>
+            )}
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>Voluntary Rate</span>
@@ -473,9 +502,11 @@ function TeamContent() {
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-display font-black text-status-attention">
-              57.4%
+              {teamKpis.earlyAttrition}%
             </span>
-            <span className="text-[11px] font-semibold text-status-danger">&lt; 12 Months</span>
+            <span className="text-[11px] font-semibold text-status-danger">
+              {teamKpis.isFiltered ? `< 12M (${selectedLocation})` : "< 12 Months"}
+            </span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>Onboarding Cliff</span>

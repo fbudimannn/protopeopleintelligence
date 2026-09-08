@@ -249,7 +249,9 @@ function VacancyContent() {
             <span className="text-2xl font-display font-black text-ink-primary">
               {metrics.openRequisitions}
             </span>
-            <span className="text-[11px] font-semibold text-status-attention">+12% vs Q2</span>
+            <span className="text-[11px] font-semibold text-brand-teal">
+              {selectedLocation === "All Locations" ? "+12% vs Q2" : selectedLocation}
+            </span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>Active Openings</span>
@@ -301,7 +303,13 @@ function VacancyContent() {
             <span className="text-2xl font-display font-black text-status-danger">
               {metrics.beyondSlaRate}%
             </span>
-            <span className="text-[11px] font-semibold text-status-danger">Bali: 42.9%</span>
+            {selectedLocation === "All Locations" ? (
+              <span className="text-[11px] font-semibold text-status-danger">Bali: 42.9%</span>
+            ) : (
+              <span className={`text-[11px] font-semibold ${metrics.beyondSlaRate === 0 ? 'text-status-healthy' : 'text-status-danger'}`}>
+                {metrics.beyondSlaRate === 0 ? '0% Breached' : 'vs Nat. 27.5%'}
+              </span>
+            )}
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>Target &gt; 28 Days</span>
@@ -327,7 +335,11 @@ function VacancyContent() {
             <span className="text-2xl font-display font-black text-ink-primary">
               {metrics.medianTTF}d
             </span>
-            <span className="text-[11px] font-semibold text-status-attention">Bali: 34.0d</span>
+            {selectedLocation === "All Locations" ? (
+              <span className="text-[11px] font-semibold text-status-attention">Bali: 34.0d</span>
+            ) : (
+              <span className="text-[11px] font-semibold text-brand-teal">Nat. Med: 27.9d</span>
+            )}
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>National Median</span>

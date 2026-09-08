@@ -31,38 +31,59 @@ export default function TopHeader() {
   const [showAboutModal, setShowAboutModal] = useState(false);
 
   // Determine current page title and default provenance badge
-  const getPageMeta = (): { title: string; subtitle: string; provenance: ProvenanceType } => {
+  const getPageMeta = (): { title: string; section: string; provenance: ProvenanceType } => {
     if (pathname === "/") {
       return {
         title: "Executive Overview",
-        subtitle: "Enterprise Workforce Lifecycle Architecture",
+        section: "Enterprise Lifecycle",
         provenance: "HYBRID",
       };
     }
     if (pathname.startsWith("/vacancy")) {
       return {
-        title: "Vacancy & Hiring Intelligence",
-        subtitle: "Pre-Hire Demand, Sourcing Funnels & Frontline Pipeline",
+        title: "Vacancy Intelligence",
+        section: "Pre-Hire",
         provenance: "OBSERVED",
+      };
+    }
+    if (pathname.startsWith("/team/capability/framework")) {
+      return {
+        title: "Capability Framework",
+        section: "Frontline Architecture",
+        provenance: "DERIVED",
+      };
+    }
+    if (pathname.startsWith("/team/engagement/survey")) {
+      return {
+        title: "eNPS Survey Builder",
+        section: "Employee Voice",
+        provenance: "OBSERVED",
+      };
+    }
+    if (pathname.startsWith("/team/exit-survey")) {
+      return {
+        title: "Exit Interview Form",
+        section: "Retention Closed-Loop",
+        provenance: "HYBRID",
       };
     }
     if (pathname.startsWith("/team")) {
       return {
         title: "Team, Retention & Mobility",
-        subtitle: "Post-Hire Experience, Early Attrition & Frontline Mobility Matching",
+        section: "Post-Hire",
         provenance: "HYBRID",
       };
     }
     if (pathname.startsWith("/data-readiness")) {
       return {
-        title: "Data Readiness & Architecture Hub",
-        subtitle: "Source -> Raw -> Staging -> Core -> Mart -> App Lineage",
+        title: "Data Readiness Hub",
+        section: "Data Governance",
         provenance: "DERIVED",
       };
     }
     return {
       title: "People Intelligence",
-      subtitle: "Workforce Analytics & Decision Support",
+      section: "Analytics",
       provenance: "HYBRID",
     };
   };
@@ -72,9 +93,9 @@ export default function TopHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 h-16 bg-surface-white/90 backdrop-blur-md border-b border-border-default px-4 sm:px-6 flex items-center justify-between gap-4">
-        {/* Left: Mobile Toggle & Page Title */}
-        <div className="flex items-center gap-3">
+      <header className="sticky top-0 z-30 h-16 bg-surface-white/95 backdrop-blur-md border-b border-border-default px-4 sm:px-6 flex items-center justify-between gap-4 shadow-subtle">
+        {/* Left: Mobile Toggle & Single-Line Breadcrumb */}
+        <div className="flex items-center gap-3 min-w-0 shrink-0">
           <button
             type="button"
             onClick={() => setMobileMenuOpen(true)}
@@ -84,13 +105,14 @@ export default function TopHeader() {
             <Menu className="w-5 h-5" />
           </button>
 
-          <div>
-            <h1 className="font-spartan font-bold text-base sm:text-lg text-ink-primary leading-tight">
+          <div className="flex items-center gap-2 text-sm font-semibold truncate">
+            <span className="text-ink-muted text-xs uppercase tracking-wider font-bold hidden sm:inline">
+              {meta.section}
+            </span>
+            <span className="text-ink-muted/50 hidden sm:inline">/</span>
+            <h1 className="font-spartan font-bold text-sm sm:text-base text-ink-primary truncate">
               {meta.title}
             </h1>
-            <p className="text-[11px] text-ink-secondary hidden sm:block leading-none mt-0.5">
-              {meta.subtitle}
-            </p>
           </div>
         </div>
 
@@ -104,9 +126,9 @@ export default function TopHeader() {
                 <select
                   value={period}
                   onChange={(e) => setPeriod(e.target.value as PeriodOption)}
-                  className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer"
+                  className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer max-w-[160px] truncate"
                 >
-                  <option value="FY2024">FY 2024 (Observed Full Year)</option>
+                  <option value="FY2024">FY 2024 (Full Year)</option>
                   <option value="Q1_2024">Q1 2024</option>
                   <option value="Q2_2024">Q2 2024</option>
                   <option value="Q3_2024">Q3 2024</option>
@@ -120,7 +142,7 @@ export default function TopHeader() {
                 <select
                   value={locationFilter}
                   onChange={(e) => setLocationFilter(e.target.value)}
-                  className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer"
+                  className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer max-w-[180px] truncate"
                 >
                   <option value="ALL">All Locations (National)</option>
                   <option value="Bali">Bali (High Pressure)</option>
