@@ -82,18 +82,58 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to explore
 
 ---
 
-## 5. Repository Structure
+## 5. Prototype Modules & Features
+
+### 1. Executive Home (`/`)
+- Dual primary entry architecture: **Vacancy** (Pre-Hire) and **Team** (Post-Hire).
+- 6-step continuous lifecycle loop: `Vacancy -> Hire -> Team -> Develop -> Exit -> Replacement`.
+- High-level executive signal strip for frontline hiring pressure, early attrition cliff, and employee voice.
+- Reactive global filters for Period, Location, and Role family.
+
+### 2. Vacancy & Sourcing Intelligence (`/vacancy`)
+- **Requisition Health & Priority Table**: Live filtering by search query, hiring type (Replacement vs Expansion), and SLA status (Within SLA, At Risk, Breached).
+- **Demand & SLA Heatmap (`?tab=matrix`)**: Role x Location matrix highlighting Bali (85.7% replacement share, 34d TTF) and East Java hotspots.
+- **Sourcing & Funnel Diagnosis (`?tab=funnel`)**: 5-stage recruitment funnel bottleneck diagnosis and channel effectiveness table proving Employee Referral superiority.
+- **Frontline Ready Pool (`?tab=talent-pool`)**: Pre-qualified candidate bank with verified Mercer competencies and one-click interview fast-tracking.
+- **Quality & SLA Outcomes (`?tab=outcomes`)**: 4-quarter trajectory measuring SLA breach reduction and new hire 6-month retention.
+
+### 3. Team & Internal Mobility (`/team`)
+- **Retention & Lifecycle Cohorts Table**: Role x Location risk matrix analyzing turnover rates, early exit (<12M) rates, and mid-tenure dips.
+- **Tenure Survival Curve (`?tab=cliff`)**: 5 milestone tenure bands diagnosing the early onboarding shock (42.7% exits < 6 months) and the 1-1.5Y promotion ceiling.
+- **Voice of Employee & eNPS (`?tab=engagement`)**: Net eNPS (+56.6) sentiment analysis, mandatory Survivorship Bias disclosure, and evaluation across 6 core workplace dimensions.
+- **Internal Mobility Matcher (`?tab=mobility`)**: Operationalizing Mercer-style skill mapping and candidate scoring from `010_internal_mobility_engine.sql` with promotion simulation.
+- **Exit-to-Vacancy Continuity (`?tab=exits`)**: Direct linkage from departure event codes (`EXT-...`) to replacement requisition codes (`REQ-...`).
+
+### 4. Data Readiness & Governance Hub (`/data-readiness`)
+- **Interactive 6-Layer Lineage Architecture**: Visual walkthrough of `Source -> Raw -> Staging -> Core -> Mart -> App`.
+- **Data Provenance Transparency Registry**: Full audit table distinguishing observed empirical facts from synthetic future-state enablers.
+- **3-Horizon Data Maturity Roadmap**: Evolution from descriptive operational spreadsheets to predictive enterprise people intelligence.
+- **Workforce Metric Dictionary**: Formal mathematical formulas, SLA thresholds, and operational interpretations for all 7 primary KPIs.
+
+---
+
+## 6. Repository Structure
 
 ```text
 proto/
-├── app/                  # Next.js App Router (pages, layouts, globals)
-│   ├── layout.tsx        # League Spartan + Poppins fonts & metadata
-│   ├── globals.css       # Custom design tokens & base Tailwind styling
-│   └── page.tsx          # Homepage with Dual Entry & Lifecycle Ribbon
-├── lib/                  # Shared utilities & Supabase client
-│   └── supabaseClient.ts # Resilient Supabase client with offline fallback
-├── .agents/              # Embedded design & craft skills (impeccable, etc.)
-├── 010_internal_mobility_engine.sql # PostgreSQL Internal Mobility Benchmark Engine
+├── app/                  # Next.js App Router
+│   ├── layout.tsx        # League Spartan + Poppins typography & AppShell
+│   ├── globals.css       # Design tokens & Tailwind utilities
+│   ├── page.tsx          # Executive Home
+│   ├── vacancy/page.tsx  # Vacancy & Sourcing Intelligence Module
+│   ├── team/page.tsx     # Team & Internal Mobility Module
+│   └── data-readiness/page.tsx # Data Readiness & Governance Hub
+├── components/           # Reusable UI Components
+│   ├── AppShell.tsx      # Responsive navigation container
+│   ├── Sidebar.tsx       # 240px Collapsible sidebar with active route styling
+│   ├── TopHeader.tsx     # Global filter bar, provenance badge, & about modal
+│   └── DataProvenanceBadge.tsx # Governance provenance disclosure tooltip
+├── lib/                  # Shared data access & state context
+│   ├── context/FilterContext.tsx # Reactive workforce filter context & Supabase probe
+│   ├── data/api.ts       # Unified API layer with auto-fallback to fixtures
+│   ├── data/fixtures.ts  # Complete typed datasets & fallback fixtures
+│   └── supabaseClient.ts # Resilient Supabase client
+├── 010_internal_mobility_engine.sql # PostgreSQL Mercer scoring engine
 ├── FIT_HUB_People_Intelligence_PRD_Design_TechSpec_v3.md
 ├── FIT_HUB_People_Intelligence_Data_Architecture_v4.md
 ├── FIT_HUB_People_Intelligence_ERD.dbml
@@ -104,7 +144,7 @@ proto/
 
 ---
 
-## 6. Author & Attribution
+## 7. Author & Attribution
 
 - **Creator**: M. Fakhri Musyaffa Budiman
 - **Project**: FIT HUB People Analytics & Intelligence Case Study
