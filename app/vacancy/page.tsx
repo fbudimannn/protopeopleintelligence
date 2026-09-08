@@ -60,7 +60,9 @@ function VacancyContent() {
   const [hiringOutcomes, setHiringOutcomes] = useState<HiringOutcomeMetric[]>([]);
 
   // Local page filters
-  const { selectedLocation, selectedRole, selectedPeriod } = useFilters();
+  const { locationFilter, roleFilter, period: selectedPeriod } = useFilters();
+  const selectedLocation = locationFilter === "ALL" ? "All Locations" : locationFilter;
+  const selectedRole = roleFilter === "ALL" ? "All Roles" : roleFilter;
   const [hiringTypeFilter, setHiringTypeFilter] = useState<"ALL" | "Replacement" | "Expansion">("ALL");
   const [slaFilter, setSlaFilter] = useState<"ALL" | "WITHIN_SLA" | "AT_RISK" | "BREACHED">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
