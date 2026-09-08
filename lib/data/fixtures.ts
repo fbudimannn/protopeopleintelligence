@@ -553,3 +553,540 @@ export const dataProvenanceRegistry: ProvenanceRecord[] = [
     impact_on_decision: "Solves #1 exit driver (Career Development) by matching internal staff to vacancies.",
   },
 ];
+
+export interface RequisitionItem {
+  req_code: string;
+  role_name: string;
+  location_name: string;
+  hiring_type: "Replacement" | "Expansion";
+  openings: number;
+  days_open: number;
+  sla_target_days: number;
+  sla_status: "WITHIN_SLA" | "AT_RISK" | "BREACHED";
+  pipeline_size: number;
+  bottleneck_stage: string;
+  health: "Healthy" | "At Risk" | "Critical";
+  hiring_manager: string;
+  linked_exit_code?: string;
+  urgency_reason: string;
+  data_provenance: "OBSERVED_CASE_STUDY" | "SYNTHETIC_ENABLER";
+}
+
+export interface SourcingChannelMetric {
+  channel_name: string;
+  applicants: number;
+  hires: number;
+  conversion_rate_pct: number;
+  beyond_sla_rate_pct: number;
+  median_ttf_days: number;
+  offer_acceptance_pct: number;
+  six_month_retention_pct: number;
+  quality_rating: number; // 1 to 5 scale
+  data_provenance: "OBSERVED_CASE_STUDY" | "SYNTHETIC_ENABLER";
+}
+
+export interface FunnelStageMetric {
+  stage_name: string;
+  stage_order: number;
+  candidate_count: number;
+  conversion_from_top_pct: number;
+  stage_conversion_pct: number;
+  median_days_in_stage: number;
+  is_bottleneck: boolean;
+  bottleneck_note: string;
+}
+
+export interface TalentPoolCandidate {
+  candidate_id: string;
+  display_name: string;
+  role_target: string;
+  location_preference: string;
+  readiness_status: "Interview Ready" | "Pre-qualified" | "Previous Finalist" | "Active Outreach";
+  source_channel: string;
+  fit_score: number;
+  verified_competencies: string[];
+  est_ttf_days: number;
+  last_activity_date: string;
+  notes: string;
+  data_provenance: "SYNTHETIC_ENABLER";
+}
+
+export interface HiringOutcomeMetric {
+  period_label: string;
+  beyond_sla_pct: number;
+  median_ttf_days: number;
+  six_month_retention_pct: number;
+  ramp_up_speed_pct: number;
+  manager_rating_avg: number;
+}
+
+export const fallbackRequisitions: RequisitionItem[] = [
+  {
+    req_code: "REQ-BLI-0104",
+    role_name: "Operation Specialist",
+    location_name: "Bali",
+    hiring_type: "Replacement",
+    openings: 4,
+    days_open: 42,
+    sla_target_days: 28,
+    sla_status: "BREACHED",
+    pipeline_size: 6,
+    bottleneck_stage: "Manager Interview",
+    health: "Critical",
+    hiring_manager: "Bambang Wijaya (Club GM)",
+    linked_exit_code: "EXT-BLI-0089",
+    urgency_reason: "Front desk shift shortage causing overtime surge and member check-in delays",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-BLI-0109",
+    role_name: "Personal Trainer",
+    location_name: "Bali",
+    hiring_type: "Replacement",
+    openings: 3,
+    days_open: 36,
+    sla_target_days: 28,
+    sla_status: "BREACHED",
+    pipeline_size: 5,
+    bottleneck_stage: "Technical Audition",
+    health: "Critical",
+    hiring_manager: "Wayan Surya (Fitness Manager)",
+    linked_exit_code: "EXT-BLI-0094",
+    urgency_reason: "Client session backlog in Sunset Road branch following senior trainer resignations",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-BLI-0115",
+    role_name: "Membership Consultant",
+    location_name: "Bali",
+    hiring_type: "Replacement",
+    openings: 2,
+    days_open: 26,
+    sla_target_days: 28,
+    sla_status: "AT_RISK",
+    pipeline_size: 7,
+    bottleneck_stage: "HR Screening",
+    health: "At Risk",
+    hiring_manager: "Ni Made Sari (Commercial Lead)",
+    linked_exit_code: "EXT-BLI-0102",
+    urgency_reason: "Target coverage drop in Q3 high-season tourist conversion drive",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-SBY-0202",
+    role_name: "Operation Specialist",
+    location_name: "Surabaya",
+    hiring_type: "Replacement",
+    openings: 5,
+    days_open: 31,
+    sla_target_days: 28,
+    sla_status: "BREACHED",
+    pipeline_size: 11,
+    bottleneck_stage: "HR Screening",
+    health: "At Risk",
+    hiring_manager: "Hendra Gunawan (Club GM)",
+    linked_exit_code: "EXT-SBY-0144",
+    urgency_reason: "East Java cluster cluster expansion backfill following internal promotion",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-SBY-0218",
+    role_name: "Personal Trainer",
+    location_name: "Surabaya",
+    hiring_type: "Expansion",
+    openings: 3,
+    days_open: 22,
+    sla_target_days: 28,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 9,
+    bottleneck_stage: "Manager Interview",
+    health: "Healthy",
+    hiring_manager: "Arief Hidayat (Fitness Manager)",
+    urgency_reason: "New PT studio line launch in Pakuwon Mall branch",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-JKB-0301",
+    role_name: "Operation Specialist",
+    location_name: "Jakarta Barat",
+    hiring_type: "Replacement",
+    openings: 6,
+    days_open: 21,
+    sla_target_days: 28,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 18,
+    bottleneck_stage: "Final Offer",
+    health: "Healthy",
+    hiring_manager: "Rian Pratama (Area Operations Lead)",
+    linked_exit_code: "EXT-JKB-0231",
+    urgency_reason: "Routine turnover backfill in flagship West Jakarta hub",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-JKB-0312",
+    role_name: "Membership Consultant",
+    location_name: "Jakarta Barat",
+    hiring_type: "Replacement",
+    openings: 4,
+    days_open: 24,
+    sla_target_days: 28,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 12,
+    bottleneck_stage: "Offer Acceptance",
+    health: "Healthy",
+    hiring_manager: "Dewi Anggraini (Regional Sales Lead)",
+    linked_exit_code: "EXT-JKB-0245",
+    urgency_reason: "Presale campaign demand for Q4 membership targets",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-JKS-0405",
+    role_name: "Personal Trainer",
+    location_name: "Jakarta Selatan",
+    hiring_type: "Replacement",
+    openings: 4,
+    days_open: 25,
+    sla_target_days: 28,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 14,
+    bottleneck_stage: "Technical Audition",
+    health: "Healthy",
+    hiring_manager: "Farhan Mahendra (Fitness Lead)",
+    linked_exit_code: "EXT-JKS-0198",
+    urgency_reason: "VIP member coaching roster coverage",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-TNG-0502",
+    role_name: "Operation Specialist",
+    location_name: "Tangerang",
+    hiring_type: "Replacement",
+    openings: 4,
+    days_open: 29,
+    sla_target_days: 28,
+    sla_status: "BREACHED",
+    pipeline_size: 8,
+    bottleneck_stage: "Candidate Sourcing",
+    health: "At Risk",
+    hiring_manager: "Eko Prasetyo (Club GM)",
+    linked_exit_code: "EXT-TNG-0112",
+    urgency_reason: "Weekend shift coverage shortfall in Bintaro and BSD clubs",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-BDG-0601",
+    role_name: "Operation Specialist",
+    location_name: "Bandung",
+    hiring_type: "Expansion",
+    openings: 2,
+    days_open: 18,
+    sla_target_days: 28,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 9,
+    bottleneck_stage: "Manager Interview",
+    health: "Healthy",
+    hiring_manager: "Ilham Ramadhan (Club GM)",
+    urgency_reason: "Extended operating hours initiative for university member demographic",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-BLI-0120",
+    role_name: "Assistant Club Manager",
+    location_name: "Bali",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 38,
+    sla_target_days: 35,
+    sla_status: "BREACHED",
+    pipeline_size: 4,
+    bottleneck_stage: "Executive Panel",
+    health: "Critical",
+    hiring_manager: "Tri Purnomo (Regional VP)",
+    linked_exit_code: "EXT-BLI-0077",
+    urgency_reason: "Club leadership gap in Canggu branch, strong candidate for internal mobility fast-track",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-SBY-0224",
+    role_name: "Membership Consultant",
+    location_name: "Surabaya",
+    hiring_type: "Replacement",
+    openings: 3,
+    days_open: 23,
+    sla_target_days: 28,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 8,
+    bottleneck_stage: "HR Screening",
+    health: "Healthy",
+    hiring_manager: "Hendra Gunawan (Club GM)",
+    linked_exit_code: "EXT-SBY-0160",
+    urgency_reason: "Mid-year corporate B2B sales push",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+];
+
+export const fallbackSourcingChannels: SourcingChannelMetric[] = [
+  {
+    channel_name: "Employee Referral",
+    applicants: 420,
+    hires: 118,
+    conversion_rate_pct: 28.1,
+    beyond_sla_rate_pct: 12.0,
+    median_ttf_days: 21.0,
+    offer_acceptance_pct: 92.4,
+    six_month_retention_pct: 84.5,
+    quality_rating: 4.8,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    channel_name: "Direct Career Site",
+    applicants: 640,
+    hires: 94,
+    conversion_rate_pct: 14.7,
+    beyond_sla_rate_pct: 22.0,
+    median_ttf_days: 26.0,
+    offer_acceptance_pct: 88.0,
+    six_month_retention_pct: 76.2,
+    quality_rating: 4.2,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    channel_name: "Job Portal (Aggregator)",
+    applicants: 1850,
+    hires: 215,
+    conversion_rate_pct: 11.6,
+    beyond_sla_rate_pct: 26.5,
+    median_ttf_days: 28.5,
+    offer_acceptance_pct: 85.5,
+    six_month_retention_pct: 72.0,
+    quality_rating: 3.9,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    channel_name: "Social Media Ads",
+    applicants: 980,
+    hires: 82,
+    conversion_rate_pct: 8.4,
+    beyond_sla_rate_pct: 38.0,
+    median_ttf_days: 33.0,
+    offer_acceptance_pct: 78.0,
+    six_month_retention_pct: 61.4,
+    quality_rating: 3.2,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    channel_name: "Specialized Search / Agency",
+    applicants: 95,
+    hires: 22,
+    conversion_rate_pct: 23.2,
+    beyond_sla_rate_pct: 41.0,
+    median_ttf_days: 36.0,
+    offer_acceptance_pct: 91.0,
+    six_month_retention_pct: 82.0,
+    quality_rating: 4.4,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+];
+
+export const fallbackFunnelStages: FunnelStageMetric[] = [
+  {
+    stage_name: "Applications Received",
+    stage_order: 1,
+    candidate_count: 3985,
+    conversion_from_top_pct: 100.0,
+    stage_conversion_pct: 100.0,
+    median_days_in_stage: 3.2,
+    is_bottleneck: false,
+    bottleneck_note: "Top of funnel healthy, volume driven by digital aggregators",
+  },
+  {
+    stage_name: "Initial HR Screening",
+    stage_order: 2,
+    candidate_count: 1840,
+    conversion_from_top_pct: 46.2,
+    stage_conversion_pct: 46.2,
+    median_days_in_stage: 6.8,
+    is_bottleneck: true,
+    bottleneck_note: "High drop-off due to basic shift flexibility and location mismatch in Bali/Surabaya",
+  },
+  {
+    stage_name: "Hiring Manager Interview",
+    stage_order: 3,
+    candidate_count: 920,
+    conversion_from_top_pct: 23.1,
+    stage_conversion_pct: 50.0,
+    median_days_in_stage: 8.4,
+    is_bottleneck: true,
+    bottleneck_note: "Club GM scheduling congestion delays candidate turnaround by average 4.6 days beyond standard",
+  },
+  {
+    stage_name: "Formal Offer Extended",
+    stage_order: 4,
+    candidate_count: 580,
+    conversion_from_top_pct: 14.6,
+    stage_conversion_pct: 63.0,
+    median_days_in_stage: 4.1,
+    is_bottleneck: false,
+    bottleneck_note: "Standard offer generation cycle within SLA",
+  },
+  {
+    stage_name: "Hired & Onboarded",
+    stage_order: 5,
+    candidate_count: 531,
+    conversion_from_top_pct: 13.3,
+    stage_conversion_pct: 91.6,
+    median_days_in_stage: 5.0,
+    is_bottleneck: false,
+    bottleneck_note: "Final confirmation rate strong across frontline operations",
+  },
+];
+
+export const fallbackTalentPool: TalentPoolCandidate[] = [
+  {
+    candidate_id: "CAN-BLI-041",
+    display_name: "Made Dananjaya",
+    role_target: "Operation Specialist",
+    location_preference: "Bali",
+    readiness_status: "Interview Ready",
+    source_channel: "Ex-Finalist Pool",
+    fit_score: 93,
+    verified_competencies: ["Member Service SOP", "POS & Cashier Protocol", "Club Safety"],
+    est_ttf_days: 9,
+    last_activity_date: "2024-08-14",
+    notes: "Top finalist from July batch, already passed HR screening, ready for immediate club GM signoff.",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    candidate_id: "CAN-BLI-045",
+    display_name: "Ketut Arimbawa",
+    role_target: "Personal Trainer",
+    location_preference: "Bali",
+    readiness_status: "Interview Ready",
+    source_channel: "Referral Pipeline",
+    fit_score: 90,
+    verified_competencies: ["Strength Conditioning", "Client Assessment", "Nutrition Fundamentals"],
+    est_ttf_days: 11,
+    last_activity_date: "2024-08-18",
+    notes: "Referred by Sunset Road Senior Trainer, certified national sports trainer, audition ready.",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    candidate_id: "CAN-BLI-052",
+    display_name: "Putu Ayu Lestari",
+    role_target: "Membership Consultant",
+    location_preference: "Bali",
+    readiness_status: "Pre-qualified",
+    source_channel: "Alumni Network",
+    fit_score: 86,
+    verified_competencies: ["B2C Direct Sales", "Consultative Negotiation", "CRM Lead Tracking"],
+    est_ttf_days: 12,
+    last_activity_date: "2024-08-20",
+    notes: "Ex-hospitality sales coordinator, high verbal fluency, completed asynchronous sales pitch test.",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    candidate_id: "CAN-SBY-078",
+    display_name: "Rizky Bayu Prasetyo",
+    role_target: "Operation Specialist",
+    location_preference: "Surabaya",
+    readiness_status: "Interview Ready",
+    source_channel: "Ex-Finalist Pool",
+    fit_score: 91,
+    verified_competencies: ["Inventory & SOP", "Member Service SOP", "Incident Reporting"],
+    est_ttf_days: 8,
+    last_activity_date: "2024-08-12",
+    notes: "Prior retail operations lead, ready to deploy immediately to Pakuwon or Merr branch.",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    candidate_id: "CAN-SBY-083",
+    display_name: "Bayu Anggoro",
+    role_target: "Personal Trainer",
+    location_preference: "Surabaya",
+    readiness_status: "Pre-qualified",
+    source_channel: "Referral Pipeline",
+    fit_score: 85,
+    verified_competencies: ["Functional Movement", "Client Rapport", "Safety Standards"],
+    est_ttf_days: 14,
+    last_activity_date: "2024-08-16",
+    notes: "Fitness enthusiast community referral, theoretical certification verified.",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    candidate_id: "CAN-JKB-102",
+    display_name: "Anisa Rahmawati",
+    role_target: "Operation Specialist",
+    location_preference: "Jakarta Barat",
+    readiness_status: "Interview Ready",
+    source_channel: "Referral Pipeline",
+    fit_score: 89,
+    verified_competencies: ["Cash Management", "Member Service SOP", "Shift Coordination"],
+    est_ttf_days: 7,
+    last_activity_date: "2024-08-21",
+    notes: "Internal staff sibling referral, verified background check completed.",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    candidate_id: "CAN-TNG-115",
+    display_name: "Bagas Wicaksono",
+    role_target: "Operation Specialist",
+    location_preference: "Tangerang",
+    readiness_status: "Previous Finalist",
+    source_channel: "Ex-Finalist Pool",
+    fit_score: 87,
+    verified_competencies: ["Equipment Care", "Member Service SOP", "Front Desk Administration"],
+    est_ttf_days: 10,
+    last_activity_date: "2024-08-10",
+    notes: "Runner-up for Q2 BSD requisition, expressed strong interest to fill current open slot.",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    candidate_id: "CAN-BDG-128",
+    display_name: "Deri Kurniawan",
+    role_target: "Operation Specialist",
+    location_preference: "Bandung",
+    readiness_status: "Pre-qualified",
+    source_channel: "Direct Career Site",
+    fit_score: 84,
+    verified_competencies: ["Member Service SOP", "Shift Flexibility", "Basic First Aid"],
+    est_ttf_days: 13,
+    last_activity_date: "2024-08-19",
+    notes: "Strong operational background in student fitness clubs, ready for manager interview.",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+];
+
+export const fallbackHiringOutcomes: HiringOutcomeMetric[] = [
+  {
+    period_label: "Q4 Previous Year",
+    beyond_sla_pct: 34.2,
+    median_ttf_days: 32.5,
+    six_month_retention_pct: 68.5,
+    ramp_up_speed_pct: 74.0,
+    manager_rating_avg: 3.9,
+  },
+  {
+    period_label: "Q1 Current Year",
+    beyond_sla_pct: 30.1,
+    median_ttf_days: 30.0,
+    six_month_retention_pct: 71.0,
+    ramp_up_speed_pct: 77.5,
+    manager_rating_avg: 4.0,
+  },
+  {
+    period_label: "Q2 Current Year",
+    beyond_sla_pct: 27.4,
+    median_ttf_days: 28.5,
+    six_month_retention_pct: 73.8,
+    ramp_up_speed_pct: 80.0,
+    manager_rating_avg: 4.15,
+  },
+  {
+    period_label: "Q3 Current Year (Active)",
+    beyond_sla_pct: 25.0,
+    median_ttf_days: 27.5,
+    six_month_retention_pct: 75.4,
+    ramp_up_speed_pct: 82.5,
+    manager_rating_avg: 4.25,
+  },
+];

@@ -5,10 +5,20 @@ import {
   EngagementSummary,
   InternalMobilityMatch,
   ProvenanceRecord,
+  RequisitionItem,
+  SourcingChannelMetric,
+  FunnelStageMetric,
+  TalentPoolCandidate,
+  HiringOutcomeMetric,
   fallbackVacancyKPIs,
   fallbackRetentionCohorts,
   fallbackEngagementSummaries,
   fallbackMobilityMatches,
+  fallbackRequisitions,
+  fallbackSourcingChannels,
+  fallbackFunnelStages,
+  fallbackTalentPool,
+  fallbackHiringOutcomes,
   dataProvenanceRegistry,
 } from "./fixtures";
 
@@ -28,6 +38,37 @@ export async function getVacancyKPIs(): Promise<{ data: VacancyKPI[]; isLive: bo
   } catch {
     return { data: fallbackVacancyKPIs, isLive: false };
   }
+}
+
+export async function getRequisitions(): Promise<{ data: RequisitionItem[]; isLive: boolean }> {
+  if (!supabase) {
+    return { data: fallbackRequisitions, isLive: false };
+  }
+  try {
+    const { data, error } = await supabase.from("mart_requisitions").select("*");
+    if (error || !data || data.length === 0) {
+      return { data: fallbackRequisitions, isLive: false };
+    }
+    return { data: data as RequisitionItem[], isLive: true };
+  } catch {
+    return { data: fallbackRequisitions, isLive: false };
+  }
+}
+
+export async function getSourcingChannels(): Promise<{ data: SourcingChannelMetric[]; isLive: boolean }> {
+  return { data: fallbackSourcingChannels, isLive: false };
+}
+
+export async function getFunnelStages(): Promise<{ data: FunnelStageMetric[]; isLive: boolean }> {
+  return { data: fallbackFunnelStages, isLive: false };
+}
+
+export async function getTalentPoolCandidates(): Promise<{ data: TalentPoolCandidate[]; isLive: boolean }> {
+  return { data: fallbackTalentPool, isLive: false };
+}
+
+export async function getHiringOutcomes(): Promise<{ data: HiringOutcomeMetric[]; isLive: boolean }> {
+  return { data: fallbackHiringOutcomes, isLive: false };
 }
 
 export async function getRetentionCohorts(): Promise<{ data: RetentionCohort[]; isLive: boolean }> {
@@ -78,3 +119,4 @@ export async function getInternalMobilityMatches(): Promise<{ data: InternalMobi
 export function getDataProvenance(): ProvenanceRecord[] {
   return dataProvenanceRegistry;
 }
+
