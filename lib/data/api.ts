@@ -13,6 +13,9 @@ import {
   ExitEvent,
   TenureBand,
   VoiceTheme,
+  PipelineLayer,
+  RoadmapHorizon,
+  MetricDefinition,
   fallbackVacancyKPIs,
   fallbackRetentionCohorts,
   fallbackEngagementSummaries,
@@ -25,6 +28,9 @@ import {
   fallbackExitEvents,
   fallbackTenureBands,
   fallbackVoiceThemes,
+  fallbackPipelineLayers,
+  fallbackRoadmapHorizons,
+  fallbackMetricDefinitions,
   dataProvenanceRegistry,
 } from "./fixtures";
 
@@ -136,5 +142,17 @@ export async function getTenureBands(): Promise<{ data: TenureBand[]; isLive: bo
 
 export async function getVoiceThemes(): Promise<{ data: VoiceTheme[]; isLive: boolean }> {
   return { data: fallbackVoiceThemes, isLive: false };
+}
+
+export async function getPipelineLayers(): Promise<{ data: PipelineLayer[]; isLive: boolean }> {
+  return { data: fallbackPipelineLayers, isLive: false };
+}
+
+export async function getRoadmapHorizons(): Promise<{ data: RoadmapHorizon[]; isLive: boolean }> {
+  return { data: fallbackRoadmapHorizons, isLive: false };
+}
+
+export async function getMetricDefinitions(): Promise<{ data: MetricDefinition[]; isLive: boolean }> {
+  return { data: fallbackMetricDefinitions, isLive: false };
 }
 

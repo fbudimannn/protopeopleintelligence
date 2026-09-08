@@ -552,6 +552,38 @@ export const dataProvenanceRegistry: ProvenanceRecord[] = [
     governance_rule: "Illustrative weights for prototype demonstration only.",
     impact_on_decision: "Solves #1 exit driver (Career Development) by matching internal staff to vacancies.",
   },
+  {
+    domain: "Job Architecture",
+    metric_or_entity: "Job Families & 4-Level Capability Hierarchy",
+    source_type: "Synthetic Future-State",
+    original_source_file: "FIT_HUB_People_Intelligence_PRD_Design_TechSpec_v3.md",
+    governance_rule: "Structured competencies derived from Mercer methodology.",
+    impact_on_decision: "Defines transparent promotion tracks for frontline club staff.",
+  },
+  {
+    domain: "Master Data",
+    metric_or_entity: "Centralized Employee Master ID (FH-EMP-xxxx)",
+    source_type: "Synthetic Future-State",
+    original_source_file: "core.dim_employee / core.dim_person",
+    governance_rule: "Synthetic entity linking to demonstrate relational lifecycle intelligence.",
+    impact_on_decision: "Eliminates departmental data silos between HR, Operations, and Sales.",
+  },
+  {
+    domain: "Pipeline Sourcing",
+    metric_or_entity: "Frontline Pre-Qualified Candidate Pool",
+    source_type: "Synthetic Future-State",
+    original_source_file: "mart.talent_pool",
+    governance_rule: "Proactive candidate bank for agile replacement staffing.",
+    impact_on_decision: "Compresses future vacancy time-to-fill from 34 days to under 12 days in Bali.",
+  },
+  {
+    domain: "Continuity",
+    metric_or_entity: "Departure to Requisition Binding (EXT -> REQ)",
+    source_type: "Observed Historical Case",
+    original_source_file: "PRD Section 27.2 Life-Cycle Mapping",
+    governance_rule: "Derived mapping from historical replacement share facts.",
+    impact_on_decision: "Proves that 70.7% of all open requisitions stem directly from employee turnover.",
+  },
 ];
 
 export interface RequisitionItem {
@@ -1348,3 +1380,193 @@ export const fallbackVoiceThemes: VoiceTheme[] = [
     strategic_action: "Implement quarterly capability development discussions using Mercer rubric",
   },
 ];
+
+export interface PipelineLayer {
+  layer_id: string;
+  layer_number: number;
+  layer_name: string;
+  schema_or_system: string;
+  description: string;
+  entities_or_tables: string[];
+  governance_status: "PRODUCED_EMPIRICAL" | "GOVERNED_TRANSFORMATION" | "FUTURE_STATE_ENABLER";
+  record_count: string;
+  latency: string;
+}
+
+export interface RoadmapHorizon {
+  horizon_number: number;
+  title: string;
+  timeframe: string;
+  business_capability: string;
+  technical_prerequisites: string[];
+  key_deliverables: string[];
+  status: "CURRENT_BASELINE" | "DELIVERED_IN_PROTOTYPE" | "FUTURE_SCALE";
+}
+
+export interface MetricDefinition {
+  metric_name: string;
+  domain: string;
+  formula: string;
+  target_benchmark: string;
+  business_interpretation: string;
+  data_provenance: "OBSERVED_CASE_STUDY" | "SYNTHETIC_ENABLER";
+}
+
+export const fallbackPipelineLayers: PipelineLayer[] = [
+  {
+    layer_id: "layer-1",
+    layer_number: 1,
+    layer_name: "Source Tier",
+    schema_or_system: "Operational Silos (ATS, HRIS, Typeform)",
+    description: "Original Excel case study exports. Disconnected departments with zero shared employee identification keys.",
+    entities_or_tables: ["Hiring Sheet (1,552 records)", "Turnover Sheet (889 records)", "Engagement Sheet (1,636 records)"],
+    governance_status: "PRODUCED_EMPIRICAL",
+    record_count: "4,077 raw rows",
+    latency: "Ad-hoc / Quarterly exports",
+  },
+  {
+    layer_id: "layer-2",
+    layer_number: 2,
+    layer_name: "Raw Landing Tier",
+    schema_or_system: "PostgreSQL schema: raw",
+    description: "Immutable landing zone preserving exact historical field types, values, and audit timestamps.",
+    entities_or_tables: ["raw.raw_hiring", "raw.raw_turnover", "raw.raw_engagement"],
+    governance_status: "PRODUCED_EMPIRICAL",
+    record_count: "4,077 ingested rows",
+    latency: "Automated ingestion pipeline",
+  },
+  {
+    layer_id: "layer-3",
+    layer_number: 3,
+    layer_name: "Staging & Cleaning Tier",
+    schema_or_system: "Data Pipeline scripts / Views",
+    description: "Deduplication, date parsing, column type normalization, and validation rules adhering to Python EDA logic.",
+    entities_or_tables: ["stg_hiring_normalized", "stg_turnover_validated", "stg_engagement_scored"],
+    governance_status: "GOVERNED_TRANSFORMATION",
+    record_count: "100% clean data pass",
+    latency: "Deterministic batch transform",
+  },
+  {
+    layer_id: "layer-4",
+    layer_number: 4,
+    layer_name: "Core Domain Tier",
+    schema_or_system: "PostgreSQL schemas: core, talent, recruiting, retention, experience",
+    description: "Normalized dimensional model linking people, jobs, locations, and Mercer capability frameworks.",
+    entities_or_tables: ["core.dim_person", "core.dim_employee", "core.dim_job_role", "core.dim_location", "talent.dim_capability", "talent.role_capability_requirement"],
+    governance_status: "FUTURE_STATE_ENABLER",
+    record_count: "13 clubs, 7 roles, 6 capabilities",
+    latency: "Single Source of Truth",
+  },
+  {
+    layer_id: "layer-5",
+    layer_number: 5,
+    layer_name: "Analytical Mart Tier",
+    schema_or_system: "PostgreSQL schema: mart",
+    description: "Pre-aggregated decision models and scoring algorithms (010_internal_mobility_engine.sql).",
+    entities_or_tables: ["mart.mart_vacancy_kpi", "mart.mart_retention_cohort", "mart.mart_engagement_summary", "mart.internal_mobility_match"],
+    governance_status: "GOVERNED_TRANSFORMATION",
+    record_count: "Real-time query performance",
+    latency: "Instant sub-10ms response",
+  },
+  {
+    layer_id: "layer-6",
+    layer_number: 6,
+    layer_name: "Executive Application Tier",
+    schema_or_system: "Next.js 14 App Router + PostgREST Client",
+    description: "Executive decision prototype featuring reactive filters, transparent provenance badges, and offline fallback.",
+    entities_or_tables: ["lib/data/api.ts", "lib/data/fixtures.ts", "FilterContext", "DataProvenanceBadge"],
+    governance_status: "FUTURE_STATE_ENABLER",
+    record_count: "Full prototype web application",
+    latency: "Under 100ms client interaction",
+  },
+];
+
+export const fallbackRoadmapHorizons: RoadmapHorizon[] = [
+  {
+    horizon_number: 1,
+    title: "Descriptive Operational Silos (Baseline State)",
+    timeframe: "Historical Case Baseline (2023 - 2024)",
+    business_capability: "Reactive headcount reporting, manual turnover calculations, and isolated post-mortem exit reviews.",
+    technical_prerequisites: ["Separate Excel spreadsheets in recruiting, turnover, and engagement", "No standardized employee ID keys", "Manual presentation assembly for executive reviews"],
+    key_deliverables: ["8-step Python cleaning pipeline", "Historical EDA analysis identifying 68.4% replacement lock and 90-day onboarding cliff", "Executive PowerPoint and PDF reports"],
+    status: "CURRENT_BASELINE",
+  },
+  {
+    horizon_number: 2,
+    title: "Unified Relational Workforce Warehouse (Prototype State)",
+    timeframe: "Current Delivery (Phase 1 to Phase 6)",
+    business_capability: "Governed end-to-end employee lifecycle intelligence connecting Vacancy demand directly to Team retention outcomes.",
+    technical_prerequisites: ["PostgreSQL database schemas on Supabase", "Public view abstraction with security invoker", "TypeScript data layer with offline fallback fixtures"],
+    key_deliverables: ["Interactive Next.js 14 decision prototype", "Role x Location SLA Heatmap and Recruitment Funnel diagnosis", "Mercer Capability Framework & candidate readiness engine", "Data Readiness Hub and governance provenance disclosure"],
+    status: "DELIVERED_IN_PROTOTYPE",
+  },
+  {
+    horizon_number: 3,
+    title: "Predictive & Prescriptive People Intelligence (Target State)",
+    timeframe: "Enterprise Production Scale (Months 6+)",
+    business_capability: "Proactive attrition prevention, ML-driven candidate flight risk alerts, and automated succession planning.",
+    technical_prerequisites: ["Real-time CDC pipeline from Darwinbox/Workday and ATS", "Automated monthly pulse survey integration", "Machine learning inference pipeline for early departure risk"],
+    key_deliverables: ["Automated buddy onboarding tracking in mobile app", "Live compensation benchmark alerts for Bali/East Java clubs", "Executive automated weekly digest and early alert triggers"],
+    status: "FUTURE_SCALE",
+  },
+];
+
+export const fallbackMetricDefinitions: MetricDefinition[] = [
+  {
+    metric_name: "Time-to-Fill (TTF)",
+    domain: "Recruiting",
+    formula: "Date Requisition Filled minus Date Requisition Approved (in calendar days)",
+    target_benchmark: "National standard: <= 28 days (SLA target)",
+    business_interpretation: "Measures hiring velocity. Bali median is 34.0 days, indicating severe local candidate supply constraints.",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    metric_name: "Beyond SLA Rate",
+    domain: "Recruiting",
+    formula: "(Count of Hires with TTF > 28 Days / Total Hires) * 100",
+    target_benchmark: "< 20.0% of all requisitions",
+    business_interpretation: "Identifies delayed operational backfilling. Bali reaches 42.9%, driving club floor overtime and shift shortages.",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    metric_name: "Replacement Share",
+    domain: "Recruiting",
+    formula: "(Replacement Requisitions / Total Open Requisitions) * 100",
+    target_benchmark: "< 40.0% for healthy expansion",
+    business_interpretation: "Indicates whether recruitment functions as expansion or reactive backfill. 70.7% national share proves acute turnover treadmill.",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    metric_name: "Early Attrition Rate (< 12M)",
+    domain: "Retention",
+    formula: "(Departures with Tenure < 12 Months / Total Departures) * 100",
+    target_benchmark: "< 25.0% of total exits",
+    business_interpretation: "Identifies onboarding and ramp-up failure. At 57.4% nationally, over half of all departures occur before Year 1.",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    metric_name: "Mid-Tenure Dip (13-18M)",
+    domain: "Retention",
+    formula: "(Departures with Tenure between 13 and 18 Months / Total Departures) * 100",
+    target_benchmark: "< 15.0% of total exits",
+    business_interpretation: "Reflects career stagnation plateau. Staff ready for promotion exit when external hires take managerial openings.",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    metric_name: "Regrettable Loss Rate",
+    domain: "Retention",
+    formula: "(Voluntary Exits of High-Performing Staff / Total Exits) * 100",
+    target_benchmark: "< 15.0% of total exits",
+    business_interpretation: "Measures loss of top club performers. 27.8% (247 staff) represents high organizational brain drain.",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    metric_name: "Net Employee Net Promoter Score (eNPS)",
+    domain: "Experience",
+    formula: "% Promoters (Score 9-10) minus % Detractors (Score 0-6)",
+    target_benchmark: "> +30.0 (World-class threshold)",
+    business_interpretation: "Measures overall employee loyalty (+56.6). Must be evaluated alongside Survivorship Bias disclosure.",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+];
+
