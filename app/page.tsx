@@ -70,7 +70,7 @@ export default async function HomePage() {
     {
       step: "04",
       label: "Develop",
-      desc: "Mercer Capability Matrix",
+      desc: "Role Competency Matrix",
       pill: "Skill Framework",
       color: "border-status-attention/40 hover:border-status-attention",
     },
@@ -109,7 +109,7 @@ export default async function HomePage() {
           </h1>
 
           <p className="text-ink-secondary text-sm sm:text-base leading-relaxed">
-            An executive decision-support system built for FIT HUB leadership. Move from fragmented spreadsheets into an interconnected lifecycle where vacancies connect to onboarding, early attrition triggers replacement requisitions, and Mercer-style competency matching prepares internal talent for promotion.
+            An executive decision-support system built for FIT HUB leadership. Move from fragmented spreadsheets into an interconnected lifecycle where vacancies connect to onboarding, early attrition triggers replacement requisitions, and internal competency matching prepares frontline talent for promotion.
           </p>
         </div>
 
@@ -216,7 +216,7 @@ export default async function HomePage() {
               Team, Retention &amp; Mobility
             </h2>
             <p className="text-sm text-ink-secondary leading-relaxed mb-6">
-              Monitor retention cohorts, employee experience dimensions, capability frameworks, and operationalize internal candidate readiness benchmarks using Mercer competency scoring.
+              Monitor retention cohorts, employee experience dimensions, capability frameworks, and operationalize internal candidate readiness benchmarks using frontline competency scoring.
             </p>
 
             {/* Quick Micro-Data Badges */}
@@ -331,7 +331,7 @@ export default async function HomePage() {
           </div>
           <p className="font-spartan font-bold text-xl text-ink-primary">+56.6 eNPS &amp; Career Path</p>
           <p className="text-xs text-ink-secondary mt-1.5 leading-relaxed">
-            High overall loyalty paired with Career Development as the top departure driver. Solved via Mercer skill matching with 8 active candidates ready for internal moves.
+            High overall loyalty paired with Career Development as the top departure driver. Solved via frontline skill matching with 8 active candidates ready for internal moves.
           </p>
         </Link>
       </section>

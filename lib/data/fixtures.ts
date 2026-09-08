@@ -546,7 +546,7 @@ export const dataProvenanceRegistry: ProvenanceRecord[] = [
   },
   {
     domain: "Mobility",
-    metric_or_entity: "Mercer Capability Framework & Candidate Scoring",
+    metric_or_entity: "FIT HUB Capability Framework & Candidate Scoring",
     source_type: "Synthetic Future-State",
     original_source_file: "010_internal_mobility_engine.sql",
     governance_rule: "Illustrative weights for prototype demonstration only.",
@@ -557,7 +557,7 @@ export const dataProvenanceRegistry: ProvenanceRecord[] = [
     metric_or_entity: "Job Families & 4-Level Capability Hierarchy",
     source_type: "Synthetic Future-State",
     original_source_file: "FIT_HUB_People_Intelligence_PRD_Design_TechSpec_v3.md",
-    governance_rule: "Structured competencies derived from Mercer methodology.",
+    governance_rule: "Structured competencies tailored for gym club operations.",
     impact_on_decision: "Defines transparent promotion tracks for frontline club staff.",
   },
   {
@@ -1341,7 +1341,7 @@ export const fallbackVoiceThemes: VoiceTheme[] = [
     sentiment: "CONCERN",
     verbatim_sample: "I have been an Operation Specialist for over 18 months with top ratings, but when Assistant Club Manager opened, headquarters hired externally instead of promoting from within.",
     segment_concentration: "Operation Specialists with 12 to 24 months tenure",
-    strategic_action: "Operationalize Mercer internal mobility matching engine with transparent qualification gates",
+    strategic_action: "Operationalize internal mobility matching engine with transparent qualification gates",
   },
   {
     dimension_name: "Supportive Workplace",
@@ -1377,7 +1377,7 @@ export const fallbackVoiceThemes: VoiceTheme[] = [
     sentiment: "NEUTRAL",
     verbatim_sample: "Performance reviews occur, but constructive feedback on how to prepare for club management responsibilities is rarely provided.",
     segment_concentration: "Junior frontline looking to advance",
-    strategic_action: "Implement quarterly capability development discussions using Mercer rubric",
+    strategic_action: "Implement quarterly capability development discussions using frontline competency rubric",
   },
 ];
 
@@ -1451,7 +1451,7 @@ export const fallbackPipelineLayers: PipelineLayer[] = [
     layer_number: 4,
     layer_name: "Core Domain Tier",
     schema_or_system: "PostgreSQL schemas: core, talent, recruiting, retention, experience",
-    description: "Normalized dimensional model linking people, jobs, locations, and Mercer capability frameworks.",
+    description: "Normalized dimensional model linking people, jobs, locations, and frontline capability frameworks.",
     entities_or_tables: ["core.dim_person", "core.dim_employee", "core.dim_job_role", "core.dim_location", "talent.dim_capability", "talent.role_capability_requirement"],
     governance_status: "FUTURE_STATE_ENABLER",
     record_count: "13 clubs, 7 roles, 6 capabilities",
@@ -1497,7 +1497,7 @@ export const fallbackRoadmapHorizons: RoadmapHorizon[] = [
     timeframe: "Current Delivery (Phase 1 to Phase 6)",
     business_capability: "Governed end-to-end employee lifecycle intelligence connecting Vacancy demand directly to Team retention outcomes.",
     technical_prerequisites: ["PostgreSQL database schemas on Supabase", "Public view abstraction with security invoker", "TypeScript data layer with offline fallback fixtures"],
-    key_deliverables: ["Interactive Next.js 14 decision prototype", "Role x Location SLA Heatmap and Recruitment Funnel diagnosis", "Mercer Capability Framework & candidate readiness engine", "Data Readiness Hub and governance provenance disclosure"],
+    key_deliverables: ["Interactive Next.js 14 decision prototype", "Role x Location SLA Heatmap and Recruitment Funnel diagnosis", "FIT HUB Frontline Competency Framework & candidate readiness engine", "Data Readiness Hub and governance provenance disclosure"],
     status: "DELIVERED_IN_PROTOTYPE",
   },
   {

@@ -1185,7 +1185,7 @@ function VacancyContent() {
                     {/* Competency Tags */}
                     <div className="mt-3">
                       <span className="text-[10px] font-semibold text-ink-tertiary block mb-1">
-                        Verified Mercer Competencies:
+                        Verified Core Competencies:
                       </span>
                       <div className="flex flex-wrap gap-1">
                         {c.verified_competencies.map((skill) => (

@@ -61,7 +61,7 @@ export default function DataProvenanceBadge({
       icon: <Sparkles className="w-3.5 h-3.5 text-status-attention" />,
       defaultText: "Synthetic Future-State",
       description:
-        "Person-level lifecycle linkages, Mercer capability competencies, and candidate readiness scoring generated to demonstrate future-state architecture.",
+        "Person-level lifecycle linkages, role capability competencies, and candidate readiness scoring generated to demonstrate future-state architecture.",
     },
     HYBRID: {
       bg: "bg-status-info/10 text-status-info border-status-info/30",

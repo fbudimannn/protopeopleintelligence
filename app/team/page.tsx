@@ -161,7 +161,7 @@ function TeamContent() {
     );
   }, [selectedBenchmarkRoleId]);
 
-  // Raw Dynamic Matching Output from Mercer Algorithm
+  // Raw Dynamic Matching Output from Frontline Matching Algorithm
   const rawDynamicMatches = useMemo(() => {
     const res = runDynamicMobilityMatching({
       targetRoleId: selectedBenchmarkRoleId,
@@ -498,13 +498,13 @@ function TeamContent() {
             <span className="text-[11px] font-semibold text-status-healthy">Score &gt;= 85%</span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
-            <span>Mercer Qualified</span>
+            <span>Ready for Promotion</span>
             <DataProvenanceBadge
               provenance="SYNTHETIC_ENABLER"
               domain="Mobility"
               metricOrEntity="Scored Candidates"
               originalSource="010_internal_mobility_engine.sql"
-              governanceRule="Mercer-style scoring model"
+              governanceRule="FIT HUB frontline competency scoring"
               impactOnDecision="Bypasses external hiring delay"
               showLabel={false}
             />
@@ -938,7 +938,7 @@ function TeamContent() {
                   Staff who demonstrate top operational capability feel stuck when there is no transparent rubric for advancement to Lead Trainer, Assistant Club Manager, or Sales Lead.
                 </p>
                 <div className="mt-3 p-2.5 rounded-lg bg-surface-card border border-surface-border text-[11px] text-ink-primary font-medium">
-                  Recommendation 5: Publish Mercer competency criteria and establish quarterly internal qualification cycles.
+                  Recommendation 5: Publish transparent frontline competency criteria and establish quarterly internal qualification cycles.
                 </div>
               </div>
             </div>
@@ -1068,7 +1068,7 @@ function TeamContent() {
                   <DataProvenanceBadge
                     provenance="SYNTHETIC_ENABLER"
                     domain="Mobility Engine"
-                    metricOrEntity="Dynamic Mercer Talent Shortlist"
+                    metricOrEntity="Dynamic Internal Talent Shortlist"
                     originalSource="010_internal_mobility_engine.sql & active frontline roster"
                     governanceRule="Dynamic composite calculation (Capabilities 55%, Performance 30%, Tenure 15% with distance penalty and feeder bonus)"
                     impactOnDecision="Directly solves #1 Career Development exit driver by promoting frontline staff into club leadership"
@@ -1234,7 +1234,7 @@ function TeamContent() {
                     </label>
                     <div className="grid grid-cols-3 gap-2 text-center text-xs">
                       <div className="p-2 rounded-lg bg-surface-card border border-surface-border">
-                        <span className="text-[10px] text-ink-tertiary block">Mercer</span>
+                        <span className="text-[10px] text-ink-tertiary block">Capability</span>
                         <span className="font-bold text-brand-teal">55%</span>
                       </div>
                       <div className="p-2 rounded-lg bg-surface-card border border-surface-border">
@@ -1274,7 +1274,7 @@ function TeamContent() {
               </div>
             </div>
 
-            {/* 2. Target Benchmark Profile (Mercer Rubric Card) */}
+            {/* 2. Target Benchmark Profile (FIT HUB Role Competency Card) */}
             <div className="p-5 rounded-xl bg-surface-ground border border-surface-border">
               <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
                 {/* Role Overview */}
@@ -1318,11 +1318,11 @@ function TeamContent() {
                   </div>
                 </div>
 
-                {/* Mercer Required Competencies */}
+                {/* Role Required Competencies */}
                 <div className="lg:w-2/3 space-y-2">
                   <div className="flex items-center justify-between mb-1">
                     <span className="text-xs font-bold text-ink-primary uppercase tracking-wider">
-                      Required Mercer Capabilities (010_internal_mobility_engine.sql)
+                      Required Role Competencies (010_internal_mobility_engine.sql)
                     </span>
                     <span className="text-[11px] text-ink-tertiary">
                       4 Core Pillars Evaluated
@@ -1795,11 +1795,11 @@ function TeamContent() {
                 </div>
               </div>
 
-              {/* Mercer Capability Rubric Comparison */}
+              {/* Frontline Competency Rubric Comparison */}
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-bold text-ink-primary text-xs uppercase tracking-wider">
-                    Mercer Capability Evaluation Rubric
+                    Frontline Competency Evaluation Rubric
                   </span>
                   <span className="text-[11px] text-ink-tertiary">
                     Candidate vs Benchmark

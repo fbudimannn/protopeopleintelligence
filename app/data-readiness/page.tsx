@@ -224,7 +224,7 @@ function DataReadinessContent() {
         {/* Metric 5 */}
         <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle">
           <div className="flex items-center justify-between text-ink-tertiary text-xs font-medium mb-1">
-            <span>Mercer Capabilities</span>
+            <span>Role Competencies</span>
             <Sparkles className="w-4 h-4 text-status-attention" />
           </div>
           <div className="flex items-baseline gap-2">
@@ -505,7 +505,7 @@ function DataReadinessContent() {
                 <strong className="text-ink-primary block mb-0.5">
                   Core Principle of Analytic Integrity
                 </strong>
-                The original FIT HUB case study datasets lacked person-level foreign keys (no employee IDs in the Hiring or Turnover sheets). Rather than inventing false historical matches or hallucinating data, this prototype maintains a strict boundary: all historical metrics are 100% empirical, while person-level entity links and Mercer competency frameworks operate as synthetic future-state enablers.
+                The original FIT HUB case study datasets lacked person-level foreign keys (no employee IDs in the Hiring or Turnover sheets). Rather than inventing false historical matches or hallucinating data, this prototype maintains a strict boundary: all historical metrics are 100% empirical, while person-level entity links and frontline competency frameworks operate as synthetic future-state enablers.
               </div>
             </div>
 

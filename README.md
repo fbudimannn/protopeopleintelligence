@@ -22,7 +22,7 @@ Vacancy ──> Candidate ──> Funnel ──> Offer ──> Hire ──> Team
 
 ### The Dual Entry Architecture:
 1. **Vacancy (Pre-Hire)**: Prioritize recruitment demand, diagnose SLA pressure (especially in Bali and commercial roles), optimize source channels, and cultivate recurring frontline talent pipelines.
-2. **Team (Post-Hire)**: Monitor retention cohorts (addressing the <12M early-tenure cliff and 1–1.5Y dip), role-level engagement sentiment, and operationalize the **Mercer-style Internal Mobility & Capability Framework** to solve the #1 voluntary departure driver (*Career Development*).
+2. **Team (Post-Hire)**: Monitor retention cohorts (addressing the <12M early-tenure cliff and 1–1.5Y dip), role-level engagement sentiment, and operationalize the **FIT HUB Internal Mobility & Competency Framework** to solve the #1 voluntary departure driver (*Career Development*).
 
 ---
 
@@ -94,14 +94,14 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to explore
 - **Requisition Health & Priority Table**: Live filtering by search query, hiring type (Replacement vs Expansion), and SLA status (Within SLA, At Risk, Breached).
 - **Demand & SLA Heatmap (`?tab=matrix`)**: Role x Location matrix highlighting Bali (85.7% replacement share, 34d TTF) and East Java hotspots.
 - **Sourcing & Funnel Diagnosis (`?tab=funnel`)**: 5-stage recruitment funnel bottleneck diagnosis and channel effectiveness table proving Employee Referral superiority.
-- **Frontline Ready Pool (`?tab=talent-pool`)**: Pre-qualified candidate bank with verified Mercer competencies and one-click interview fast-tracking.
+- **Frontline Ready Pool (`?tab=talent-pool`)**: Pre-qualified candidate bank with verified core competencies and one-click interview fast-tracking.
 - **Quality & SLA Outcomes (`?tab=outcomes`)**: 4-quarter trajectory measuring SLA breach reduction and new hire 6-month retention.
 
 ### 3. Team & Internal Mobility (`/team`)
 - **Retention & Lifecycle Cohorts Table**: Role x Location risk matrix analyzing turnover rates, early exit (<12M) rates, and mid-tenure dips.
 - **Tenure Survival Curve (`?tab=cliff`)**: 5 milestone tenure bands diagnosing the early onboarding shock (42.7% exits < 6 months) and the 1-1.5Y promotion ceiling.
 - **Voice of Employee & eNPS (`?tab=engagement`)**: Net eNPS (+56.6) sentiment analysis, mandatory Survivorship Bias disclosure, and evaluation across 6 core workplace dimensions.
-- **Internal Mobility Matcher (`?tab=mobility`)**: Operationalizing Mercer-style skill mapping and candidate scoring from `010_internal_mobility_engine.sql` with promotion simulation.
+- **Internal Mobility Matcher (`?tab=mobility`)**: Operationalizing frontline skill mapping and candidate scoring from `010_internal_mobility_engine.sql` with promotion simulation.
 - **Exit-to-Vacancy Continuity (`?tab=exits`)**: Direct linkage from departure event codes (`EXT-...`) to replacement requisition codes (`REQ-...`).
 
 ### 4. Data Readiness & Governance Hub (`/data-readiness`)
@@ -133,7 +133,7 @@ proto/
 │   ├── data/api.ts       # Unified API layer with auto-fallback to fixtures
 │   ├── data/fixtures.ts  # Complete typed datasets & fallback fixtures
 │   └── supabaseClient.ts # Resilient Supabase client
-├── 010_internal_mobility_engine.sql # PostgreSQL Mercer scoring engine
+├── 010_internal_mobility_engine.sql # PostgreSQL internal mobility scoring engine
 ├── FIT_HUB_People_Intelligence_PRD_Design_TechSpec_v3.md
 ├── FIT_HUB_People_Intelligence_Data_Architecture_v4.md
 ├── FIT_HUB_People_Intelligence_ERD.dbml

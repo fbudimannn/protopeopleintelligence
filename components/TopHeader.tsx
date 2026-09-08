@@ -49,7 +49,7 @@ export default function TopHeader() {
     if (pathname.startsWith("/team")) {
       return {
         title: "Team, Retention & Mobility",
-        subtitle: "Post-Hire Experience, Early Attrition & Mercer Skill Matching",
+        subtitle: "Post-Hire Experience, Early Attrition & Frontline Mobility Matching",
         provenance: "HYBRID",
       };
     }
@@ -202,7 +202,7 @@ export default function TopHeader() {
                   <span>Analytical Governance</span>
                 </div>
                 <p>
-                  Historical hiring (1,552 rows), turnover (889 rows), and engagement (1,636 rows) use exact observed case study records. Person-level lifecycle links, Mercer skill competency framework, and mobility scoring engine are clearly labeled synthetic future-state enablers.
+                  Historical hiring (1,552 rows), turnover (889 rows), and engagement (1,636 rows) use exact observed case study records. Person-level lifecycle links, frontline competency framework, and mobility scoring engine are clearly labeled synthetic future-state enablers.
                 </p>
               </div>
 

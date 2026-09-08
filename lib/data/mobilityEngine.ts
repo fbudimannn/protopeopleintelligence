@@ -1,6 +1,6 @@
 // FIT HUB People Intelligence
 // Dynamic Internal Mobility & Talent Matching Engine
-// Operationalizing Mercer-style Capability Scoring & Succession Matching
+// Operationalizing FIT HUB Frontline Capability Scoring & Succession Matching
 
 export interface TargetCapabilityRequirement {
   name: string;
