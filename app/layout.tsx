@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { League_Spartan, Poppins } from "next/font/google";
 import "./globals.css";
+import AppShell from "@/components/AppShell";
 
 const leagueSpartan = League_Spartan({
   subsets: ["latin"],
@@ -34,7 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${leagueSpartan.variable} ${poppins.variable}`}>
       <body className="min-h-screen antialiased bg-surface-soft text-ink-primary font-poppins selection:bg-brand-teal selection:text-ink-primary">
-        {children}
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );
