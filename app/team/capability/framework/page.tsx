@@ -155,7 +155,7 @@ export default function CapabilityFrameworkPage() {
             <span>Frontline Capability Framework Editor</span>
           </h1>
           <p className="text-xs sm:text-sm text-ink-secondary mt-1 max-w-3xl leading-relaxed">
-            Standar kompetensi 5-level ala Paragon PDS &amp; Mercer untuk memperjelas ekspektasi jenjang karir frontline staff dan dasar promosi internal (*Operationalizing Notebook Section 5.3 Action 2*).
+            Standar kompetensi 5-level arsitektur FIT HUB Frontline untuk memperjelas ekspektasi jenjang karir staf operasional dan dasar kualifikasi promosi internal (*Operationalizing Notebook Section 5.3 Action 2*).
           </p>
         </div>
 
@@ -189,7 +189,7 @@ export default function CapabilityFrameworkPage() {
 
       {/* 5-Point Proficiency Scale Reference */}
       <div className="p-4 rounded-2xl bg-surface-soft border border-border-default/80">
-        <span className="label-xs text-ink-secondary block mb-2">Panduan Standar 5 Level Profisiensi (Paragon PDS Style)</span>
+        <span className="label-xs text-ink-secondary block mb-2">Panduan Standar 5 Level Profisiensi FIT HUB Frontline</span>
         <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
           {PROFICIENCY_LEVELS.map((p) => (
             <div key={p.level} className="p-3 rounded-xl bg-white border border-border-default/60 shadow-sm">

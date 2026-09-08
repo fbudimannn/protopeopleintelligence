@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useFilters } from "@/lib/context/FilterContext";
 import {
   LayoutDashboard,
@@ -17,11 +17,43 @@ import {
   Sparkles,
   GitBranch,
   Radio,
+  Award,
+  HeartHandshake,
+  Repeat,
 } from "lucide-react";
 
-export default function Sidebar() {
+function SidebarNavItems() {
   const pathname = usePathname();
-  const { sidebarCollapsed, toggleSidebar, isSupabaseLive, mobileMenuOpen, setMobileMenuOpen } = useFilters();
+  const searchParams = useSearchParams();
+  const currentTab = searchParams ? searchParams.get("tab") : null;
+  const { sidebarCollapsed, setMobileMenuOpen } = useFilters();
+
+  const isItemActive = (href: string) => {
+    if (href === "/") {
+      return pathname === "/";
+    }
+
+    const [itemPath, itemQuery] = href.split("?");
+
+    if (pathname !== itemPath) {
+      // Sub-routes like /team/capability/framework, /team/engagement/survey, /team/exit-survey
+      if (itemPath !== "/vacancy" && itemPath !== "/team") {
+        return pathname.startsWith(itemPath);
+      }
+      return false;
+    }
+
+    // Both on itemPath (e.g. pathname === '/vacancy')
+    if (!itemQuery) {
+      return !currentTab || currentTab === "overview";
+    }
+
+    const itemTab = new URLSearchParams(itemQuery).get("tab");
+    if (!itemTab || itemTab === "overview") {
+      return !currentTab || currentTab === "overview";
+    }
+    return currentTab === itemTab;
+  };
 
   const navSections = [
     {
@@ -39,17 +71,17 @@ export default function Sidebar() {
       items: [
         {
           label: "Vacancy Overview",
-          href: "/vacancy",
+          href: "/vacancy?tab=overview",
           icon: <Briefcase className="w-5 h-5 flex-shrink-0" />,
         },
         {
           label: "Demand & SLA Matrix",
-          href: "/vacancy#matrix",
+          href: "/vacancy?tab=matrix",
           icon: <Target className="w-5 h-5 flex-shrink-0" />,
         },
         {
           label: "Sourcing & Funnel",
-          href: "/vacancy#funnel",
+          href: "/vacancy?tab=funnel",
           icon: <TrendingUp className="w-5 h-5 flex-shrink-0" />,
         },
       ],
@@ -59,18 +91,38 @@ export default function Sidebar() {
       items: [
         {
           label: "Team Overview",
-          href: "/team",
+          href: "/team?tab=overview",
           icon: <Users className="w-5 h-5 flex-shrink-0" />,
         },
         {
           label: "Retention & Cohorts",
-          href: "/team#retention",
+          href: "/team?tab=cliff",
           icon: <GitBranch className="w-5 h-5 flex-shrink-0" />,
         },
         {
           label: "Internal Mobility Match",
-          href: "/team#mobility",
+          href: "/team?tab=mobility",
           icon: <Sparkles className="w-5 h-5 flex-shrink-0 text-status-attention" />,
+        },
+      ],
+    },
+    {
+      title: "INTERACTIVE TOOLS",
+      items: [
+        {
+          label: "eNPS Survey Builder",
+          href: "/team/engagement/survey",
+          icon: <HeartHandshake className="w-5 h-5 flex-shrink-0" />,
+        },
+        {
+          label: "Exit Interview Form",
+          href: "/team/exit-survey",
+          icon: <Repeat className="w-5 h-5 flex-shrink-0" />,
+        },
+        {
+          label: "Capability Framework",
+          href: "/team/capability/framework",
+          icon: <Award className="w-5 h-5 flex-shrink-0" />,
         },
       ],
     },
@@ -86,6 +138,46 @@ export default function Sidebar() {
     },
   ];
 
+  return (
+    <nav className="p-3 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)]">
+      {navSections.map((section) => (
+        <div key={section.title} className="space-y-1">
+          {!sidebarCollapsed && (
+            <p className="px-3 text-[10px] font-bold tracking-wider text-ink-muted uppercase mb-2">
+              {section.title}
+            </p>
+          )}
+
+          {section.items.map((item) => {
+            const isActive = isItemActive(item.href);
+
+            return (
+              <Link
+                key={item.label}
+                href={item.href}
+                onClick={() => setMobileMenuOpen(false)}
+                title={sidebarCollapsed ? item.label : undefined}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                  isActive
+                    ? "bg-brand-teal/10 text-ink-primary border-l-4 border-brand-teal font-semibold shadow-sm"
+                    : "text-ink-secondary hover:bg-surface-soft hover:text-ink-primary border-l-4 border-transparent"
+                }`}
+              >
+                <div className={isActive ? "text-brand-teal" : "text-ink-muted"}>
+                  {item.icon}
+                </div>
+                {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+              </Link>
+            );
+          })}
+        </div>
+      ))}
+    </nav>
+  );
+}
+
+export default function Sidebar() {
+  const { sidebarCollapsed, toggleSidebar, isSupabaseLive, mobileMenuOpen, setMobileMenuOpen } = useFilters();
   const sidebarWidth = sidebarCollapsed ? "w-20" : "w-64";
 
   return (
@@ -140,42 +232,10 @@ export default function Sidebar() {
             </button>
           </div>
 
-          {/* Nav List */}
-          <nav className="p-3 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)]">
-            {navSections.map((section) => (
-              <div key={section.title} className="space-y-1">
-                {!sidebarCollapsed && (
-                  <p className="px-3 text-[10px] font-bold tracking-wider text-ink-muted uppercase mb-2">
-                    {section.title}
-                  </p>
-                )}
-
-                {section.items.map((item) => {
-                  const isActive =
-                    item.href === "/" ? pathname === "/" : pathname.startsWith(item.href.split("#")[0]);
-
-                  return (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      title={sidebarCollapsed ? item.label : undefined}
-                      className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                        isActive
-                          ? "bg-brand-teal/10 text-ink-primary border-l-4 border-brand-teal font-semibold shadow-sm"
-                          : "text-ink-secondary hover:bg-surface-soft hover:text-ink-primary border-l-4 border-transparent"
-                      }`}
-                    >
-                      <div className={isActive ? "text-brand-teal" : "text-ink-muted"}>
-                        {item.icon}
-                      </div>
-                      {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-            ))}
-          </nav>
+          {/* Nav List with Suspense for useSearchParams */}
+          <Suspense fallback={<div className="p-4 text-xs text-ink-muted">Loading navigation...</div>}>
+            <SidebarNavItems />
+          </Suspense>
         </div>
 
         {/* Footer Area */}

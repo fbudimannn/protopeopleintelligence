@@ -80,6 +80,24 @@ function VacancyContent() {
     }
   }, [searchParams]);
 
+  const handleTabChange = (tab: VacancyTab) => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
+
+  const currentLifecycleStep = useMemo(() => {
+    if (activeTab === "overview") return "vacancy";
+    if (activeTab === "funnel") return "sourcing";
+    if (activeTab === "matrix") return "funnel";
+    if (activeTab === "talent-pool") return "mobility";
+    if (activeTab === "outcomes") return "exit";
+    return "vacancy";
+  }, [activeTab]);
+
   useEffect(() => {
     async function loadData() {
       setLoading(true);
@@ -209,7 +227,15 @@ function VacancyContent() {
       </div>
 
       {/* Lifecycle Strip Banner */}
-      <LifecycleStrip activeStep="vacancy" className="my-6" />
+      <LifecycleStrip
+        activeStep={currentLifecycleStep}
+        onSelectStep={(stepId, targetTab) => {
+          if (targetTab && ["overview", "matrix", "funnel", "talent-pool", "outcomes"].includes(targetTab)) {
+            handleTabChange(targetTab as VacancyTab);
+          }
+        }}
+        className="my-6"
+      />
 
       {/* 2. Top Executive KPI Row (6 Metric Cards) */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
@@ -374,7 +400,7 @@ function VacancyContent() {
       <div className="flex items-center justify-between border-b border-surface-border gap-2 overflow-x-auto">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveTab("overview")}
+            onClick={() => handleTabChange("overview")}
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "overview"
                 ? "border-brand-teal text-brand-teal"
@@ -389,7 +415,7 @@ function VacancyContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab("matrix")}
+            onClick={() => handleTabChange("matrix")}
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "matrix"
                 ? "border-brand-teal text-brand-teal"
@@ -401,7 +427,7 @@ function VacancyContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab("funnel")}
+            onClick={() => handleTabChange("funnel")}
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "funnel"
                 ? "border-brand-teal text-brand-teal"
@@ -413,7 +439,7 @@ function VacancyContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab("talent-pool")}
+            onClick={() => handleTabChange("talent-pool")}
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "talent-pool"
                 ? "border-brand-teal text-brand-teal"
@@ -428,7 +454,7 @@ function VacancyContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab("outcomes")}
+            onClick={() => handleTabChange("outcomes")}
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "outcomes"
                 ? "border-brand-teal text-brand-teal"

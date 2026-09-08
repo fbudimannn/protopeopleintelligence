@@ -37,6 +37,13 @@ export default async function HomePage() {
   const engagementMetrics = getEngagementMetrics();
   const talentPool = getTalentPool();
 
+  const hotspotLoc = [...vacancyMetrics.locationBreakdown].sort((a, b) => b.rate - a.rate)[0] || {
+    location: "Bali",
+    rate: 44.9,
+    beyondSla: 9,
+    total: 20,
+  };
+
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-12">
       {/* Executive Hero Banner */}
@@ -55,7 +62,7 @@ export default async function HomePage() {
             Connect Hiring, Retention, and <span className="text-brand-teal">Internal Mobility</span>
           </h1>
 
-          <p className="text-ink-secondary text-sm sm:text-base leading-relaxed">
+          <p className="text-ink-secondary text-sm sm:base leading-relaxed">
             An executive decision-support system built for FIT HUB leadership. Move from fragmented spreadsheets into an interconnected lifecycle where vacancies connect to onboarding, early attrition triggers replacement requisitions, and internal competency matching prepares frontline talent for promotion.
           </p>
         </div>
@@ -81,7 +88,7 @@ export default async function HomePage() {
           value={`${vacancyMetrics.replacementSharePct}%`}
           tone="attention"
           badge="High Inflow"
-          subtext="68.1% of all requisitions backfill departures rather than network growth"
+          subtext={`${vacancyMetrics.replacementReqs} of ${vacancyMetrics.totalReqs} requisitions backfill departures rather than network growth`}
           icon={<AlertTriangle className="w-4 h-4 text-status-attention" />}
         />
         <KpiCard
@@ -89,16 +96,16 @@ export default async function HomePage() {
           value={`${retentionMetrics.earlyExitPct}%`}
           tone="critical"
           badge="< 12 Months"
-          subtext="Departures concentrated in months 3-6 post-probation ramp-up"
+          subtext={`${retentionMetrics.earlyExitCount} of ${retentionMetrics.totalExits} departures concentrated in months 1-6 post-probation`}
           icon={<TrendingUp className="w-4 h-4 text-status-critical" />}
         />
         <KpiCard
           label="Beyond SLA Hotspot"
-          value="44.9%"
-          unit="in Bali"
+          value={`${hotspotLoc.rate}%`}
+          unit={`in ${hotspotLoc.location}`}
           tone="attention"
-          badge="TTF 48.7d"
-          subtext="Frontline consultant & trainer sourcing delay in expansion markets"
+          badge={`${hotspotLoc.beyondSla} Breached`}
+          subtext={`${hotspotLoc.beyondSla} of ${hotspotLoc.total} requisitions open beyond SLA target in ${hotspotLoc.location}`}
           icon={<Briefcase className="w-4 h-4 text-status-attention" />}
         />
         <KpiCard
@@ -107,7 +114,7 @@ export default async function HomePage() {
           unit="candidates"
           tone="healthy"
           badge="Ready Now"
-          subtext="Pre-qualified internal frontline staff ready to fill open leader roles"
+          subtext={`${talentPool.readyNowCount} ready now, ${talentPool.ready6MCount} in 6M across ${talentPool.totalPool} active frontline staff`}
           icon={<CheckCircle2 className="w-4 h-4 text-status-healthy" />}
         />
       </section>
@@ -116,7 +123,7 @@ export default async function HomePage() {
       <SectionCard
         title="Hiring Demand Composition: The Replacement Cycle"
         description="Data from 2024 hiring requisitions reveals that workforce loss generates the majority of open demand. Addressing retention directly compresses recruitment overhead."
-        note="Insight from fithub_analysis.ipynb Section 3: High replacement share (68.1%) indicates that sourcing volume is treating a symptom of turnover rather than net expansion."
+        note={`Insight from fithub_analysis.ipynb Section 3: High replacement share (${vacancyMetrics.replacementSharePct}%) indicates that sourcing volume is treating a symptom of turnover rather than net expansion.`}
       >
         <div className="space-y-4 pt-2">
           <StackedBarShare
@@ -240,9 +247,9 @@ export default async function HomePage() {
             </div>
             <ArrowRight className="w-3.5 h-3.5 text-ink-muted group-hover:text-brand-teal group-hover:translate-x-1 transition-all" />
           </div>
-          <p className="font-spartan font-bold text-xl text-ink-primary">68.1% Replacement Demand</p>
+          <p className="font-spartan font-bold text-xl text-ink-primary">{vacancyMetrics.replacementSharePct}% Replacement Demand</p>
           <p className="text-xs text-ink-secondary mt-1.5 leading-relaxed">
-            Hiring volume is dominated by backfilling existing roles rather than expansion, with acute pressure in Bali (44.9% beyond SLA) and Sales Consultants.
+            Hiring volume is dominated by backfilling existing roles ({vacancyMetrics.replacementReqs} of {vacancyMetrics.totalReqs} openings), with acute pressure in {hotspotLoc.location} ({hotspotLoc.rate}% beyond SLA).
           </p>
         </Link>
 
@@ -258,9 +265,9 @@ export default async function HomePage() {
             </div>
             <ArrowRight className="w-3.5 h-3.5 text-ink-muted group-hover:text-brand-teal group-hover:translate-x-1 transition-all" />
           </div>
-          <p className="font-spartan font-bold text-xl text-ink-primary">57.4% &lt;12M Tenure Cliff</p>
+          <p className="font-spartan font-bold text-xl text-ink-primary">{retentionMetrics.earlyExitPct}% &lt;12M Tenure Cliff</p>
           <p className="text-xs text-ink-secondary mt-1.5 leading-relaxed">
-            Departures peak at months 3-6 post-probation. 30/60/90 Day listening protocols capture role clarity issues before resignation occurs.
+            {retentionMetrics.earlyExitCount} of {retentionMetrics.totalExits} departures peak within first 12 months. 30/60/90 Day listening protocols capture onboarding friction before resignation occurs.
           </p>
         </Link>
 

@@ -109,6 +109,49 @@ function TeamContent() {
     }
   }, [searchParams]);
 
+  const handleTabChange = (tab: TeamTab) => {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      window.history.replaceState({}, "", url.toString());
+    }
+  };
+
+  const currentLifecycleStep = useMemo(() => {
+    if (activeTab === "overview" || activeTab === "cliff") return "onboarding";
+    if (activeTab === "engagement") return "engagement";
+    if (activeTab === "mobility") return "mobility";
+    if (activeTab === "exits") return "exit";
+    return "onboarding";
+  }, [activeTab]);
+
+  // Dynamic Tenure Band Metrics for Callouts
+  const earlyCliffBands = useMemo(() => {
+    return tenureBands.filter((b) => b.band_label.includes("0 to 3") || b.band_label.includes("4 to 6"));
+  }, [tenureBands]);
+
+  const earlyCliffPct = useMemo(() => {
+    if (earlyCliffBands.length > 0) {
+      return earlyCliffBands.reduce((acc, b) => acc + (b.pct_of_exits || 0), 0);
+    }
+    return 42.7;
+  }, [earlyCliffBands]);
+
+  const earlyCliffCount = useMemo(() => {
+    if (earlyCliffBands.length > 0) {
+      return earlyCliffBands.reduce((acc, b) => acc + (b.exit_count || 0), 0);
+    }
+    return 380;
+  }, [earlyCliffBands]);
+
+  const midTenureBand = useMemo(() => {
+    return tenureBands.find((b) => b.band_label.includes("13 to 18")) || tenureBands[3];
+  }, [tenureBands]);
+
+  const midTenurePct = midTenureBand?.pct_of_exits || 21.9;
+  const midTenureCount = midTenureBand?.exit_count || 195;
+
   useEffect(() => {
     async function loadData() {
       setLoading(true);
@@ -342,7 +385,15 @@ function TeamContent() {
       </div>
 
       {/* Lifecycle Strip Banner */}
-      <LifecycleStrip activeStep="onboarding" className="my-6" />
+      <LifecycleStrip
+        activeStep={currentLifecycleStep}
+        onSelectStep={(stepId, targetTab) => {
+          if (targetTab && ["overview", "cliff", "engagement", "mobility", "exits"].includes(targetTab)) {
+            handleTabChange(targetTab as TeamTab);
+          }
+        }}
+        className="my-6"
+      />
 
       {/* Promotion Success Notification Banner */}
       {promotionSuccess && (
@@ -523,7 +574,7 @@ function TeamContent() {
       <div className="flex items-center justify-between border-b border-surface-border gap-2 overflow-x-auto">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setActiveTab("overview")}
+            onClick={() => handleTabChange("overview")}
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "overview"
                 ? "border-brand-teal text-brand-teal"
@@ -538,7 +589,7 @@ function TeamContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab("cliff")}
+            onClick={() => handleTabChange("cliff")}
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "cliff"
                 ? "border-brand-teal text-brand-teal"
@@ -550,7 +601,7 @@ function TeamContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab("engagement")}
+            onClick={() => handleTabChange("engagement")}
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "engagement"
                 ? "border-brand-teal text-brand-teal"
@@ -562,7 +613,7 @@ function TeamContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab("mobility")}
+            onClick={() => handleTabChange("mobility")}
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "mobility"
                 ? "border-brand-teal text-brand-teal"
@@ -577,7 +628,7 @@ function TeamContent() {
           </button>
 
           <button
-            onClick={() => setActiveTab("exits")}
+            onClick={() => handleTabChange("exits")}
             className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
               activeTab === "exits"
                 ? "border-brand-teal text-brand-teal"
@@ -1063,26 +1114,26 @@ function TeamContent() {
               <div className="p-4 rounded-xl bg-surface-ground border border-surface-border">
                 <h4 className="text-xs font-bold text-status-danger mb-1 flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4" />
-                  <span>The Early Cliff (0 to 6 Months: 42.7% of all Exits)</span>
+                  <span>The Early Cliff (0 to 6 Months: {earlyCliffPct.toFixed(1)}% of all Exits)</span>
                 </h4>
                 <p className="text-xs text-ink-secondary leading-relaxed">
-                  New hires face steep shift expectations without adequate buddy accompaniment. When opening or closing shifts encounter POS errors or equipment malfunctions, the lack of floor support generates immediate psychological exhaustion.
+                  First 6 months account for {earlyCliffCount} exits across FIT HUB clubs. Frontline Fitness Consultants and Trainers transition from initial onboarding into solo shift rosters and sales quotas without structured peer accompaniment, driving peak voluntary departures in months 3 to 6.
                 </p>
                 <div className="mt-3 p-2.5 rounded-lg bg-surface-card border border-surface-border text-[11px] text-ink-primary font-medium">
-                  Recommendation 4: Introduce peer buddy pairing for all frontline roles during days 1 to 30.
+                  Recommendation 4: Deploy structured buddy pairing during days 1 to 30 and formalize Day 60 check-in milestones before solitary shift sign-off.
                 </div>
               </div>
 
               <div className="p-4 rounded-xl bg-surface-ground border border-surface-border">
                 <h4 className="text-xs font-bold text-status-attention mb-1 flex items-center gap-2">
                   <Clock className="w-4 h-4" />
-                  <span>The Mid-Tenure Plateau (13 to 18 Months: 21.9% of Exits)</span>
+                  <span>The Mid-Tenure Plateau (13 to 18 Months: {midTenurePct.toFixed(1)}% of Exits)</span>
                 </h4>
                 <p className="text-xs text-ink-secondary leading-relaxed">
-                  Staff who demonstrate top operational capability feel stuck when there is no transparent rubric for advancement to Lead Trainer, Assistant Club Manager, or Sales Lead.
+                  {midTenureCount} departures occur among seasoned frontline staff who master gym operations but hit a career advancement ceiling. When leadership and ACM openings are sourced externally without a transparent internal qualification rubric, high performers depart.
                 </p>
                 <div className="mt-3 p-2.5 rounded-lg bg-surface-card border border-surface-border text-[11px] text-ink-primary font-medium">
-                  Recommendation 5: Publish transparent frontline competency criteria and establish quarterly internal qualification cycles.
+                  Recommendation 5: Operationalize FIT HUB Frontline Competency Architecture (Levels 1 to 5) to qualify internal candidates for promotion.
                 </div>
               </div>
             </div>

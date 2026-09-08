@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { Info, ArrowRight, CheckCircle2, AlertTriangle, AlertCircle, Sparkles } from 'lucide-react';
 
 // --- Section Card ---
@@ -137,40 +138,92 @@ export function Chip({
 }
 
 // --- Lifecycle Ribbon (Closed-Loop People Architecture) ---
+export interface LifecycleStepDef {
+  id: 'vacancy' | 'sourcing' | 'funnel' | 'onboarding' | 'engagement' | 'capability' | 'mobility' | 'exit';
+  label: string;
+  sub: string;
+  href: string;
+  targetTab?: string;
+  pageScope?: 'vacancy' | 'team' | 'other';
+}
+
+export const LIFECYCLE_STEPS: LifecycleStepDef[] = [
+  { id: 'vacancy', label: '1. Vacancy Demand', sub: 'Replacement Cycle', href: '/vacancy?tab=overview', targetTab: 'overview', pageScope: 'vacancy' },
+  { id: 'sourcing', label: '2. Sourcing Mix', sub: 'Channels & Inflow', href: '/vacancy?tab=funnel', targetTab: 'funnel', pageScope: 'vacancy' },
+  { id: 'funnel', label: '3. Hiring Funnel', sub: 'SLA & TTF Matrix', href: '/vacancy?tab=matrix', targetTab: 'matrix', pageScope: 'vacancy' },
+  { id: 'onboarding', label: '4. 30/60/90 Listening', sub: 'Early Retention Cliff', href: '/team?tab=cliff', targetTab: 'cliff', pageScope: 'team' },
+  { id: 'engagement', label: '5. eNPS Experience', sub: '6 Voice Dimensions', href: '/team?tab=engagement', targetTab: 'engagement', pageScope: 'team' },
+  { id: 'capability', label: '6. Capability Matrix', sub: 'Competency (L1-L5)', href: '/team/capability/framework', pageScope: 'other' },
+  { id: 'mobility', label: '7. Talent Mobility', sub: 'Promotion Pool', href: '/team?tab=mobility', targetTab: 'mobility', pageScope: 'team' },
+  { id: 'exit', label: '8. Exit & Loop', sub: 'Triggers Requisition', href: '/team?tab=exits', targetTab: 'exits', pageScope: 'team' },
+];
+
 interface LifecycleStripProps {
   activeStep?: 'vacancy' | 'sourcing' | 'funnel' | 'onboarding' | 'engagement' | 'capability' | 'mobility' | 'exit';
+  onSelectStep?: (stepId: string, targetTab?: string) => void;
   className?: string;
 }
 
-export function LifecycleStrip({ activeStep, className = '' }: LifecycleStripProps) {
-  const steps = [
-    { id: 'vacancy', label: '1. Vacancy Demand', sub: '68% Replacement' },
-    { id: 'sourcing', label: '2. Sourcing Mix', sub: 'Referrals vs Portals' },
-    { id: 'funnel', label: '3. Hiring Funnel', sub: 'SLA & TTF' },
-    { id: 'onboarding', label: '4. 30/60/90 Listening', sub: 'Early Retention' },
-    { id: 'engagement', label: '5. eNPS Experience', sub: 'Comp & Culture' },
-    { id: 'capability', label: '6. Capability Matrix', sub: 'Paragon 5-Level' },
-    { id: 'mobility', label: '7. Talent Mobility', sub: 'Promotion Pool' },
-    { id: 'exit', label: '8. Exit & Loop', sub: 'Triggers Requisition' },
-  ];
-
+export function LifecycleStrip({ activeStep, onSelectStep, className = '' }: LifecycleStripProps) {
   return (
     <div className={`bg-white rounded-2xl border border-border-default shadow-card p-4 overflow-x-auto ${className}`}>
-      <div className="flex items-center justify-between min-w-[850px] gap-2">
-        {steps.map((s, idx) => {
+      <div className="flex items-center justify-between min-w-[920px] gap-2">
+        {LIFECYCLE_STEPS.map((s, idx) => {
           const isActive = s.id === activeStep;
-          return (
-            <React.Fragment key={s.id}>
-              <div className={`flex flex-col p-2.5 rounded-xl transition-all ${isActive ? 'bg-brand-teal/15 border border-brand-teal' : 'hover:bg-surface-soft'}`}>
-                <span className={`text-xs font-bold tracking-tight ${isActive ? 'text-brand-navy font-spartan text-sm' : 'text-ink-primary'}`}>
+
+          const content = (
+            <div
+              className={`flex flex-col p-2.5 rounded-xl transition-all cursor-pointer select-none text-left relative h-full justify-between ${
+                isActive
+                  ? 'bg-brand-teal/15 border-2 border-brand-teal ring-2 ring-brand-teal/20 shadow-sm'
+                  : 'bg-surface-soft/60 border border-border-default hover:border-brand-teal/50 hover:bg-brand-teal/5'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-1 mb-0.5">
+                <span
+                  className={`text-xs font-bold tracking-tight ${
+                    isActive ? 'text-brand-navy font-spartan text-sm' : 'text-ink-primary'
+                  }`}
+                >
                   {s.label}
                 </span>
-                <span className="text-[10px] text-ink-secondary mt-0.5">{s.sub}</span>
+                {isActive && (
+                  <span className="flex items-center gap-1 text-[9px] font-bold text-brand-teal bg-brand-teal/20 px-1.5 py-0.5 rounded-full shrink-0">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand-teal animate-pulse" />
+                    Active
+                  </span>
+                )}
               </div>
-              {idx < steps.length - 1 ? (
+              <span className={`text-[10px] mt-0.5 ${isActive ? 'text-brand-teal font-semibold' : 'text-ink-secondary'}`}>
+                {s.sub}
+              </span>
+            </div>
+          );
+
+          return (
+            <React.Fragment key={s.id}>
+              {onSelectStep && s.targetTab ? (
+                <button
+                  type="button"
+                  onClick={() => onSelectStep(s.id, s.targetTab)}
+                  className="flex-1 min-w-[120px] text-left focus:outline-none"
+                  title={`Go to ${s.label}`}
+                >
+                  {content}
+                </button>
+              ) : (
+                <Link
+                  href={s.href}
+                  className="flex-1 min-w-[120px] text-left focus:outline-none"
+                  title={`Navigate to ${s.label}`}
+                >
+                  {content}
+                </Link>
+              )}
+              {idx < LIFECYCLE_STEPS.length - 1 ? (
                 <ArrowRight className="w-3.5 h-3.5 text-ink-muted/60 shrink-0" />
               ) : (
-                <span className="text-[10px] font-bold text-brand-teal bg-brand-teal/10 px-2 py-1 rounded-full shrink-0 flex items-center gap-1 border border-brand-teal/30">
+                <span className="text-[10px] font-bold text-brand-teal bg-brand-teal/10 px-2.5 py-1.5 rounded-full shrink-0 flex items-center gap-1.5 border border-brand-teal/30">
                   <Sparkles className="w-3 h-3" /> Closed-Loop
                 </span>
               )}
