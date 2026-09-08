@@ -10,6 +10,9 @@ import {
   FunnelStageMetric,
   TalentPoolCandidate,
   HiringOutcomeMetric,
+  ExitEvent,
+  TenureBand,
+  VoiceTheme,
   fallbackVacancyKPIs,
   fallbackRetentionCohorts,
   fallbackEngagementSummaries,
@@ -19,6 +22,9 @@ import {
   fallbackFunnelStages,
   fallbackTalentPool,
   fallbackHiringOutcomes,
+  fallbackExitEvents,
+  fallbackTenureBands,
+  fallbackVoiceThemes,
   dataProvenanceRegistry,
 } from "./fixtures";
 
@@ -118,5 +124,17 @@ export async function getInternalMobilityMatches(): Promise<{ data: InternalMobi
 
 export function getDataProvenance(): ProvenanceRecord[] {
   return dataProvenanceRegistry;
+}
+
+export async function getExitEvents(): Promise<{ data: ExitEvent[]; isLive: boolean }> {
+  return { data: fallbackExitEvents, isLive: false };
+}
+
+export async function getTenureBands(): Promise<{ data: TenureBand[]; isLive: boolean }> {
+  return { data: fallbackTenureBands, isLive: false };
+}
+
+export async function getVoiceThemes(): Promise<{ data: VoiceTheme[]; isLive: boolean }> {
+  return { data: fallbackVoiceThemes, isLive: false };
 }
 

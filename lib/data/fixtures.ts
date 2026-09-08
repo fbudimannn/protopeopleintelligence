@@ -1090,3 +1090,261 @@ export const fallbackHiringOutcomes: HiringOutcomeMetric[] = [
     manager_rating_avg: 4.25,
   },
 ];
+
+export interface ExitEvent {
+  exit_code: string;
+  employee_code: string;
+  role_name: string;
+  location_name: string;
+  exit_date: string;
+  tenure_months: number;
+  resignation_type: "Voluntary" | "Involuntary";
+  is_regrettable: boolean;
+  primary_reason: string;
+  secondary_reason: string;
+  triggered_requisition_code: string;
+  performance_rating: number;
+  data_provenance: "OBSERVED_CASE_STUDY" | "SYNTHETIC_ENABLER";
+}
+
+export interface TenureBand {
+  band_label: string;
+  exit_count: number;
+  pct_of_exits: number;
+  cumulative_pct: number;
+  cliff_stage: string;
+  primary_stressor: string;
+}
+
+export interface VoiceTheme {
+  dimension_name: string;
+  score: number;
+  national_benchmark: number;
+  sentiment: "POSITIVE" | "NEUTRAL" | "CONCERN";
+  verbatim_sample: string;
+  segment_concentration: string;
+  strategic_action: string;
+}
+
+export const fallbackExitEvents: ExitEvent[] = [
+  {
+    exit_code: "EXT-BLI-0089",
+    employee_code: "FH-EMP-0988",
+    role_name: "Operation Specialist",
+    location_name: "Bali",
+    exit_date: "2024-07-02",
+    tenure_months: 5,
+    resignation_type: "Voluntary",
+    is_regrettable: true,
+    primary_reason: "Career Development",
+    secondary_reason: "Shift Roster Fatigue",
+    triggered_requisition_code: "REQ-BLI-0104",
+    performance_rating: 4.5,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    exit_code: "EXT-BLI-0094",
+    employee_code: "FH-EMP-0912",
+    role_name: "Personal Trainer",
+    location_name: "Bali",
+    exit_date: "2024-07-08",
+    tenure_months: 14,
+    resignation_type: "Voluntary",
+    is_regrettable: true,
+    primary_reason: "Compensation & Commission Volatility",
+    secondary_reason: "Lack of Senior Promotion Track",
+    triggered_requisition_code: "REQ-BLI-0109",
+    performance_rating: 4.6,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    exit_code: "EXT-BLI-0102",
+    employee_code: "FH-EMP-0845",
+    role_name: "Membership Consultant",
+    location_name: "Bali",
+    exit_date: "2024-07-15",
+    tenure_months: 4,
+    resignation_type: "Voluntary",
+    is_regrettable: false,
+    primary_reason: "Sales Target Pressure",
+    secondary_reason: "Unclear Onboarding Goals",
+    triggered_requisition_code: "REQ-BLI-0115",
+    performance_rating: 3.4,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    exit_code: "EXT-SBY-0144",
+    employee_code: "FH-EMP-0792",
+    role_name: "Operation Specialist",
+    location_name: "Surabaya",
+    exit_date: "2024-07-20",
+    tenure_months: 8,
+    resignation_type: "Voluntary",
+    is_regrettable: true,
+    primary_reason: "Career Development",
+    secondary_reason: "Commute Distance",
+    triggered_requisition_code: "REQ-SBY-0202",
+    performance_rating: 4.2,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    exit_code: "EXT-JKB-0231",
+    employee_code: "FH-EMP-0610",
+    role_name: "Operation Specialist",
+    location_name: "Jakarta Barat",
+    exit_date: "2024-07-28",
+    tenure_months: 11,
+    resignation_type: "Voluntary",
+    is_regrettable: false,
+    primary_reason: "Career Development",
+    secondary_reason: "Better Offer",
+    triggered_requisition_code: "REQ-JKB-0301",
+    performance_rating: 3.8,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    exit_code: "EXT-JKB-0245",
+    employee_code: "FH-EMP-0554",
+    role_name: "Membership Consultant",
+    location_name: "Jakarta Barat",
+    exit_date: "2024-08-01",
+    tenure_months: 15,
+    resignation_type: "Voluntary",
+    is_regrettable: true,
+    primary_reason: "Career Development",
+    secondary_reason: "Commission Cap Expectations",
+    triggered_requisition_code: "REQ-JKB-0312",
+    performance_rating: 4.4,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    exit_code: "EXT-JKS-0198",
+    employee_code: "FH-EMP-0489",
+    role_name: "Personal Trainer",
+    location_name: "Jakarta Selatan",
+    exit_date: "2024-08-04",
+    tenure_months: 9,
+    resignation_type: "Voluntary",
+    is_regrettable: true,
+    primary_reason: "Compensation & Commission Volatility",
+    secondary_reason: "Studio Floor Split",
+    triggered_requisition_code: "REQ-JKS-0405",
+    performance_rating: 4.3,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    exit_code: "EXT-TNG-0112",
+    employee_code: "FH-EMP-0412",
+    role_name: "Operation Specialist",
+    location_name: "Tangerang",
+    exit_date: "2024-08-09",
+    tenure_months: 6,
+    resignation_type: "Voluntary",
+    is_regrettable: false,
+    primary_reason: "Working Environment & Facilities",
+    secondary_reason: "Shift Scheduling",
+    triggered_requisition_code: "REQ-TNG-0502",
+    performance_rating: 3.6,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+];
+
+export const fallbackTenureBands: TenureBand[] = [
+  {
+    band_label: "0 to 3 Months",
+    exit_count: 218,
+    pct_of_exits: 24.5,
+    cumulative_pct: 24.5,
+    cliff_stage: "Early Onboarding Shock",
+    primary_stressor: "Immediate shift roster realities, POS SOP steepness, and lack of dedicated floor buddy",
+  },
+  {
+    band_label: "4 to 6 Months",
+    exit_count: 162,
+    pct_of_exits: 18.2,
+    cumulative_pct: 42.7,
+    cliff_stage: "Ramp-Up Performance Pressure",
+    primary_stressor: "Transition from onboarding grace period to full solo shift and member retention targets",
+  },
+  {
+    band_label: "7 to 12 Months",
+    exit_count: 130,
+    pct_of_exits: 14.7,
+    cumulative_pct: 57.4,
+    cliff_stage: "Year 1 Cliff Threshold",
+    primary_stressor: "Cumulative fatigue without visible career roadmap or progression discussion with Area Manager",
+  },
+  {
+    band_label: "13 to 18 Months",
+    exit_count: 195,
+    pct_of_exits: 21.9,
+    cumulative_pct: 79.3,
+    cliff_stage: "Mid-Tenure Growth Plateau",
+    primary_stressor: "High performers ready for Lead or ACM roles feel blocked by external hiring for managerial slots",
+  },
+  {
+    band_label: "19+ Months",
+    exit_count: 184,
+    pct_of_exits: 20.7,
+    cumulative_pct: 100.0,
+    cliff_stage: "Mature Staff Transition",
+    primary_stressor: "Relocation, life events, or external corporate recruitment",
+  },
+];
+
+export const fallbackVoiceThemes: VoiceTheme[] = [
+  {
+    dimension_name: "Compensation & Benefit",
+    score: 4.96,
+    national_benchmark: 5.5,
+    sentiment: "CONCERN",
+    verbatim_sample: "Base salary follows UMK, but when member PT sessions drop during low months, take-home pay is too volatile to sustain living costs in Bali and South Jakarta.",
+    segment_concentration: "Personal Trainers & Membership Consultants in Bali",
+    strategic_action: "Introduce base commission floor during low season to stabilize income security",
+  },
+  {
+    dimension_name: "Career Growth",
+    score: 5.22,
+    national_benchmark: 5.4,
+    sentiment: "CONCERN",
+    verbatim_sample: "I have been an Operation Specialist for over 18 months with top ratings, but when Assistant Club Manager opened, headquarters hired externally instead of promoting from within.",
+    segment_concentration: "Operation Specialists with 12 to 24 months tenure",
+    strategic_action: "Operationalize Mercer internal mobility matching engine with transparent qualification gates",
+  },
+  {
+    dimension_name: "Supportive Workplace",
+    score: 5.58,
+    national_benchmark: 5.5,
+    sentiment: "POSITIVE",
+    verbatim_sample: "The club floor team feels like family. Shift colleagues always step up to help when member traffic peaks or during event days.",
+    segment_concentration: "Club-level frontline staff nationally",
+    strategic_action: "Leverage team solidarity through peer onboarding buddy system",
+  },
+  {
+    dimension_name: "Organisation Alignment",
+    score: 5.62,
+    national_benchmark: 5.5,
+    sentiment: "POSITIVE",
+    verbatim_sample: "FIT HUB has a strong mission to democratize fitness in Indonesia. Members appreciate our accessible facilities and energy.",
+    segment_concentration: "All roles, corporate and frontline",
+    strategic_action: "Reinforce brand purpose during 30-day onboarding milestones",
+  },
+  {
+    dimension_name: "Work Clarity",
+    score: 5.45,
+    national_benchmark: 5.4,
+    sentiment: "NEUTRAL",
+    verbatim_sample: "Daily opening and closing checklists are clear, but cross-shift handover notes between morning and evening shifts are often missed.",
+    segment_concentration: "Front desk and facility maintenance shifts",
+    strategic_action: "Standardize digital shift handover checklist on mobile POS",
+  },
+  {
+    dimension_name: "Fair Performance",
+    score: 5.34,
+    national_benchmark: 5.3,
+    sentiment: "NEUTRAL",
+    verbatim_sample: "Performance reviews occur, but constructive feedback on how to prepare for club management responsibilities is rarely provided.",
+    segment_concentration: "Junior frontline looking to advance",
+    strategic_action: "Implement quarterly capability development discussions using Mercer rubric",
+  },
+];
