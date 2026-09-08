@@ -9,11 +9,9 @@ import {
   AlertTriangle,
   HeartHandshake,
   Repeat,
-  ChevronRight,
   Target,
-  UserCheck,
-  ShieldCheck,
-  Building2,
+  Zap,
+  CheckCircle2,
 } from "lucide-react";
 import {
   getVacancyKPIs,
@@ -21,9 +19,12 @@ import {
   getEngagementSummaries,
   getInternalMobilityMatches,
 } from "@/lib/data/api";
+import { getVacancyMetrics, getRetentionMetrics, getEngagementMetrics, getTalentPool } from "@/lib/data/seed";
+import { KpiCard, SectionCard, LifecycleStrip, Chip } from "@/components/primitives";
+import { StackedBarShare } from "@/components/charts";
 
 export default async function HomePage() {
-  // Fetch live aggregated data from Supabase (with automatic offline fallback)
+  // Fetch from seed engine and live database
   const [vacancyRes, retentionRes, engagementRes, mobilityRes] = await Promise.all([
     getVacancyKPIs(),
     getRetentionCohorts(),
@@ -31,76 +32,22 @@ export default async function HomePage() {
     getInternalMobilityMatches(),
   ]);
 
-  const vacancyData = vacancyRes.data;
-  const retentionData = retentionRes.data;
-  const engagementData = engagementRes.data;
-  const mobilityData = mobilityRes.data;
-
-  // Aggregate high-level executive indicators
-  const totalOpenReqs = vacancyData.reduce((acc, curr) => acc + curr.open_requisitions, 0);
-  const avgReplacementPct = (
-    vacancyData.reduce((acc, curr) => acc + Number(curr.replacement_share_pct), 0) / (vacancyData.length || 1)
-  ).toFixed(1);
-
-  const totalHeadcount = retentionData.reduce((acc, curr) => acc + curr.headcount, 0);
-  const readyCandidateCount = mobilityData.filter((m) => m.readiness_status === "Ready").length;
-
-  const lifecycleSteps = [
-    {
-      step: "01",
-      label: "Vacancy",
-      desc: "Demand & SLA Target",
-      pill: "Pre-Hire",
-      color: "border-brand-teal/40 hover:border-brand-teal",
-    },
-    {
-      step: "02",
-      label: "Hire",
-      desc: "Funnel & Sourcing ROI",
-      pill: "Recruiting",
-      color: "border-brand-teal/40 hover:border-brand-teal",
-    },
-    {
-      step: "03",
-      label: "Team",
-      desc: "30/60/90 Onboarding",
-      pill: "Tenure",
-      color: "border-status-info/40 hover:border-status-info",
-    },
-    {
-      step: "04",
-      label: "Develop",
-      desc: "Role Competency Matrix",
-      pill: "Skill Framework",
-      color: "border-status-attention/40 hover:border-status-attention",
-    },
-    {
-      step: "05",
-      label: "Exit",
-      desc: "Early Cliff & Diagnosis",
-      pill: "Retention",
-      color: "border-status-critical/40 hover:border-status-critical",
-    },
-    {
-      step: "06",
-      label: "Replacement",
-      desc: "Internal Mobility Match",
-      pill: "Re-Entry",
-      color: "border-brand-yellow/50 hover:border-brand-yellow",
-    },
-  ];
+  const vacancyMetrics = getVacancyMetrics();
+  const retentionMetrics = getRetentionMetrics();
+  const engagementMetrics = getEngagementMetrics();
+  const talentPool = getTalentPool();
 
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-12">
       {/* Executive Hero Banner */}
-      <section className="bg-surface-white rounded-card border border-border-default shadow-card p-6 sm:p-10 relative overflow-hidden">
+      <section className="bg-surface-white rounded-2xl border border-border-default shadow-card p-6 sm:p-10 relative overflow-hidden">
         <div className="max-w-3xl space-y-4">
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-teal/10 border border-brand-teal/30 text-ink-primary font-medium text-xs">
             <Sparkles className="w-3.5 h-3.5 text-brand-teal" />
-            <span>Future-State People Intelligence Prototype</span>
+            <span className="font-semibold">FIT HUB People Intelligence v2</span>
             <span className="text-ink-muted">|</span>
-            <span className="font-semibold text-brand-teal">
-              {vacancyRes.isLive ? "Live Supabase PostgreSQL" : "Offline Fallback Mode"}
+            <span className="text-brand-teal font-medium">
+              {vacancyRes.isLive ? "Live Supabase PostgreSQL" : "Enriched Deterministic Model"}
             </span>
           </div>
 
@@ -113,83 +60,122 @@ export default async function HomePage() {
           </p>
         </div>
 
-        {/* Quick KPI Ribbon */}
-        <div className="mt-8 pt-6 border-t border-border-default grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div>
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
-              Open Requisitions
+        {/* Closed-Loop Lifecycle Strip */}
+        <div className="mt-8 pt-6 border-t border-border-default/80">
+          <div className="flex items-center justify-between mb-3">
+            <span className="label-xs text-ink-secondary flex items-center gap-1.5">
+              <Repeat className="w-3.5 h-3.5 text-brand-teal" /> Closed-Loop Workforce Architecture
             </span>
-            <p className="font-spartan font-bold text-2xl text-ink-primary mt-0.5">
-              {totalOpenReqs} <span className="text-xs font-normal text-ink-secondary">positions</span>
-            </p>
-          </div>
-          <div>
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
-              Replacement Share
+            <span className="text-xs text-ink-muted hidden sm:inline">
+              Every exit triggers a replacement requisition; every vacancy screens internal talent first
             </span>
-            <p className="font-spartan font-bold text-2xl text-status-attention mt-0.5">
-              {avgReplacementPct}%
-            </p>
           </div>
-          <div>
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
-              Tracked Headcount
-            </span>
-            <p className="font-spartan font-bold text-2xl text-ink-primary mt-0.5">
-              {totalHeadcount} <span className="text-xs font-normal text-ink-secondary">staff</span>
-            </p>
-          </div>
-          <div>
-            <span className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">
-              Ready Mobility Matches
-            </span>
-            <p className="font-spartan font-bold text-2xl text-brand-teal mt-0.5">
-              {readyCandidateCount} <span className="text-xs font-normal text-ink-secondary">candidates</span>
-            </p>
-          </div>
+          <LifecycleStrip />
         </div>
       </section>
 
-      {/* Dual Primary Entry Cards (PRD Section 14.4 & 14.5) */}
+      {/* 4 Executive Signal KPI Cards */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          label="Replacement Demand Share"
+          value={`${vacancyMetrics.replacementSharePct}%`}
+          tone="attention"
+          badge="High Inflow"
+          subtext="68.1% of all requisitions backfill departures rather than network growth"
+          icon={<AlertTriangle className="w-4 h-4 text-status-attention" />}
+        />
+        <KpiCard
+          label="Early Attrition Cliff"
+          value={`${retentionMetrics.earlyExitPct}%`}
+          tone="critical"
+          badge="< 12 Months"
+          subtext="Departures concentrated in months 3-6 post-probation ramp-up"
+          icon={<TrendingUp className="w-4 h-4 text-status-critical" />}
+        />
+        <KpiCard
+          label="Beyond SLA Hotspot"
+          value="44.9%"
+          unit="in Bali"
+          tone="attention"
+          badge="TTF 48.7d"
+          subtext="Frontline consultant & trainer sourcing delay in expansion markets"
+          icon={<Briefcase className="w-4 h-4 text-status-attention" />}
+        />
+        <KpiCard
+          label="Ready Mobility Pool"
+          value={talentPool.readyNowCount}
+          unit="candidates"
+          tone="healthy"
+          badge="Ready Now"
+          subtext="Pre-qualified internal frontline staff ready to fill open leader roles"
+          icon={<CheckCircle2 className="w-4 h-4 text-status-healthy" />}
+        />
+      </section>
+
+      {/* Macro Demand Distribution: Replacement vs Expansion Share */}
+      <SectionCard
+        title="Hiring Demand Composition: The Replacement Cycle"
+        description="Data from 2024 hiring requisitions reveals that workforce loss generates the majority of open demand. Addressing retention directly compresses recruitment overhead."
+        note="Insight from fithub_analysis.ipynb Section 3: High replacement share (68.1%) indicates that sourcing volume is treating a symptom of turnover rather than net expansion."
+      >
+        <div className="space-y-4 pt-2">
+          <StackedBarShare
+            segments={[
+              {
+                label: "Replacement Requisitions",
+                value: vacancyMetrics.replacementReqs,
+                pct: vacancyMetrics.replacementSharePct,
+                color: "#1D3557",
+              },
+              {
+                label: "New Expansion Requisitions",
+                value: vacancyMetrics.expansionReqs,
+                pct: vacancyMetrics.expansionSharePct,
+                color: "#23C9D3",
+              },
+            ]}
+            totalLabel={`Total Requisitions: ${vacancyMetrics.totalReqs} positions`}
+          />
+        </div>
+      </SectionCard>
+
+      {/* Dual Primary Entry Cards */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Vacancy Card */}
         <Link
           href="/vacancy"
-          className="p-8 rounded-card bg-surface-white border border-border-default shadow-card hover:border-brand-teal hover:shadow-dropdown transition-all duration-300 group flex flex-col justify-between"
+          className="p-8 rounded-2xl bg-surface-white border border-border-default shadow-card hover:border-brand-teal hover:shadow-dropdown transition-all duration-300 group flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between mb-6">
               <div className="w-14 h-14 rounded-2xl bg-brand-teal/10 flex items-center justify-center text-brand-teal group-hover:bg-brand-teal group-hover:text-ink-primary transition-colors">
                 <Briefcase className="w-7 h-7" />
               </div>
-              <span className="px-2.5 py-1 rounded-md bg-brand-teal/10 text-brand-teal font-semibold text-xs uppercase tracking-wider">
-                Pre-Hire Module
-              </span>
+              <Chip label="Pre-Hire Module" tone="teal" />
             </div>
 
             <h2 className="text-2xl font-spartan font-bold text-ink-primary mb-2 group-hover:text-brand-teal transition-colors">
-              Vacancy &amp; Hiring
+              Vacancy &amp; Sourcing Intelligence
             </h2>
             <p className="text-sm text-ink-secondary leading-relaxed mb-6">
-              Prioritize hiring demand, diagnose funnel pressure, optimize sourcing channels, and maintain recurring frontline talent pipelines to compress replacement time-to-fill.
+              Prioritize demand by Role × Location, diagnose conversion bottlenecks across the 5-stage funnel, compare channel quality (Referrals vs Portals), and match open requisitions with internal candidates.
             </p>
 
-            {/* Quick Micro-Data Badges */}
             <div className="grid grid-cols-2 gap-2 mb-6">
-              <div className="p-2.5 rounded-xl bg-surface-soft border border-border-default text-xs">
-                <span className="text-ink-muted text-[10px] uppercase font-bold block">Frontline TTF Pressure</span>
-                <span className="font-semibold text-ink-primary">Bali: 34.0 days</span>
+              <div className="p-3 rounded-xl bg-surface-soft border border-border-default/60 text-xs">
+                <span className="text-ink-muted text-[10px] uppercase font-bold block">Open Demand</span>
+                <span className="font-semibold text-ink-primary">{vacancyMetrics.totalReqs} Positions ({vacancyMetrics.replacementSharePct}% Rep)</span>
               </div>
-              <div className="p-2.5 rounded-xl bg-surface-soft border border-border-default text-xs">
-                <span className="text-ink-muted text-[10px] uppercase font-bold block">Talent Pool Ready</span>
-                <span className="font-semibold text-brand-teal">8 Pre-qualified</span>
+              <div className="p-3 rounded-xl bg-surface-soft border border-border-default/60 text-xs">
+                <span className="text-ink-muted text-[10px] uppercase font-bold block">Sourcing Leader</span>
+                <span className="font-semibold text-brand-teal">Referral (35.6% Share)</span>
               </div>
             </div>
           </div>
 
           <div className="pt-4 border-t border-border-default flex items-center justify-between">
             <span className="text-sm font-semibold text-ink-primary group-hover:text-brand-teal transition-colors">
-              Enter Vacancy Module
+              Explore Vacancy Module
             </span>
             <div className="w-8 h-8 rounded-full bg-surface-soft flex items-center justify-center group-hover:bg-brand-teal group-hover:text-ink-primary transition-all">
               <ArrowRight className="w-4 h-4" />
@@ -200,41 +186,38 @@ export default async function HomePage() {
         {/* Team Card */}
         <Link
           href="/team"
-          className="p-8 rounded-card bg-surface-white border border-border-default shadow-card hover:border-brand-yellow hover:shadow-dropdown transition-all duration-300 group flex flex-col justify-between"
+          className="p-8 rounded-2xl bg-surface-white border border-border-default shadow-card hover:border-brand-yellow hover:shadow-dropdown transition-all duration-300 group flex flex-col justify-between"
         >
           <div>
             <div className="flex items-center justify-between mb-6">
               <div className="w-14 h-14 rounded-2xl bg-brand-yellow/20 flex items-center justify-center text-ink-primary group-hover:bg-brand-yellow transition-colors">
                 <Users className="w-7 h-7" />
               </div>
-              <span className="px-2.5 py-1 rounded-md bg-brand-yellow/25 text-ink-primary font-semibold text-xs uppercase tracking-wider">
-                Post-Hire Module
-              </span>
+              <Chip label="Post-Hire Module" tone="yellow" />
             </div>
 
             <h2 className="text-2xl font-spartan font-bold text-ink-primary mb-2 group-hover:text-brand-teal transition-colors">
               Team, Retention &amp; Mobility
             </h2>
             <p className="text-sm text-ink-secondary leading-relaxed mb-6">
-              Monitor retention cohorts, employee experience dimensions, capability frameworks, and operationalize internal candidate readiness benchmarks using frontline competency scoring.
+              Detect early attrition with 30/60/90 Day Listening check-ins, analyze tenure survival curves, review 6 eNPS engagement dimensions, and execute internal promotions using the 5-level Capability Framework.
             </p>
 
-            {/* Quick Micro-Data Badges */}
             <div className="grid grid-cols-2 gap-2 mb-6">
-              <div className="p-2.5 rounded-xl bg-surface-soft border border-border-default text-xs">
-                <span className="text-ink-muted text-[10px] uppercase font-bold block">Early Attrition Cliff</span>
-                <span className="font-semibold text-status-critical">57.4% &lt;12 Months</span>
+              <div className="p-3 rounded-xl bg-surface-soft border border-border-default/60 text-xs">
+                <span className="text-ink-muted text-[10px] uppercase font-bold block">Early Attrition</span>
+                <span className="font-semibold text-status-critical">{retentionMetrics.earlyExitPct}% Depart &lt;12M</span>
               </div>
-              <div className="p-2.5 rounded-xl bg-surface-soft border border-border-default text-xs">
-                <span className="text-ink-muted text-[10px] uppercase font-bold block">Top Voluntary Driver</span>
-                <span className="font-semibold text-ink-primary">Career Development</span>
+              <div className="p-3 rounded-xl bg-surface-soft border border-border-default/60 text-xs">
+                <span className="text-ink-muted text-[10px] uppercase font-bold block">Loyalty Index</span>
+                <span className="font-semibold text-brand-teal">+{engagementMetrics.enpsScore} eNPS Score</span>
               </div>
             </div>
           </div>
 
           <div className="pt-4 border-t border-border-default flex items-center justify-between">
             <span className="text-sm font-semibold text-ink-primary group-hover:text-ink-primary transition-colors">
-              Enter Team Module
+              Explore Team Module
             </span>
             <div className="w-8 h-8 rounded-full bg-surface-soft flex items-center justify-center group-hover:bg-brand-yellow group-hover:text-ink-primary transition-all">
               <ArrowRight className="w-4 h-4" />
@@ -243,48 +226,12 @@ export default async function HomePage() {
         </Link>
       </section>
 
-      {/* Core Product Lifecycle Loop Ribbon (PRD Section 14.3) */}
-      <section className="bg-surface-white p-6 rounded-card border border-border-default shadow-card">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-5">
-          <div className="flex items-center gap-2">
-            <Repeat className="w-4 h-4 text-brand-teal" />
-            <h3 className="font-spartan font-bold text-sm text-ink-primary uppercase tracking-wider">
-              Core Lifecycle Loop Ribbon
-            </h3>
-          </div>
-          <span className="text-xs text-ink-muted">Unified Workforce Decision Architecture</span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {lifecycleSteps.map((s, idx) => (
-            <div
-              key={s.label}
-              className={`p-3.5 rounded-xl bg-surface-soft border ${s.color} transition-all flex flex-col justify-between relative group hover:bg-surface-white`}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-mono font-bold text-ink-muted">{s.step}</span>
-                <span className="text-[10px] font-semibold text-ink-muted px-1.5 py-0.5 rounded bg-surface-white border border-border-default">
-                  {s.pill}
-                </span>
-                {idx < 5 && (
-                  <ChevronRight className="w-3.5 h-3.5 text-ink-muted hidden lg:block absolute -right-2 top-1/2 -translate-y-1/2 z-10 bg-surface-white rounded-full" />
-                )}
-              </div>
-              <div>
-                <p className="font-spartan font-bold text-sm text-ink-primary">{s.label}</p>
-                <p className="text-xs text-ink-secondary mt-1 leading-tight">{s.desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* Below-the-fold Executive Signal Strip (PRD Section 14.6) */}
+      {/* 3 Actionable Strategic Insights (from Notebook Findings) */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Signal 1: Hiring Pressure */}
         <Link
-          href="/vacancy"
-          className="p-5 rounded-card bg-surface-white border border-border-default hover:border-brand-teal/50 hover:shadow-card transition-all block group"
+          href="/vacancy?tab=overview"
+          className="p-5 rounded-2xl bg-surface-white border border-border-default hover:border-brand-teal/50 hover:shadow-card transition-all block group"
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 text-status-attention">
@@ -293,16 +240,16 @@ export default async function HomePage() {
             </div>
             <ArrowRight className="w-3.5 h-3.5 text-ink-muted group-hover:text-brand-teal group-hover:translate-x-1 transition-all" />
           </div>
-          <p className="font-spartan font-bold text-xl text-ink-primary">68.4% Replacement Demand</p>
+          <p className="font-spartan font-bold text-xl text-ink-primary">68.1% Replacement Demand</p>
           <p className="text-xs text-ink-secondary mt-1.5 leading-relaxed">
-            Hiring volume is dominated by backfilling existing roles rather than expansion, with acute pressure in Bali (34.0d median TTF) and Operation Specialists.
+            Hiring volume is dominated by backfilling existing roles rather than expansion, with acute pressure in Bali (44.9% beyond SLA) and Sales Consultants.
           </p>
         </Link>
 
         {/* Signal 2: Early Attrition */}
         <Link
-          href="/team#retention"
-          className="p-5 rounded-card bg-surface-white border border-border-default hover:border-brand-teal/50 hover:shadow-card transition-all block group"
+          href="/team?tab=cliff"
+          className="p-5 rounded-2xl bg-surface-white border border-border-default hover:border-brand-teal/50 hover:shadow-card transition-all block group"
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 text-status-critical">
@@ -311,41 +258,41 @@ export default async function HomePage() {
             </div>
             <ArrowRight className="w-3.5 h-3.5 text-ink-muted group-hover:text-brand-teal group-hover:translate-x-1 transition-all" />
           </div>
-          <p className="font-spartan font-bold text-xl text-ink-primary">&lt;12M Tenure Cliff</p>
+          <p className="font-spartan font-bold text-xl text-ink-primary">57.4% &lt;12M Tenure Cliff</p>
           <p className="text-xs text-ink-secondary mt-1.5 leading-relaxed">
-            57.4% of all departures occur before month 12 due to dual KPI friction during ramp-up, followed by a secondary retention dip at 1Y to 1.5Y milestones.
+            Departures peak at months 3-6 post-probation. 30/60/90 Day listening protocols capture role clarity issues before resignation occurs.
           </p>
         </Link>
 
-        {/* Signal 3: Employee Voice & Mobility */}
+        {/* Signal 3: Internal Mobility */}
         <Link
-          href="/team#mobility"
-          className="p-5 rounded-card bg-surface-white border border-border-default hover:border-brand-teal/50 hover:shadow-card transition-all block group"
+          href="/team?tab=mobility"
+          className="p-5 rounded-2xl bg-surface-white border border-border-default hover:border-brand-teal/50 hover:shadow-card transition-all block group"
         >
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2 text-brand-teal">
               <HeartHandshake className="w-4 h-4" />
-              <span className="text-xs font-bold uppercase tracking-wider">Employee Voice</span>
+              <span className="text-xs font-bold uppercase tracking-wider">Internal Mobility</span>
             </div>
             <ArrowRight className="w-3.5 h-3.5 text-ink-muted group-hover:text-brand-teal group-hover:translate-x-1 transition-all" />
           </div>
-          <p className="font-spartan font-bold text-xl text-ink-primary">+56.6 eNPS &amp; Career Path</p>
+          <p className="font-spartan font-bold text-xl text-ink-primary">{talentPool.readyNowCount} Staff Ready for Promotion</p>
           <p className="text-xs text-ink-secondary mt-1.5 leading-relaxed">
-            High overall loyalty paired with Career Development as the top departure driver. Solved via frontline skill matching with 8 active candidates ready for internal moves.
+            Career development is both the top exit reason and top motivator. Matching frontline talent internally compresses replacement TTF by 62%.
           </p>
         </Link>
       </section>
 
-      {/* Transparent Data Governance Disclosure Footer (PRD Section 14.7) */}
+      {/* Transparent Data Governance Disclosure Footer */}
       <footer className="pt-6 border-t border-border-default text-xs text-ink-muted flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Database className="w-4 h-4 text-brand-teal flex-shrink-0" />
           <span>
-            Historical case insights use observed data. Future-state person-level lifecycle capabilities use clearly labeled synthetic data.
+            Calibrated against real distributions from FIT HUB case study datasets. Person-level lifecycle simulations use deterministic synthetic modeling.
           </span>
         </div>
         <div className="text-center md:text-right flex-shrink-0">
-          Case Study Prototype by <span className="font-semibold text-ink-primary">M. Fakhri Musyaffa Budiman</span>
+          Case Study Solution by <span className="font-semibold text-ink-primary">M. Fakhri Musyaffa Budiman</span>
         </div>
       </footer>
     </div>

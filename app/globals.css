@@ -15,6 +15,23 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Typographic Utilities */
+.kpi-number {
+  font-family: var(--font-spartan), sans-serif;
+  font-weight: 700;
+  font-size: 2.25rem;
+  line-height: 2.5rem;
+  letter-spacing: -0.02em;
+}
+
+.label-xs {
+  font-family: var(--font-poppins), sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

@@ -21,6 +21,9 @@ import {
   TenureBand,
   VoiceTheme,
 } from "@/lib/data/fixtures";
+import { KpiCard, SectionCard, LifecycleStrip, Chip } from "@/components/primitives";
+import { SimpleBar, ColoredBar, SimpleLine, StackedBarShare } from "@/components/charts";
+import { SEED_DATA, getRetentionMetrics, getEngagementMetrics } from "@/lib/data/seed";
 import {
   targetRoleBenchmarks,
   TargetRoleBenchmark,
@@ -49,6 +52,7 @@ import {
   Layers,
   Clock,
   Briefcase,
+  Plus,
 } from "lucide-react";
 
 type TeamTab = "overview" | "cliff" | "engagement" | "mobility" | "exits";
@@ -337,6 +341,9 @@ function TeamContent() {
         </div>
       </div>
 
+      {/* Lifecycle Strip Banner */}
+      <LifecycleStrip activeStep="onboarding" className="my-6" />
+
       {/* Promotion Success Notification Banner */}
       {promotionSuccess && (
         <div className="p-4 rounded-xl bg-status-healthy/15 border border-status-healthy/40 text-xs text-status-healthy font-semibold flex items-center justify-between shadow-subtle animate-fadeIn">
@@ -503,7 +510,7 @@ function TeamContent() {
               provenance="SYNTHETIC_ENABLER"
               domain="Mobility"
               metricOrEntity="Scored Candidates"
-              originalSource="010_internal_mobility_engine.sql"
+              originalSource="Competency scoring model"
               governanceRule="FIT HUB frontline competency scoring"
               impactOnDecision="Bypasses external hiring delay"
               showLabel={false}
@@ -852,6 +859,127 @@ function TeamContent() {
       {/* 5. TAB 2: Tenure Cliff & Survival Curve */}
       {activeTab === "cliff" && (
         <div className="space-y-6">
+          {/* 30/60/90 Day Listening Architecture (Notebook Section 5.2 Action 1) */}
+          <SectionCard
+            title="30 / 60 / 90 Day Listening & Onboarding Check-in Framework"
+            description="Structured early-tenure listening checkpoints to intercept role expectation mismatch and roster friction before resignations occur."
+            note="Actionable Solve: 57.4% of turnover happens in <12M tenure. Capturing sentiment at Day 30 and 60 identifies at-risk frontline staff before month 6 exit cliff."
+          >
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <div className="p-4 rounded-xl bg-surface-soft border border-border-default/80">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="label-xs text-brand-teal">Milestone 1</span>
+                  <Chip label="Day 30 Pulse" tone="teal" size="sm" />
+                </div>
+                <h4 className="font-spartan font-bold text-sm text-ink-primary">Role Clarity & Expectation Sync</h4>
+                <div className="flex items-baseline gap-2 my-2">
+                  <span className="kpi-number text-2xl text-ink-primary">3.4</span>
+                  <span className="text-xs text-ink-secondary">/ 5.0 score</span>
+                </div>
+                <p className="text-xs text-ink-secondary leading-relaxed">
+                  Measures floor orientation, manager 1-on-1 check-in, and clarity on personal training commission split.
+                </p>
+                <div className="mt-3 pt-2 border-t border-border-default/50 text-[11px] flex justify-between">
+                  <span className="text-status-attention font-semibold">4 At-Risk Joiners</span>
+                  <span className="text-ink-muted">94% Completion</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface-soft border border-border-default/80">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="label-xs text-status-attention">Milestone 2</span>
+                  <Chip label="Day 60 Pulse" tone="yellow" size="sm" />
+                </div>
+                <h4 className="font-spartan font-bold text-sm text-ink-primary">Ramp-Up & Floor Integration</h4>
+                <div className="flex items-baseline gap-2 my-2">
+                  <span className="kpi-number text-2xl text-ink-primary">3.6</span>
+                  <span className="text-xs text-ink-secondary">/ 5.0 score</span>
+                </div>
+                <p className="text-xs text-ink-secondary leading-relaxed">
+                  Evaluates club GM coaching, member consultation workflow, and peak shift fatigue management.
+                </p>
+                <div className="mt-3 pt-2 border-t border-border-default/50 text-[11px] flex justify-between">
+                  <span className="text-status-attention font-semibold">2 At-Risk Joiners</span>
+                  <span className="text-ink-muted">88% Completion</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface-soft border border-border-default/80">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="label-xs text-status-healthy">Milestone 3</span>
+                  <Chip label="Day 90 Pulse" tone="healthy" size="sm" />
+                </div>
+                <h4 className="font-spartan font-bold text-sm text-ink-primary">Probation & Autonomy Signoff</h4>
+                <div className="flex items-baseline gap-2 my-2">
+                  <span className="kpi-number text-2xl text-status-healthy">3.9</span>
+                  <span className="text-xs text-ink-secondary">/ 5.0 score</span>
+                </div>
+                <p className="text-xs text-ink-secondary leading-relaxed">
+                  Readiness for autonomous floor quota, permanent staff confirmation, and initial capability baseline review.
+                </p>
+                <div className="mt-3 pt-2 border-t border-border-default/50 text-[11px] flex justify-between">
+                  <span className="text-status-healthy font-semibold">Ready for Confirmation</span>
+                  <span className="text-ink-muted">82% Completion</span>
+                </div>
+              </div>
+            </div>
+
+            {/* At-Risk Joiners Intervention Table */}
+            <div className="p-4 rounded-xl bg-[#FFF8E6] border border-[#CA8A04]/30">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-status-attention" />
+                  <span className="font-spartan font-bold text-xs text-ink-primary uppercase tracking-wider">
+                    Recent Joiners Flagged for Proactive Intervention
+                  </span>
+                </div>
+                <span className="text-[11px] text-ink-secondary">Tenure &lt; 6 months</span>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-[#CA8A04]/20 text-ink-secondary">
+                      <th className="py-2 px-3">Joiner Name</th>
+                      <th className="py-2 px-3">Role &amp; Club</th>
+                      <th className="py-2 px-3 text-center">Tenure</th>
+                      <th className="py-2 px-3 text-center">30D Score</th>
+                      <th className="py-2 px-3 text-center">60D Score</th>
+                      <th className="py-2 px-3">Primary Concern</th>
+                      <th className="py-2 px-3 text-right">Action Protocol</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#CA8A04]/10">
+                    <tr>
+                      <td className="py-2.5 px-3 font-semibold text-ink-primary">Farhan Siregar</td>
+                      <td className="py-2.5 px-3 text-ink-secondary">Fitness Consultant &bull; FIT HUB Canggu (Bali)</td>
+                      <td className="py-2.5 px-3 text-center font-bold">2.5 mos</td>
+                      <td className="py-2.5 px-3 text-center font-mono font-bold text-status-critical">2.8</td>
+                      <td className="py-2.5 px-3 text-center font-mono text-status-attention">3.1</td>
+                      <td className="py-2.5 px-3 text-ink-secondary">Shift schedule roster fatigue</td>
+                      <td className="py-2.5 px-3 text-right">
+                        <button className="px-2.5 py-1 rounded bg-brand-teal text-white text-[11px] font-semibold hover:bg-brand-teal/90 transition-all">
+                          Schedule GM 1-on-1
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="py-2.5 px-3 font-semibold text-ink-primary">Dewi Wulan</td>
+                      <td className="py-2.5 px-3 text-ink-secondary">Personal Trainer &bull; FIT HUB Sunset Road (Bali)</td>
+                      <td className="py-2.5 px-3 text-center font-bold">1.8 mos</td>
+                      <td className="py-2.5 px-3 text-center font-mono font-bold text-status-critical">3.0</td>
+                      <td className="py-2.5 px-3 text-center font-mono text-ink-muted">Pending</td>
+                      <td className="py-2.5 px-3 text-ink-secondary">Commission structure clarity</td>
+                      <td className="py-2.5 px-3 text-right">
+                        <button className="px-2.5 py-1 rounded bg-brand-teal text-white text-[11px] font-semibold hover:bg-brand-teal/90 transition-all">
+                          Assign Buddy Mentor
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </SectionCard>
           <div className="p-6 rounded-xl bg-surface-card border border-surface-border">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -912,6 +1040,22 @@ function TeamContent() {
                   </div>
                 </div>
               ))}
+            </div>
+
+            {/* Visual Recharts Tenure Distribution */}
+            <div className="my-6 p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
+              <span className="label-xs text-ink-secondary block mb-3">Tenure Interval Distribution (% of Exits)</span>
+              <ColoredBar
+                data={tenureBands.map((band, idx) => ({
+                  label: band.band_label,
+                  value: band.pct_of_exits,
+                  color: idx <= 1 ? "#C65353" : idx === 3 ? "#C99400" : "#23C9D3",
+                }))}
+                dataKey="value"
+                categoryKey="label"
+                height={200}
+                unit="%"
+              />
             </div>
 
             {/* Root Cause & Action Callout */}
@@ -975,16 +1119,26 @@ function TeamContent() {
                 </p>
               </div>
 
-              {/* eNPS Badge */}
-              <div className="flex items-center gap-4 p-3 rounded-xl bg-surface-ground border border-surface-border">
-                <div className="text-right">
-                  <span className="text-[11px] text-ink-tertiary block">Net eNPS Score</span>
-                  <span className="text-2xl font-display font-black text-status-healthy">+56.6</span>
-                </div>
-                <div className="text-xs text-ink-secondary border-l border-surface-border pl-3">
-                  <div>Promoters: <strong className="text-status-healthy">68.0%</strong></div>
-                  <div>Passives: <strong>20.6%</strong></div>
-                  <div>Detractors: <strong className="text-status-danger">11.4%</strong></div>
+              {/* eNPS Badge & Builder Button */}
+              <div className="flex flex-wrap items-center gap-3">
+                <Link
+                  href="/team/engagement/survey"
+                  className="px-3 py-2 rounded-xl bg-brand-teal text-white text-xs font-bold hover:bg-brand-teal/90 transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Launch Survey Simulator</span>
+                </Link>
+
+                <div className="flex items-center gap-4 p-3 rounded-xl bg-surface-ground border border-surface-border">
+                  <div className="text-right">
+                    <span className="text-[11px] text-ink-tertiary block">Net eNPS Score</span>
+                    <span className="text-2xl font-display font-black text-status-healthy">+56.6</span>
+                  </div>
+                  <div className="text-xs text-ink-secondary border-l border-surface-border pl-3">
+                    <div>Promoters: <strong className="text-status-healthy">68.0%</strong></div>
+                    <div>Passives: <strong>20.6%</strong></div>
+                    <div>Detractors: <strong className="text-status-danger">11.4%</strong></div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -997,6 +1151,37 @@ function TeamContent() {
                   Analytical Governance Disclosure: Survivorship Bias in eNPS
                 </strong>
                 While a +56.6 net eNPS reflects high brand pride and camaraderie, the survey was administered only to active employees. Dissatisfied frontline staff departed prior to survey rollout (57.4% exiting in Year 1). True organizational sentiment must be interpreted in conjunction with turnover data.
+              </div>
+            </div>
+
+            {/* Visual Recharts eNPS Share & Dimensions Chart */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+              <div className="p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
+                <span className="label-xs text-ink-secondary block mb-3">eNPS Voter Distribution (Net +56.6)</span>
+                <StackedBarShare
+                  segments={[
+                    { label: "Promoters (Score 9-10)", value: 839, pct: 68.0, color: "#2E8B57" },
+                    { label: "Passives (Score 7-8)", value: 254, pct: 20.6, color: "#C99400" },
+                    { label: "Detractors (Score 0-6)", value: 141, pct: 11.4, color: "#C65353" },
+                  ]}
+                  totalLabel="1,234 Active Survey Respondents"
+                />
+              </div>
+
+              <div className="p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
+                <span className="label-xs text-ink-secondary block mb-3">Dimension Scores (Out of 6.00 Scale)</span>
+                <ColoredBar
+                  data={voiceThemes.map((v) => ({
+                    label: v.dimension_name,
+                    value: v.score,
+                    color: v.sentiment === "CONCERN" ? "#C65353" : v.sentiment === "POSITIVE" ? "#2E8B57" : "#23C9D3",
+                  }))}
+                  dataKey="value"
+                  categoryKey="label"
+                  horizontal={true}
+                  height={180}
+                  unit="/ 6.0"
+                />
               </div>
             </div>
 
@@ -1060,7 +1245,7 @@ function TeamContent() {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-teal/20 text-brand-teal uppercase">
-                    010_internal_mobility_engine.sql
+                    Automated Mobility Engine
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-yellow/20 text-ink-primary uppercase border border-brand-yellow/30">
                     Dynamic Succession Generator
@@ -1069,7 +1254,7 @@ function TeamContent() {
                     provenance="SYNTHETIC_ENABLER"
                     domain="Mobility Engine"
                     metricOrEntity="Dynamic Internal Talent Shortlist"
-                    originalSource="010_internal_mobility_engine.sql & active frontline roster"
+                    originalSource="Competency scoring engine & active frontline roster"
                     governanceRule="Dynamic composite calculation (Capabilities 55%, Performance 30%, Tenure 15% with distance penalty and feeder bonus)"
                     impactOnDecision="Directly solves #1 Career Development exit driver by promoting frontline staff into club leadership"
                   />
@@ -1083,12 +1268,22 @@ function TeamContent() {
                 </p>
               </div>
 
-              {/* Live Status Pill */}
-              <div className="flex items-center gap-2 bg-surface-ground px-3 py-1.5 rounded-lg border border-surface-border text-xs">
-                <div className="w-2 h-2 rounded-full bg-status-healthy animate-pulse" />
-                <span className="font-mono text-[11px] text-ink-secondary font-medium">
-                  {engineExecutionStats}
-                </span>
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/team/capability/framework"
+                  className="px-3 py-1.5 rounded-lg bg-surface-card border border-border-default text-xs font-bold text-ink-primary hover:border-brand-teal transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <Award className="w-3.5 h-3.5 text-brand-teal" />
+                  <span>Capability Framework Editor</span>
+                </Link>
+
+                {/* Live Status Pill */}
+                <div className="flex items-center gap-2 bg-surface-ground px-3 py-1.5 rounded-lg border border-surface-border text-xs">
+                  <div className="w-2 h-2 rounded-full bg-status-healthy animate-pulse" />
+                  <span className="font-mono text-[11px] text-ink-secondary font-medium">
+                    {engineExecutionStats}
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -1622,14 +1817,25 @@ function TeamContent() {
                   PRD Section 27.2: Illustrating how every frontline employee departure automatically generates a replacement requisition in Vacancy.
                 </p>
               </div>
-              <DataProvenanceBadge
-                provenance="DERIVED"
-                domain="Lifecycle Loop"
-                metricOrEntity="Exit to Requisition Binding"
-                originalSource="Turnover sheet + Hiring sheet"
-                governanceRule="Synchronized exit code to requisition code mapping"
-                impactOnDecision="Demonstrates closed-loop lifecycle intelligence"
-              />
+
+              <div className="flex items-center gap-3">
+                <Link
+                  href="/team/exit-survey"
+                  className="px-3.5 py-2 rounded-xl bg-status-critical text-white text-xs font-bold hover:bg-status-critical/90 transition-all flex items-center gap-1.5 shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Exit Interview</span>
+                </Link>
+
+                <DataProvenanceBadge
+                  provenance="DERIVED"
+                  domain="Lifecycle Loop"
+                  metricOrEntity="Exit to Requisition Binding"
+                  originalSource="Turnover sheet + Hiring sheet"
+                  governanceRule="Synchronized exit code to requisition code mapping"
+                  impactOnDecision="Demonstrates closed-loop lifecycle intelligence"
+                />
+              </div>
             </div>
 
             <div className="overflow-x-auto">
