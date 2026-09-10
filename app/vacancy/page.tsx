@@ -1215,7 +1215,8 @@ function VacancyContent() {
                     <th className="py-3 px-3 text-center">Applicants</th>
                     <th className="py-3 px-3 text-center">Hires</th>
                     <th className="py-3 px-3 text-center">Hire Conversion</th>
-                    <th className="py-3 px-3 text-center">Beyond SLA Rate</th>
+                    <th className="py-3 px-3 text-center">Delayed Hires (Abs)</th>
+                    <th className="py-3 px-3 text-center">Beyond SLA Rate (%)</th>
                     <th className="py-3 px-3 text-center">Median TTF</th>
                     <th className="py-3 px-3 text-center">Offer Acceptance</th>
                     <th className="py-3 px-3 text-center">6M Retention</th>
@@ -1223,67 +1224,73 @@ function VacancyContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-border">
-                  {sourcingChannels.map((channel) => (
-                    <tr
-                      key={channel.channel_name}
-                      className={`hover:bg-surface-elevated/70 transition-colors ${
-                        channel.channel_name === "Employee Referral" ? "bg-brand-teal/5 font-medium" : ""
-                      }`}
-                    >
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-ink-primary">
-                            {channel.channel_name}
-                          </span>
-                          {channel.channel_name === "Employee Referral" && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-brand-teal text-surface-ground">
-                              TOP CHANNEL
+                  {sourcingChannels.map((channel) => {
+                    const delayedCount = Math.round(channel.hires * (channel.beyond_sla_rate_pct / 100));
+                    return (
+                      <tr
+                        key={channel.channel_name}
+                        className={`hover:bg-surface-elevated/70 transition-colors ${
+                          channel.channel_name === "Employee Referral" ? "bg-brand-teal/5 font-medium" : ""
+                        }`}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-ink-primary">
+                              {channel.channel_name}
                             </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-center text-ink-secondary">
-                        {channel.applicants}
-                      </td>
-                      <td className="py-3 px-3 text-center font-bold text-ink-primary">
-                        {channel.hires}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono">
-                        <span className={channel.conversion_rate_pct > 20 ? "text-status-healthy font-bold" : "text-ink-primary"}>
-                          {channel.conversion_rate_pct}%
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono">
-                        <span className={channel.beyond_sla_rate_pct > 30 ? "text-status-danger font-bold" : "text-ink-primary"}>
-                          {channel.beyond_sla_rate_pct}%
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono font-medium">
-                        {channel.median_ttf_days}d
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono">
-                        {channel.offer_acceptance_pct}%
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono">
-                        <span className={channel.six_month_retention_pct >= 80 ? "text-status-healthy font-bold" : channel.six_month_retention_pct < 65 ? "text-status-danger font-bold" : "text-ink-primary"}>
-                          {channel.six_month_retention_pct}%
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <div className="inline-flex items-center gap-1 font-bold text-ink-primary">
-                          <span className="text-status-attention">&#9733;</span>
-                          <span>{channel.quality_rating}</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {channel.channel_name === "Employee Referral" && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-brand-teal text-surface-ground">
+                                TOP CHANNEL
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-center text-ink-secondary">
+                          {channel.applicants}
+                        </td>
+                        <td className="py-3 px-3 text-center font-bold text-ink-primary">
+                          {channel.hires}
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono">
+                          <span className={channel.conversion_rate_pct > 20 ? "text-status-healthy font-bold" : "text-ink-primary"}>
+                            {channel.conversion_rate_pct}%
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono font-bold text-status-danger">
+                          {delayedCount} hires
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono">
+                          <span className={channel.beyond_sla_rate_pct > 30 ? "text-status-danger font-bold" : "text-ink-primary"}>
+                            {channel.beyond_sla_rate_pct}%
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono font-medium">
+                          {channel.median_ttf_days}d
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono">
+                          {channel.offer_acceptance_pct}%
+                        </td>
+                        <td className="py-3 px-3 text-center font-mono">
+                          <span className={channel.six_month_retention_pct >= 80 ? "text-status-healthy font-bold" : channel.six_month_retention_pct < 65 ? "text-status-danger font-bold" : "text-ink-primary"}>
+                            {channel.six_month_retention_pct}%
+                          </span>
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          <div className="inline-flex items-center gap-1 font-bold text-ink-primary">
+                            <span className="text-status-attention">&#9733;</span>
+                            <span>{channel.quality_rating}</span>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
 
             {/* Strategic Decision Support Summary */}
             <div className="mt-4 p-4 rounded-xl bg-surface-ground border border-surface-border text-xs text-ink-secondary leading-relaxed">
-              <strong className="text-ink-primary">TA Strategy Conclusion:</strong> Employee Referral delivers the highest 6-month retention (84.5%) and shortest TTF (21.0d) at 12% beyond SLA rate, compared to Social Media Ads which suffers high delay (33.0d) and 61.4% retention. Recommendation 2 advises shifting digital ad budget toward internal employee referral bonuses in Bali and East Java.
+              <strong className="text-ink-primary">Role x Location x Channel Decision Rule:</strong> Never pick a single &ldquo;best sourcing channel&rdquo; by hire count alone. Evaluate volume + SLA speed + 6M downstream retention together. While <span className="text-status-danger font-semibold">Social Media Ads</span> has the highest delay rate (38.0%), high-volume channels like <span className="text-ink-primary font-semibold">Job Portals</span> and <span className="text-ink-primary font-semibold">Employee Referrals</span> contribute substantial absolute delayed headcount. Both rate (%) and absolute volume must be cross-analyzed before shifting recruitment spend.
             </div>
           </div>
         </div>
