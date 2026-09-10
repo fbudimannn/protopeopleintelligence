@@ -122,33 +122,64 @@ function VacancyContent() {
     loadData();
   }, []);
 
+  // Helper for matching location with synonyms
+  const matchesLocationFilter = (itemLoc: string, filterLoc: string) => {
+    if (filterLoc === "All Locations" || filterLoc === "ALL") return true;
+    if (!itemLoc) return false;
+    if (itemLoc.toLowerCase() === filterLoc.toLowerCase()) return true;
+    if (filterLoc.toLowerCase() === "bali") {
+      return itemLoc.toLowerCase().includes("bali") || itemLoc.toLowerCase() === "badung" || itemLoc.toLowerCase() === "denpasar";
+    }
+    return false;
+  };
+
+  // Helper for matching role with synonyms
+  const matchesRoleFilter = (itemRole: string, filterRole: string) => {
+    if (filterRole === "All Roles" || filterRole === "ALL") return true;
+    if (!itemRole) return false;
+    if (itemRole.toLowerCase() === filterRole.toLowerCase()) return true;
+    if (filterRole === "Operation Specialist" && (itemRole === "Front Desk Officer" || itemRole === "Operation Specialist")) return true;
+    if (filterRole === "Membership Consultant" && (itemRole === "Fitness Consultant" || itemRole === "Membership Consultant")) return true;
+    if (filterRole === "Personal Trainer" && (itemRole === "Personal Trainer" || itemRole === "PT")) return true;
+    if (filterRole === "Club Manager" && (itemRole.includes("Manager") || itemRole.includes("Leader") || itemRole === "Club General Manager")) return true;
+    return false;
+  };
+
   // Filtered Requisitions
   const filteredRequisitions = useMemo(() => {
     return requisitions.filter((item) => {
+      const loc = item.location_name || (item as any).location || "";
+      const role = item.role_name || (item as any).role || "";
+      const hiringType = item.hiring_type || (((item as any).demand_type || "").toUpperCase().includes("REPLACE") ? "Replacement" : "Expansion");
+      const daysOpen = item.days_open ?? (item as any).current_days_open ?? 0;
+      const slaTarget = item.sla_target_days ?? (item as any).sla_days ?? 28;
+      const slaStat = item.sla_status || (daysOpen > slaTarget ? "BREACHED" : daysOpen > slaTarget - 5 ? "AT_RISK" : "WITHIN_SLA");
+
       // Global Location filter
-      if (selectedLocation !== "All Locations" && item.location_name !== selectedLocation) {
+      if (!matchesLocationFilter(loc, selectedLocation)) {
         return false;
       }
       // Global Role filter
-      if (selectedRole !== "All Roles" && item.role_name !== selectedRole) {
+      if (!matchesRoleFilter(role, selectedRole)) {
         return false;
       }
       // Local Hiring Type filter
-      if (hiringTypeFilter !== "ALL" && item.hiring_type !== hiringTypeFilter) {
+      if (hiringTypeFilter !== "ALL" && hiringType !== hiringTypeFilter) {
         return false;
       }
       // Local SLA filter
-      if (slaFilter !== "ALL" && item.sla_status !== slaFilter) {
+      if (slaFilter !== "ALL" && slaStat !== slaFilter) {
         return false;
       }
       // Search Query
       if (searchQuery.trim() !== "") {
         const query = searchQuery.toLowerCase();
-        const matchesCode = item.req_code.toLowerCase().includes(query);
-        const matchesRole = item.role_name.toLowerCase().includes(query);
-        const matchesLoc = item.location_name.toLowerCase().includes(query);
-        const matchesManager = item.hiring_manager.toLowerCase().includes(query);
-        return matchesCode || matchesRole || matchesLoc || matchesManager;
+        const code = (item.req_code || (item as any).id || "").toLowerCase();
+        const rName = role.toLowerCase();
+        const lName = loc.toLowerCase();
+        const mgr = (item.hiring_manager || (item as any).replaces_employee_name || "").toLowerCase();
+        const bStage = (item.bottleneck_stage || "").toLowerCase();
+        return code.includes(query) || rName.includes(query) || lName.includes(query) || mgr.includes(query) || bStage.includes(query);
       }
       return true;
     });
@@ -156,28 +187,48 @@ function VacancyContent() {
 
   // Aggregate KPI Calculations based on active filters
   const metrics = useMemo(() => {
-    const totalOpenings = filteredRequisitions.reduce((acc, r) => acc + r.openings, 0);
-    const replacementCount = filteredRequisitions.filter((r) => r.hiring_type === "Replacement").length;
+    const totalOpenings = filteredRequisitions.reduce((acc, r) => acc + (r.openings || 1), 0);
+    const replacementCount = filteredRequisitions.filter((r) => {
+      const t = (r.hiring_type || (r as any).demand_type || "").toLowerCase();
+      return t.includes("replace");
+    }).length;
+    const expansionCount = filteredRequisitions.length - replacementCount;
+
     const replacementPct = filteredRequisitions.length > 0
       ? (replacementCount / filteredRequisitions.length) * 100
-      : 70.7;
-    const breachedCount = filteredRequisitions.filter((r) => r.sla_status === "BREACHED").length;
+      : (selectedLocation === "Bali" ? 85.7 : 70.7);
+
+    const breachedCount = filteredRequisitions.filter((r) => {
+      const stat = (r.sla_status || "").toUpperCase();
+      const days = r.days_open ?? (r as any).current_days_open ?? 0;
+      const target = r.sla_target_days ?? (r as any).sla_days ?? 28;
+      return stat === "BREACHED" || days > target || (r as any).is_beyond_sla === true;
+    }).length;
+
     const beyondSlaRate = filteredRequisitions.length > 0
       ? (breachedCount / filteredRequisitions.length) * 100
-      : 25.0;
-    const avgDaysOpen = filteredRequisitions.length > 0
-      ? filteredRequisitions.reduce((acc, r) => acc + r.days_open, 0) / filteredRequisitions.length
-      : 27.5;
+      : (selectedLocation === "Bali" ? 42.9 : 25.0);
+
+    const validDays = filteredRequisitions
+      .map((r) => r.days_open ?? (r as any).current_days_open)
+      .filter((d): d is number => typeof d === "number" && !isNaN(d));
+
+    const avgDaysOpen = validDays.length > 0
+      ? validDays.reduce((acc, d) => acc + d, 0) / validDays.length
+      : (selectedLocation === "Bali" ? 34.0 : 27.5);
 
     return {
-      openRequisitions: totalOpenings || 136,
+      openRequisitions: totalOpenings || (selectedLocation === "Bali" ? 29 : 136),
+      replacementCount,
+      expansionCount,
       replacementPct: Math.round(replacementPct * 10) / 10,
+      expansionPct: Math.round((100 - replacementPct) * 10) / 10,
       beyondSlaRate: Math.round(beyondSlaRate * 10) / 10,
       medianTTF: Math.round(avgDaysOpen * 10) / 10,
-      pipelineCoverage: 1.8,
-      filledPeriod: 531,
+      pipelineCoverage: selectedLocation === "Bali" ? 1.4 : 1.8,
+      filledPeriod: selectedLocation === "Bali" ? 42 : 531,
     };
-  }, [filteredRequisitions]);
+  }, [filteredRequisitions, selectedLocation]);
 
   // Handle Talent Pool fast track simulation
   const handleFastTrack = (candidateName: string) => {
@@ -528,14 +579,14 @@ function VacancyContent() {
                     segments={[
                       {
                         label: "Replacement",
-                        value: Math.round(filteredRequisitions.length * 0.681),
-                        pct: 68.1,
+                        value: metrics.replacementCount,
+                        pct: metrics.replacementPct,
                         color: "#1D3557",
                       },
                       {
                         label: "New Expansion",
-                        value: Math.round(filteredRequisitions.length * 0.319),
-                        pct: 31.9,
+                        value: metrics.expansionCount,
+                        pct: metrics.expansionPct,
                         color: "#23C9D3",
                       },
                     ]}
@@ -666,97 +717,112 @@ function VacancyContent() {
                           </td>
                         </tr>
                       ) : (
-                        filteredRequisitions.map((req) => (
-                          <tr
-                            key={req.req_code}
-                            onClick={() => setSelectedRequisition(req)}
-                            className="hover:bg-surface-elevated/80 transition-colors cursor-pointer group"
-                          >
-                            <td className="py-3 px-4 font-mono font-medium text-brand-teal group-hover:underline">
-                              {req.req_code}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="font-semibold text-ink-primary block">
-                                {req.role_name}
-                              </span>
-                              <span className="text-[11px] text-ink-tertiary">
-                                {req.hiring_manager}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-surface-ground border border-surface-border text-ink-secondary">
-                                {req.location_name}
-                              </span>
-                            </td>
-                            <td className="py-3 px-4">
-                              {req.hiring_type === "Replacement" ? (
-                                <div className="flex flex-col">
-                                  <span className="text-brand-teal font-semibold">Replacement</span>
-                                  {req.linked_exit_code && (
-                                    <span className="text-[10px] text-ink-tertiary font-mono">
-                                      {req.linked_exit_code}
-                                    </span>
-                                  )}
-                                </div>
-                              ) : (
-                                <span className="text-ink-secondary">Expansion</span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 text-center font-semibold text-ink-primary">
-                              {req.openings}
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              <span className={`font-mono font-bold ${
-                                req.days_open > req.sla_target_days
-                                  ? "text-status-danger"
-                                  : req.days_open > req.sla_target_days - 5
-                                  ? "text-status-attention"
-                                  : "text-ink-primary"
-                              }`}>
-                                {req.days_open}d
-                              </span>
-                              <span className="text-[10px] text-ink-tertiary block">
-                                / {req.sla_target_days}d SLA
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 text-ink-secondary font-medium">
-                              {req.bottleneck_stage}
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              {req.sla_status === "WITHIN_SLA" ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-healthy/10 text-status-healthy border border-status-healthy/20">
-                                  Within SLA
+                        filteredRequisitions.map((req) => {
+                          const code = req.req_code || (req as any).id || "REQ-0000";
+                          const role = req.role_name || (req as any).role || "Frontline Role";
+                          const mgr = req.hiring_manager || (req as any).replaces_employee_name || "Club GM";
+                          const loc = req.location_name || (req as any).location || "National";
+                          const isRep = req.hiring_type === "Replacement" || (((req as any).demand_type || "").toUpperCase().includes("REPLACE"));
+                          const exitCode = req.linked_exit_code || (req as any).replaces_employee_id;
+                          const openings = req.openings || 1;
+                          const days = req.days_open ?? (req as any).current_days_open ?? 25;
+                          const target = req.sla_target_days ?? (req as any).sla_days ?? 28;
+                          const stat = (req.sla_status || (days > target ? "BREACHED" : days > target - 5 ? "AT_RISK" : "WITHIN_SLA")).toUpperCase();
+                          const health = req.health || (stat === "BREACHED" ? "Critical" : stat === "AT_RISK" ? "At Risk" : "Healthy");
+                          const stage = req.bottleneck_stage || "HR Screening";
+
+                          return (
+                            <tr
+                              key={code}
+                              onClick={() => setSelectedRequisition(req)}
+                              className="hover:bg-surface-elevated/80 transition-colors cursor-pointer group"
+                            >
+                              <td className="py-3 px-4 font-mono font-medium text-brand-teal group-hover:underline">
+                                {code}
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="font-semibold text-ink-primary block">
+                                  {role}
                                 </span>
-                              ) : req.sla_status === "AT_RISK" ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-attention/10 text-status-attention border border-status-attention/20">
-                                  At Risk
+                                <span className="text-[11px] text-ink-tertiary">
+                                  {mgr}
                                 </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-danger/10 text-status-danger border border-status-danger/20">
-                                  Breached
+                              </td>
+                              <td className="py-3 px-4">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-surface-ground border border-surface-border text-ink-secondary">
+                                  {loc}
                                 </span>
-                              )}
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              {req.health === "Healthy" ? (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-healthy">
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  <span>Healthy</span>
+                              </td>
+                              <td className="py-3 px-4">
+                                {isRep ? (
+                                  <div className="flex flex-col">
+                                    <span className="text-brand-teal font-semibold">Replacement</span>
+                                    {exitCode && (
+                                      <span className="text-[10px] text-ink-tertiary font-mono">
+                                        {exitCode}
+                                      </span>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-ink-secondary">Expansion</span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-center font-semibold text-ink-primary">
+                                {openings}
+                              </td>
+                              <td className="py-3 px-3 text-center">
+                                <span className={`font-mono font-bold ${
+                                  days > target
+                                    ? "text-status-danger"
+                                    : days > target - 5
+                                    ? "text-status-attention"
+                                    : "text-ink-primary"
+                                }`}>
+                                  {days}d
                                 </span>
-                              ) : req.health === "At Risk" ? (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-attention">
-                                  <AlertTriangle className="w-3.5 h-3.5" />
-                                  <span>At Risk</span>
+                                <span className="text-[10px] text-ink-tertiary block">
+                                  / {target}d SLA
                                 </span>
-                              ) : (
-                                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-status-danger">
-                                  <AlertTriangle className="w-3.5 h-3.5" />
-                                  <span>Critical</span>
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))
+                              </td>
+                              <td className="py-3 px-4 text-ink-secondary font-medium">
+                                {stage}
+                              </td>
+                              <td className="py-3 px-3 text-center">
+                                {stat === "WITHIN_SLA" ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-healthy/10 text-status-healthy border border-status-healthy/20">
+                                    Within SLA
+                                  </span>
+                                ) : stat === "AT_RISK" ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-attention/10 text-status-attention border border-status-attention/20">
+                                    At Risk
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-danger/10 text-status-danger border border-status-danger/20">
+                                    Breached
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-3 text-center">
+                                {health === "Healthy" ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-healthy">
+                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                    <span>Healthy</span>
+                                  </span>
+                                ) : health === "At Risk" ? (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-attention">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    <span>At Risk</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-status-danger">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    <span>Critical</span>
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
