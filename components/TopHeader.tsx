@@ -145,7 +145,7 @@ export default function TopHeader() {
                   className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer max-w-[180px] truncate"
                 >
                   <option value="ALL">All Locations (National)</option>
-                  <option value="Bali">Bali (High Pressure)</option>
+                  <option value="Bali">Bali</option>
                   <option value="Surabaya">Surabaya</option>
                   <option value="Jakarta Barat">Jakarta Barat</option>
                   <option value="Jakarta Selatan">Jakarta Selatan</option>

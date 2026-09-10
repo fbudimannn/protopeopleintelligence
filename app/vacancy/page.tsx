@@ -355,7 +355,7 @@ function VacancyContent() {
               {metrics.beyondSlaRate}%
             </span>
             {selectedLocation === "All Locations" ? (
-              <span className="text-[11px] font-semibold text-status-danger">Bali: 42.9%</span>
+              <span className="text-[11px] font-semibold text-status-attention">Target: ≤ 20%</span>
             ) : (
               <span className={`text-[11px] font-semibold ${metrics.beyondSlaRate === 0 ? 'text-status-healthy' : 'text-status-danger'}`}>
                 {metrics.beyondSlaRate === 0 ? '0% Breached' : 'vs Nat. 27.5%'}
@@ -387,7 +387,7 @@ function VacancyContent() {
               {metrics.medianTTF}d
             </span>
             {selectedLocation === "All Locations" ? (
-              <span className="text-[11px] font-semibold text-status-attention">Bali: 34.0d</span>
+              <span className="text-[11px] font-semibold text-brand-teal">Target: 28.0d</span>
             ) : (
               <span className="text-[11px] font-semibold text-brand-teal">Nat. Med: 27.9d</span>
             )}
