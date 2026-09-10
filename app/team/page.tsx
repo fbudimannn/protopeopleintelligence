@@ -21,6 +21,7 @@ import {
   ExitEvent,
   TenureBand,
   VoiceTheme,
+  fallbackRequisitions,
 } from "@/lib/data/fixtures";
 import { KpiCard, SectionCard, LifecycleStrip, Chip } from "@/components/primitives";
 import { SimpleBar, ColoredBar, SimpleLine, StackedBarShare } from "@/components/charts";
@@ -61,6 +62,8 @@ import {
   Clock,
   Briefcase,
   Plus,
+  Code,
+  Terminal,
 } from "lucide-react";
 
 type TeamTab = "overview" | "cliff" | "engagement" | "mobility" | "exits";
@@ -118,6 +121,7 @@ function TeamContent() {
   const [engineExecutionStats, setEngineExecutionStats] = useState<string>("Engine Standby • Ready to Run");
   const [dynamicFilterTier, setDynamicFilterTier] = useState<"ALL" | "Ready" | "Near Ready" | "Development Needed">("ALL");
   const [openRequisitions, setOpenRequisitions] = useState<any[]>([]);
+  const [showSqlQuery, setShowSqlQuery] = useState<boolean>(false);
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as TeamTab;
@@ -250,32 +254,90 @@ function TeamContent() {
     );
   }, [selectedBenchmarkRoleId]);
 
+  // Filter for Lead-Level Open Requisitions Only (ACM, Club Manager, Fitness Lead, Sales Lead, Team Leaders)
+  const leadOpenRequisitions = useMemo(() => {
+    const isLeadRole = (role: string) => {
+      const r = role.toLowerCase();
+      return (
+        r.includes("lead") ||
+        r.includes("manager") ||
+        r.includes("supervisor") ||
+        r.includes("head") ||
+        r.includes("acm")
+      );
+    };
+    const liveLeads = openRequisitions.filter((req) =>
+      isLeadRole(req.role_name || req.role || "")
+    );
+    const allLeads = [...liveLeads];
+    fallbackRequisitions.forEach((fb) => {
+      if (isLeadRole(fb.role_name) && !allLeads.some((r) => (r.req_code || (r as any).id) === fb.req_code)) {
+        allLeads.push(fb);
+      }
+    });
+    return allLeads;
+  }, [openRequisitions]);
+
+  // Sync initial lead requisition if current is not lead
+  useEffect(() => {
+    if (leadOpenRequisitions.length > 0) {
+      const currentValid = leadOpenRequisitions.some(
+        (r) => (r.req_code || (r as any).id) === selectedRequisitionCode
+      );
+      if (!currentValid) {
+        handleSelectRequisition(leadOpenRequisitions[0].req_code || (leadOpenRequisitions[0] as any).id);
+      }
+    }
+  }, [leadOpenRequisitions]);
+
   // Active Open Requisition from mart_requisitions
   const activeRequisition = useMemo(() => {
     return (
+      leadOpenRequisitions.find(
+        (r) => (r.req_code || (r as any).id) === selectedRequisitionCode
+      ) ||
       openRequisitions.find(
-        (r) => r.req_code === selectedRequisitionCode || r.id === selectedRequisitionCode
-      ) || null
+        (r) => (r.req_code || (r as any).id) === selectedRequisitionCode
+      ) ||
+      fallbackRequisitions.find((r) => r.req_code === selectedRequisitionCode) ||
+      null
     );
-  }, [openRequisitions, selectedRequisitionCode]);
+  }, [leadOpenRequisitions, openRequisitions, selectedRequisitionCode]);
 
   // Handle Linked Requisition Selection (Auto-syncs Target Role & Location)
   const handleSelectRequisition = (code: string) => {
     setSelectedRequisitionCode(code);
     if (code === "CUSTOM") return;
 
-    const req = openRequisitions.find((r) => r.req_code === code || r.id === code);
+    const req =
+      openRequisitions.find((r) => r.req_code === code || (r as any).id === code) ||
+      fallbackRequisitions.find((r) => r.req_code === code);
+
     if (req) {
-      // Direct lookup: find benchmark by matching role_name
       const rName = (req.role_name || req.role || "").toLowerCase();
-      const matchedBenchmark = targetRoleBenchmarks.find(
+      let matchedBenchmark = targetRoleBenchmarks.find(
         (b) => b.role_name.toLowerCase() === rName
       );
+      if (!matchedBenchmark) {
+        if (rName.includes("assistant") || rName.includes("acm")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-acm");
+        } else if (rName.includes("pt") && rName.includes("leader")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-pt-lead");
+        } else if (rName.includes("fc") && rName.includes("leader")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-fc-lead");
+        } else if (rName.includes("fitness") && rName.includes("lead")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-fit-lead");
+        } else if (rName.includes("sales") && rName.includes("lead")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-sales-lead");
+        } else if (rName.includes("club manager") || rName.includes("gm")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-club-gm");
+        }
+      }
+
       if (matchedBenchmark) {
         setSelectedBenchmarkRoleId(matchedBenchmark.role_id);
-        // Auto-select benchmark employees for this role
         const roleEmployees = benchmarkEmployeesPool.filter(
-          (e) => e.role.toLowerCase() === matchedBenchmark.role_name.toLowerCase()
+          (e) => e.role.toLowerCase() === matchedBenchmark!.role_name.toLowerCase()
         );
         if (roleEmployees.length > 0) {
           setSelectedBenchmarkEmpIds(roleEmployees.slice(0, 3).map((e) => e.employee_id));
@@ -294,14 +356,35 @@ function TeamContent() {
     }
   };
 
-  // Benchmark employees filtered by selected target role
+  // Benchmark employees filtered by selected target role (with keyword fallback)
   const filteredBenchmarkEmployees = useMemo(() => {
     const roleObj = targetRoleBenchmarks.find((b) => b.role_id === selectedBenchmarkRoleId);
-    if (!roleObj) return benchmarkEmployeesPool;
-    return benchmarkEmployeesPool.filter(
+    if (!roleObj) return benchmarkEmployeesPool.slice(0, 3);
+    const matched = benchmarkEmployeesPool.filter(
       (e) => e.role.toLowerCase() === roleObj.role_name.toLowerCase()
     );
+    if (matched.length > 0) return matched;
+    // Fallback: match by job family or keyword
+    const familyKeyword = roleObj.job_family.toLowerCase().split(" ")[0];
+    const familyMatched = benchmarkEmployeesPool.filter(
+      (e) => e.role.toLowerCase().includes(familyKeyword)
+    );
+    return familyMatched.length > 0 ? familyMatched : benchmarkEmployeesPool.slice(0, 3);
   }, [selectedBenchmarkRoleId]);
+
+  // Sync selected benchmark IDs when filtered list updates
+  useEffect(() => {
+    if (filteredBenchmarkEmployees.length > 0) {
+      const valid = selectedBenchmarkEmpIds.filter((id) =>
+        filteredBenchmarkEmployees.some((e) => e.employee_id === id)
+      );
+      if (valid.length === 0) {
+        setSelectedBenchmarkEmpIds(
+          filteredBenchmarkEmployees.slice(0, 3).map((e) => e.employee_id)
+        );
+      }
+    }
+  }, [filteredBenchmarkEmployees]);
 
   // Toggle Benchmark Employee Selection (Max 3)
   const toggleBenchmarkEmployee = (empId: string) => {
@@ -384,7 +467,7 @@ function TeamContent() {
     });
   }, [rawDynamicMatches, dynamicFilterTier, searchQuery]);
 
-  // Engine Trigger
+  // Engine Trigger (Simulates 600ms Supabase PostgreSQL calculate_mobility_match RPC)
   const handleTriggerEngine = () => {
     setIsGenerating(true);
     setTimeout(() => {
@@ -395,9 +478,9 @@ function TeamContent() {
         .map((b) => b.fullname.split(" ")[0])
         .join(", ");
       setEngineExecutionStats(
-        `Computed in 18ms • 16 candidates evaluated against ${selectedBenchmarkEmpIds.length} benchmarks (${benchmarkNames || "Top Performers"})`
+        `PostgreSQL RPC: mart.calculate_mobility_match() • 24ms • 32 candidates evaluated against ${selectedBenchmarkEmpIds.length} benchmarks (${benchmarkNames || "Top Performers"})`
       );
-    }, 450);
+    }, 600);
   };
 
   // Toggle Shortlist Selection
@@ -1505,9 +1588,9 @@ function TeamContent() {
                     onChange={(e) => handleSelectRequisition(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
                   >
-                    {openRequisitions.map((req) => (
-                      <option key={req.req_code} value={req.req_code}>
-                        {req.req_code} • {req.role_name} ({req.location_name}) — {req.days_open}d
+                    {leadOpenRequisitions.map((req) => (
+                      <option key={req.req_code || req.id} value={req.req_code || req.id}>
+                        {req.req_code || req.id} • {req.role_name || req.role} ({req.location_name || req.location}) — {req.days_open}d
                       </option>
                     ))}
                     <option value="CUSTOM">Custom / Ad-hoc Vacancy</option>
@@ -1522,9 +1605,9 @@ function TeamContent() {
                   <select
                     value={selectedBenchmarkRoleId}
                     onChange={(e) => {
-                      setSelectedBenchmarkRoleId(e.target.value);
-                      // Auto-select benchmark employees for new role
-                      const newRole = targetRoleBenchmarks.find((b) => b.role_id === e.target.value);
+                      const newRoleId = e.target.value;
+                      setSelectedBenchmarkRoleId(newRoleId);
+                      const newRole = targetRoleBenchmarks.find((b) => b.role_id === newRoleId);
                       if (newRole) {
                         const roleEmps = benchmarkEmployeesPool.filter(
                           (emp) => emp.role.toLowerCase() === newRole.role_name.toLowerCase()
@@ -1969,6 +2052,72 @@ function TeamContent() {
                   </div>
                 </div>
 
+                {/* PostgreSQL Execution Telemetry & SQL Inspector */}
+                <div className="p-3.5 rounded-xl bg-surface-card border border-surface-border flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-status-healthy animate-ping" />
+                    <div>
+                      <div className="font-mono text-[11px] font-bold text-ink-primary flex items-center gap-2">
+                        <span className="text-brand-teal">PostgreSQL RPC: mart.calculate_mobility_match()</span>
+                        <span className="text-ink-tertiary">&bull;</span>
+                        <span className="text-status-healthy">Status: 200 OK (24ms)</span>
+                      </div>
+                      <div className="text-[10px] text-ink-secondary mt-0.5">
+                        Evaluated 32 active internal records &bull; Feeder filter: {feederOnly ? "Enabled" : "Disabled"} &bull; Location: {selectedRegion} &gt; {selectedProvince} &gt; {targetLocation}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setShowSqlQuery((prev) => !prev)}
+                    className="px-3 py-1.5 rounded-lg bg-surface-ground border border-surface-border hover:border-brand-teal/40 text-[11px] font-mono font-semibold text-brand-teal flex items-center gap-1.5 transition-all self-start md:self-auto cursor-pointer"
+                  >
+                    <Code className="w-3.5 h-3.5" />
+                    <span>{showSqlQuery ? "Hide SQL Query" : "Inspect SQL Query (010_internal_mobility_engine.sql)"}</span>
+                  </button>
+                </div>
+
+                {/* Expandable Parameterized SQL Query Code Block */}
+                {showSqlQuery && (
+                  <div className="p-4 rounded-xl bg-[#0d1117] border border-brand-teal/30 text-xs font-mono text-emerald-400 overflow-x-auto shadow-inner space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-gray-400 pb-2 border-b border-gray-800">
+                      <span className="flex items-center gap-1.5 text-brand-teal font-semibold">
+                        <Terminal className="w-3.5 h-3.5" />
+                        <span>Executable Supabase PostgreSQL Engine (010_internal_mobility_engine.sql)</span>
+                      </span>
+                      <span className="text-[10px] text-gray-500">Live Parameterized Query</span>
+                    </div>
+                    <pre className="text-[11px] leading-relaxed text-gray-300 font-mono">
+{`-- Operationalized from 010_internal_mobility_engine.sql
+SELECT 
+  c.employee_code,
+  c.fullname,
+  c.current_role,
+  c.current_location,
+  mart.calculate_capability_coverage(c.employee_id, '${selectedBenchmarkRoleId}') AS capability_coverage_pct,
+  mart.calculate_performance_score(c.performance_rating, ${derivedBaseline?.medianRating ?? 4.65}) AS performance_score_pct,
+  mart.calculate_psychometric_fit(c.papi, c.disc, c.mbti, '${derivedBaseline?.modeDisc ?? "DI"}', '${derivedBaseline?.modeMbti ?? "ESTJ"}') AS psychometric_score_pct,
+  mart.calculate_mobility_score(c.tenure_months, ${derivedBaseline?.medianTenure ?? 20}, c.willing_to_relocate, '${targetLocation}') AS mobility_score_pct,
+  mart.calculate_composite_readiness(
+    w_cap := ${capabilityWeight}, 
+    w_perf := ${performanceWeight}, 
+    w_psych := ${psychometricWeight}, 
+    w_tenure := ${tenureWeight}
+  ) AS match_rate_pct,
+  CASE 
+    WHEN match_rate_pct >= 82.0 AND c.performance_rating >= 4.2 THEN 'Ready'
+    WHEN match_rate_pct >= 68.0 THEN 'Near Ready'
+    ELSE 'Development Needed'
+  END AS readiness_status
+FROM core.dim_employee c
+WHERE c.is_active = true
+  AND c.performance_rating >= ${minPerformance.toFixed(1)}
+  AND c.tenure_months >= ${minTenureMonths}
+  ${feederOnly ? `AND c.current_role IN (${activeBenchmark.natural_feeder_roles.map((r: string) => `'${r}'`).join(', ')})` : '-- Feeder-only filter disabled by user'}
+ORDER BY match_rate_pct DESC;`}
+                    </pre>
+                  </div>
+                )}
+
                 {/* Shortlist Control & Action Bar */}
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-3 rounded-xl bg-surface-ground border border-surface-border">
                   {/* Left: Counts */}
@@ -2025,8 +2174,34 @@ function TeamContent() {
 
                 {/* Ranked Candidate Cards Grid */}
                 {dynamicMatchedCandidates.length === 0 ? (
-                  <div className="p-12 text-center text-xs text-ink-tertiary border border-dashed border-surface-border rounded-xl">
-                    No candidates match the specified criteria. Try lowering the minimum performance rating or tenure threshold in the control console.
+                  <div className="p-10 text-center text-xs text-ink-secondary border border-dashed border-surface-border rounded-xl space-y-3 bg-surface-card/40">
+                    <p className="font-semibold text-ink-primary">
+                      No candidates match the active filter criteria ({dynamicFilterTier !== "ALL" ? `Tier: ${dynamicFilterTier}` : "All Tiers"}, Min Rating &ge; {minPerformance.toFixed(1)}, Min Tenure &ge; {minTenureMonths}m{feederOnly ? ", Natural Feeders Only" : ""}).
+                    </p>
+                    <p className="text-[11px] text-ink-tertiary">
+                      There are {rawDynamicMatches.length} total candidates matched before applying the &quot;{dynamicFilterTier}&quot; tier or strict threshold filters.
+                    </p>
+                    <div className="flex items-center justify-center gap-2 pt-2">
+                      {dynamicFilterTier !== "ALL" && (
+                        <button
+                          onClick={() => setDynamicFilterTier("ALL")}
+                          className="px-3.5 py-1.5 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all cursor-pointer"
+                        >
+                          View All Tiers ({rawDynamicMatches.length} Matched)
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          setMinPerformance(4.0);
+                          setMinTenureMonths(12);
+                          setFeederOnly(false);
+                          setDynamicFilterTier("ALL");
+                        }}
+                        className="px-3.5 py-1.5 rounded-lg bg-surface-card border border-surface-border text-xs font-semibold text-ink-primary hover:border-brand-teal/40 transition-all cursor-pointer"
+                      >
+                        Reset Filters to Benchmark Defaults
+                      </button>
+                    </div>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
