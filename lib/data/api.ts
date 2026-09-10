@@ -68,19 +68,63 @@ export async function getRequisitions(): Promise<{ data: RequisitionItem[]; isLi
 }
 
 export async function getSourcingChannels(): Promise<{ data: SourcingChannelMetric[]; isLive: boolean }> {
-  return { data: fallbackSourcingChannels, isLive: false };
+  if (!supabase) {
+    return { data: fallbackSourcingChannels, isLive: false };
+  }
+  try {
+    const { data, error } = await supabase.from("sourcing_channels").select("*");
+    if (error || !data || data.length === 0) {
+      return { data: fallbackSourcingChannels, isLive: false };
+    }
+    return { data: data as SourcingChannelMetric[], isLive: true };
+  } catch {
+    return { data: fallbackSourcingChannels, isLive: false };
+  }
 }
 
 export async function getFunnelStages(): Promise<{ data: FunnelStageMetric[]; isLive: boolean }> {
-  return { data: fallbackFunnelStages, isLive: false };
+  if (!supabase) {
+    return { data: fallbackFunnelStages, isLive: false };
+  }
+  try {
+    const { data, error } = await supabase.from("funnel_stages").select("*").order("stage_order", { ascending: true });
+    if (error || !data || data.length === 0) {
+      return { data: fallbackFunnelStages, isLive: false };
+    }
+    return { data: data as FunnelStageMetric[], isLive: true };
+  } catch {
+    return { data: fallbackFunnelStages, isLive: false };
+  }
 }
 
 export async function getTalentPoolCandidates(): Promise<{ data: TalentPoolCandidate[]; isLive: boolean }> {
-  return { data: fallbackTalentPool, isLive: false };
+  if (!supabase) {
+    return { data: fallbackTalentPool, isLive: false };
+  }
+  try {
+    const { data, error } = await supabase.from("synthetic_talent_pool").select("*");
+    if (error || !data || data.length === 0) {
+      return { data: fallbackTalentPool, isLive: false };
+    }
+    return { data: data as TalentPoolCandidate[], isLive: true };
+  } catch {
+    return { data: fallbackTalentPool, isLive: false };
+  }
 }
 
 export async function getHiringOutcomes(): Promise<{ data: HiringOutcomeMetric[]; isLive: boolean }> {
-  return { data: fallbackHiringOutcomes, isLive: false };
+  if (!supabase) {
+    return { data: fallbackHiringOutcomes, isLive: false };
+  }
+  try {
+    const { data, error } = await supabase.from("hiring_outcomes").select("*");
+    if (error || !data || data.length === 0) {
+      return { data: fallbackHiringOutcomes, isLive: false };
+    }
+    return { data: data as HiringOutcomeMetric[], isLive: true };
+  } catch {
+    return { data: fallbackHiringOutcomes, isLive: false };
+  }
 }
 
 export async function getRetentionCohorts(): Promise<{ data: RetentionCohort[]; isLive: boolean }> {
@@ -113,11 +157,23 @@ export async function getEngagementSummaries(): Promise<{ data: EngagementSummar
   }
 }
 
-export async function getInternalMobilityMatches(): Promise<{ data: InternalMobilityMatch[]; isLive: boolean }> {
+export async function getInternalMobilityMatches(
+  targetRole: string = "Assistant Club Manager",
+  targetLocation: string = "ALL"
+): Promise<{ data: InternalMobilityMatch[]; isLive: boolean }> {
   if (!supabase) {
     return { data: fallbackMobilityMatches, isLive: false };
   }
   try {
+    // 1. Primary: Run live PostgreSQL SQL Matching Engine via Supabase RPC
+    const { data: rpcData, error: rpcError } = await supabase.rpc("calculate_mobility_match", {
+      p_target_role: targetRole,
+      p_target_location: targetLocation,
+    });
+    if (!rpcError && rpcData && rpcData.length > 0) {
+      return { data: rpcData as InternalMobilityMatch[], isLive: true };
+    }
+    // 2. Secondary fallback: check mart table
     const { data, error } = await supabase.from("mart_internal_mobility_match").select("*");
     if (error || !data || data.length === 0) {
       return { data: fallbackMobilityMatches, isLive: false };
@@ -128,20 +184,68 @@ export async function getInternalMobilityMatches(): Promise<{ data: InternalMobi
   }
 }
 
+export async function getSyntheticEmployees(limit: number = 300): Promise<{ data: any[]; isLive: boolean }> {
+  if (!supabase) {
+    return { data: [], isLive: false };
+  }
+  try {
+    const { data, error } = await supabase.from("synthetic_employees").select("*").limit(limit);
+    if (error || !data || data.length === 0) {
+      return { data: [], isLive: false };
+    }
+    return { data, isLive: true };
+  } catch {
+    return { data: [], isLive: false };
+  }
+}
+
 export function getDataProvenance(): ProvenanceRecord[] {
   return dataProvenanceRegistry;
 }
 
 export async function getExitEvents(): Promise<{ data: ExitEvent[]; isLive: boolean }> {
-  return { data: fallbackExitEvents, isLive: false };
+  if (!supabase) {
+    return { data: fallbackExitEvents, isLive: false };
+  }
+  try {
+    const { data, error } = await supabase.from("exit_events").select("*");
+    if (error || !data || data.length === 0) {
+      return { data: fallbackExitEvents, isLive: false };
+    }
+    return { data: data as ExitEvent[], isLive: true };
+  } catch {
+    return { data: fallbackExitEvents, isLive: false };
+  }
 }
 
 export async function getTenureBands(): Promise<{ data: TenureBand[]; isLive: boolean }> {
-  return { data: fallbackTenureBands, isLive: false };
+  if (!supabase) {
+    return { data: fallbackTenureBands, isLive: false };
+  }
+  try {
+    const { data, error } = await supabase.from("tenure_bands").select("*");
+    if (error || !data || data.length === 0) {
+      return { data: fallbackTenureBands, isLive: false };
+    }
+    return { data: data as TenureBand[], isLive: true };
+  } catch {
+    return { data: fallbackTenureBands, isLive: false };
+  }
 }
 
 export async function getVoiceThemes(): Promise<{ data: VoiceTheme[]; isLive: boolean }> {
-  return { data: fallbackVoiceThemes, isLive: false };
+  if (!supabase) {
+    return { data: fallbackVoiceThemes, isLive: false };
+  }
+  try {
+    const { data, error } = await supabase.from("voice_themes").select("*");
+    if (error || !data || data.length === 0) {
+      return { data: fallbackVoiceThemes, isLive: false };
+    }
+    return { data: data as VoiceTheme[], isLive: true };
+  } catch {
+    return { data: fallbackVoiceThemes, isLive: false };
+  }
 }
 
 export async function getPipelineLayers(): Promise<{ data: PipelineLayer[]; isLive: boolean }> {
