@@ -32,6 +32,11 @@ import {
   runDynamicMobilityMatching,
   benchmarkEmployeesPool,
   BenchmarkEmployeeProfile,
+  locationHierarchy,
+  getProvincesForRegion,
+  getCitiesForProvince,
+  getRegionCluster,
+  getProvince,
 } from "@/lib/data/mobilityEngine";
 import {
   Users,
@@ -89,13 +94,15 @@ function TeamContent() {
   const [promotionSuccess, setPromotionSuccess] = useState<string | null>(null);
 
   // Dynamic Mobility Engine State
-  const [selectedRequisitionCode, setSelectedRequisitionCode] = useState<string>("REQ-BLI-0120");
-  const [selectedBenchmarkRoleId, setSelectedBenchmarkRoleId] = useState<string>("role-acm");
+  const [selectedRequisitionCode, setSelectedRequisitionCode] = useState<string>("REQ-BLI-0104");
+  const [selectedBenchmarkRoleId, setSelectedBenchmarkRoleId] = useState<string>("role-opspec");
   const [targetLocation, setTargetLocation] = useState<string>("Bali");
+  const [selectedRegion, setSelectedRegion] = useState<string>("Jawa & Bali");
+  const [selectedProvince, setSelectedProvince] = useState<string>("Bali");
   const [selectedBenchmarkEmpIds, setSelectedBenchmarkEmpIds] = useState<string[]>([
-    "EMP-1003",
-    "EMP-1005",
-    "EMP-1002",
+    "EMP-1081",
+    "EMP-1083",
+    "EMP-1085",
   ]);
   const [hasRunEngine, setHasRunEngine] = useState<boolean>(false);
   const [minPerformance, setMinPerformance] = useState<number>(4.0);
@@ -259,23 +266,42 @@ function TeamContent() {
 
     const req = openRequisitions.find((r) => r.req_code === code || r.id === code);
     if (req) {
+      // Direct lookup: find benchmark by matching role_name
       const rName = (req.role_name || req.role || "").toLowerCase();
-      if (rName.includes("assistant")) {
-        setSelectedBenchmarkRoleId("role-acm");
-      } else if (rName.includes("fitness lead") || rName.includes("pt team")) {
-        setSelectedBenchmarkRoleId("role-fit-lead");
-      } else if (rName.includes("sales lead") || rName.includes("fc team") || rName.includes("fitness consultant")) {
-        setSelectedBenchmarkRoleId("role-sales-lead");
-      } else if (rName.includes("club manager") || rName.includes("gm")) {
-        setSelectedBenchmarkRoleId("role-club-gm");
+      const matchedBenchmark = targetRoleBenchmarks.find(
+        (b) => b.role_name.toLowerCase() === rName
+      );
+      if (matchedBenchmark) {
+        setSelectedBenchmarkRoleId(matchedBenchmark.role_id);
+        // Auto-select benchmark employees for this role
+        const roleEmployees = benchmarkEmployeesPool.filter(
+          (e) => e.role.toLowerCase() === matchedBenchmark.role_name.toLowerCase()
+        );
+        if (roleEmployees.length > 0) {
+          setSelectedBenchmarkEmpIds(roleEmployees.slice(0, 3).map((e) => e.employee_id));
+        }
       }
 
+      // Sync location hierarchy from requisition
       const loc = req.location_name || req.location;
       if (loc) {
         setTargetLocation(loc);
+        const region = getRegionCluster(loc);
+        const province = getProvince(loc);
+        setSelectedRegion(region);
+        setSelectedProvince(province);
       }
     }
   };
+
+  // Benchmark employees filtered by selected target role
+  const filteredBenchmarkEmployees = useMemo(() => {
+    const roleObj = targetRoleBenchmarks.find((b) => b.role_id === selectedBenchmarkRoleId);
+    if (!roleObj) return benchmarkEmployeesPool;
+    return benchmarkEmployeesPool.filter(
+      (e) => e.role.toLowerCase() === roleObj.role_name.toLowerCase()
+    );
+  }, [selectedBenchmarkRoleId]);
 
   // Toggle Benchmark Employee Selection (Max 3)
   const toggleBenchmarkEmployee = (empId: string) => {
@@ -1452,8 +1478,8 @@ function TeamContent() {
               </div>
             </div>
 
-            {/* 1. Interactive Control Console (3-Column Configuration Grid) */}
-            <div className="p-5 rounded-xl bg-surface-ground border border-surface-border space-y-4">
+            {/* 1. Interactive Control Console — Unified Configuration Panel */}
+            <div className="p-5 rounded-xl bg-surface-ground border border-surface-border space-y-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Zap className="w-4 h-4 text-brand-teal" />
@@ -1466,64 +1492,61 @@ function TeamContent() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
-                {/* Column 1: Target Role & Location Selection */}
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-[11px] font-bold text-ink-primary uppercase mb-1 flex items-center justify-between">
-                      <span>Linked Open Requisition</span>
-                      <span className="text-[10px] text-brand-teal font-normal font-mono">mart_requisitions</span>
-                    </label>
-                    <select
-                      value={selectedRequisitionCode}
-                      onChange={(e) => handleSelectRequisition(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
-                    >
-                      {openRequisitions.map((req) => (
-                        <option key={req.req_code} value={req.req_code}>
-                          {req.req_code} • {req.role_name} ({req.location_name}) — {req.days_open}d
-                        </option>
-                      ))}
-                      <option value="CUSTOM">Custom / Ad-hoc Vacancy</option>
-                    </select>
-                  </div>
+              {/* Row 1: Requisition + Target Role + Location Cascade */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+                {/* Linked Open Requisition */}
+                <div>
+                  <label className="block text-[11px] font-bold text-ink-primary uppercase mb-1 flex items-center justify-between">
+                    <span>Linked Open Requisition</span>
+                    <span className="text-[10px] text-brand-teal font-normal font-mono">mart_requisitions</span>
+                  </label>
+                  <select
+                    value={selectedRequisitionCode}
+                    onChange={(e) => handleSelectRequisition(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
+                  >
+                    {openRequisitions.map((req) => (
+                      <option key={req.req_code} value={req.req_code}>
+                        {req.req_code} • {req.role_name} ({req.location_name}) — {req.days_open}d
+                      </option>
+                    ))}
+                    <option value="CUSTOM">Custom / Ad-hoc Vacancy</option>
+                  </select>
+                </div>
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-ink-primary uppercase mb-1">
-                      Target Vacancy / Benchmark Role
-                    </label>
-                    <select
-                      value={selectedBenchmarkRoleId}
-                      onChange={(e) => setSelectedBenchmarkRoleId(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
-                    >
-                      {targetRoleBenchmarks.map((b) => (
-                        <option key={b.role_id} value={b.role_id}>
-                          {b.role_name} ({b.job_family})
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                {/* Target Vacancy / Benchmark Role */}
+                <div>
+                  <label className="block text-[11px] font-bold text-ink-primary uppercase mb-1">
+                    Target Vacancy / Benchmark Role
+                  </label>
+                  <select
+                    value={selectedBenchmarkRoleId}
+                    onChange={(e) => {
+                      setSelectedBenchmarkRoleId(e.target.value);
+                      // Auto-select benchmark employees for new role
+                      const newRole = targetRoleBenchmarks.find((b) => b.role_id === e.target.value);
+                      if (newRole) {
+                        const roleEmps = benchmarkEmployeesPool.filter(
+                          (emp) => emp.role.toLowerCase() === newRole.role_name.toLowerCase()
+                        );
+                        if (roleEmps.length > 0) {
+                          setSelectedBenchmarkEmpIds(roleEmps.slice(0, 3).map((emp) => emp.employee_id));
+                        }
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
+                  >
+                    {targetRoleBenchmarks.map((b) => (
+                      <option key={b.role_id} value={b.role_id}>
+                        {b.role_name} ({b.job_family})
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-                  <div>
-                    <label className="block text-[11px] font-bold text-ink-primary uppercase mb-1">
-                      Cluster Location / Target Gym
-                    </label>
-                    <select
-                      value={targetLocation}
-                      onChange={(e) => setTargetLocation(e.target.value)}
-                      className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
-                    >
-                      {["Bali", "Surabaya", "Jakarta Barat", "Jakarta Selatan", "Tangerang", "Bandung"].map((loc) => (
-                        <option key={loc} value={loc}>
-                          {loc} Cluster
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {/* Requisition Linkage & SLA Status Pill */}
-                  <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border flex items-center justify-between text-xs">
+                {/* Requisition Linkage & SLA Status Pill */}
+                <div className="flex flex-col justify-end">
+                  <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border flex items-center justify-between text-xs h-full">
                     <div>
                       <span className="text-[10px] text-ink-tertiary uppercase font-bold block">
                         Linked Requisition SLA
@@ -1532,81 +1555,140 @@ function TeamContent() {
                         {activeRequisition ? `${activeRequisition.req_code} (${activeRequisition.days_open}d Open)` : selectedRequisitionCode}
                       </span>
                     </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-status-healthy/15 text-status-healthy">
-                      SLA: 10d vs 34d
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      activeRequisition?.sla_status === "BREACHED"
+                        ? "bg-status-critical/15 text-status-critical"
+                        : activeRequisition?.sla_status === "AT_RISK"
+                        ? "bg-brand-yellow/15 text-brand-yellow"
+                        : "bg-status-healthy/15 text-status-healthy"
+                    }`}>
+                      SLA: {activeRequisition ? `${activeRequisition.days_open}d vs ${activeRequisition.sla_target_days}d` : "—"}
                     </span>
                   </div>
                 </div>
+              </div>
 
-                {/* Column 2: Candidate Qualification Filters */}
-                <div className="space-y-3">
+              {/* Row 1b: Location Cascade (Region → Province → City) */}
+              <div>
+                <label className="block text-[11px] font-bold text-ink-primary uppercase mb-1.5 flex items-center gap-1.5">
+                  <span>Target Location</span>
+                  <span className="text-[10px] text-ink-tertiary font-normal">(Region → Province → City — consistent with fithub_analysis.ipynb)</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Region Cluster */}
                   <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="text-[11px] font-bold text-ink-primary uppercase">
-                        Min Performance Rating
-                      </label>
-                      <span className="font-mono text-xs font-bold text-brand-teal">
-                        &gt;= {minPerformance.toFixed(1)} / 5.0
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min="3.5"
-                      max="4.8"
-                      step="0.1"
-                      value={minPerformance}
-                      onChange={(e) => setMinPerformance(parseFloat(e.target.value))}
-                      className="w-full accent-brand-teal cursor-pointer"
-                    />
-                    <div className="flex justify-between text-[10px] text-ink-tertiary">
-                      <span>3.5 (Acceptable)</span>
-                      <span>4.0 (Benchmark)</span>
-                      <span>4.8 (Top Performer)</span>
-                    </div>
+                    <span className="text-[10px] text-ink-tertiary font-semibold uppercase block mb-0.5">Region Cluster</span>
+                    <select
+                      value={selectedRegion}
+                      onChange={(e) => {
+                        const newRegion = e.target.value;
+                        setSelectedRegion(newRegion);
+                        const provs = getProvincesForRegion(newRegion);
+                        if (provs.length > 0) {
+                          setSelectedProvince(provs[0]);
+                          const cities = getCitiesForProvince(newRegion, provs[0]);
+                          if (cities.length > 0) setTargetLocation(cities[0]);
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
+                    >
+                      {Object.keys(locationHierarchy).map((region) => (
+                        <option key={region} value={region}>{region}</option>
+                      ))}
+                    </select>
                   </div>
 
+                  {/* Province */}
                   <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <label className="text-[11px] font-bold text-ink-primary uppercase">
-                        Min Club Tenure
-                      </label>
-                      <span className="font-mono text-xs font-bold text-brand-teal">
-                        &gt;= {minTenureMonths} Months
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min="6"
-                      max="24"
-                      step="1"
-                      value={minTenureMonths}
-                      onChange={(e) => setMinTenureMonths(parseInt(e.target.value))}
-                      className="w-full accent-brand-teal cursor-pointer"
-                    />
-                    <div className="flex justify-between text-[10px] text-ink-tertiary">
-                      <span>6 mo (Probation)</span>
-                      <span>12 mo (1Y Cliff)</span>
-                      <span>24 mo (Senior)</span>
-                    </div>
+                    <span className="text-[10px] text-ink-tertiary font-semibold uppercase block mb-0.5">Province</span>
+                    <select
+                      value={selectedProvince}
+                      onChange={(e) => {
+                        const newProv = e.target.value;
+                        setSelectedProvince(newProv);
+                        const cities = getCitiesForProvince(selectedRegion, newProv);
+                        if (cities.length > 0) setTargetLocation(cities[0]);
+                      }}
+                      className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
+                    >
+                      {getProvincesForRegion(selectedRegion).map((prov) => (
+                        <option key={prov} value={prov}>{prov}</option>
+                      ))}
+                    </select>
                   </div>
 
-                  <div className="pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={feederOnly}
-                        onChange={(e) => setFeederOnly(e.target.checked)}
-                        className="w-4 h-4 rounded border-surface-border text-brand-teal accent-brand-teal cursor-pointer"
-                      />
-                      <span className="text-xs font-medium text-ink-primary">
-                        Natural feeder pathways only ({activeBenchmark.natural_feeder_roles.join(", ")})
-                      </span>
+                  {/* City */}
+                  <div>
+                    <span className="text-[10px] text-ink-tertiary font-semibold uppercase block mb-0.5">City / Location</span>
+                    <select
+                      value={targetLocation}
+                      onChange={(e) => setTargetLocation(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
+                    >
+                      {getCitiesForProvince(selectedRegion, selectedProvince).map((city) => (
+                        <option key={city} value={city}>{city}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Row 2: Qualification Filters + Weights */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Min Performance Rating */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[11px] font-bold text-ink-primary uppercase">
+                      Min Performance Rating
                     </label>
+                    <span className="font-mono text-xs font-bold text-brand-teal">
+                      &gt;= {minPerformance.toFixed(1)} / 5.0
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="3.5"
+                    max="4.8"
+                    step="0.1"
+                    value={minPerformance}
+                    onChange={(e) => setMinPerformance(parseFloat(e.target.value))}
+                    className="w-full accent-brand-teal cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-ink-tertiary">
+                    <span>3.5 (Acceptable)</span>
+                    <span>4.0 (Benchmark)</span>
+                    <span>4.8 (Top Performer)</span>
                   </div>
                 </div>
 
-                {/* Column 3: Composite Weights & Action Trigger */}
-                <div className="space-y-3 flex flex-col justify-between">
+                {/* Min Club Tenure */}
+                <div>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-[11px] font-bold text-ink-primary uppercase">
+                      Min Club Tenure
+                    </label>
+                    <span className="font-mono text-xs font-bold text-brand-teal">
+                      &gt;= {minTenureMonths} Months
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="6"
+                    max="24"
+                    step="1"
+                    value={minTenureMonths}
+                    onChange={(e) => setMinTenureMonths(parseInt(e.target.value))}
+                    className="w-full accent-brand-teal cursor-pointer"
+                  />
+                  <div className="flex justify-between text-[10px] text-ink-tertiary">
+                    <span>6 mo (Probation)</span>
+                    <span>12 mo (1Y Cliff)</span>
+                    <span>24 mo (Senior)</span>
+                  </div>
+                </div>
+
+                {/* Weights + Feeder Toggle */}
+                <div className="space-y-3">
                   <div>
                     <label className="block text-[11px] font-bold text-ink-primary uppercase mb-1.5">
                       Composite Weight Distribution (100% Total)
@@ -1629,126 +1711,139 @@ function TeamContent() {
                         <span className="font-bold text-ink-primary">10%</span>
                       </div>
                     </div>
-                    <span className="text-[10px] text-ink-tertiary block mt-1.5">
-                      Includes PAPI (6%), DISC (5%), MBTI (4%), Strengths (5%), + location/tenure feeder multipliers.
+                    <span className="text-[10px] text-ink-tertiary block mt-1">
+                      PAPI (6%) + DISC (5%) + MBTI (4%) + Strengths (5%)
                     </span>
                   </div>
 
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={feederOnly}
+                      onChange={(e) => setFeederOnly(e.target.checked)}
+                      className="w-4 h-4 rounded border-surface-border text-brand-teal accent-brand-teal cursor-pointer"
+                    />
+                    <span className="text-xs font-medium text-ink-primary">
+                      Natural feeder pathways only ({activeBenchmark.natural_feeder_roles.join(", ")})
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Row 3: Benchmark Employee Picker (Filtered by Selected Role) */}
+              <div className="pt-2 border-t border-surface-border/60 space-y-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
                   <div>
-                    <button
-                      onClick={handleTriggerEngine}
-                      disabled={isGenerating}
-                      className="w-full py-2.5 px-4 rounded-xl bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
-                    >
-                      {isGenerating ? (
-                        <>
-                          <div className="w-3.5 h-3.5 border-2 border-surface-ground border-t-transparent rounded-full animate-spin" />
-                          <span>Evaluating Talent Intelligence Pool...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="w-4 h-4" />
-                          <span>Run Dynamic Matching Engine</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 2. Top-Performer Benchmark Selection Roster */}
-            <div className="p-5 rounded-xl bg-surface-ground border border-surface-border space-y-3">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <Award className="w-4 h-4 text-brand-teal" />
-                    <h3 className="text-xs font-bold text-ink-primary uppercase tracking-wider">
-                      Select Top-Performer Benchmarks ({selectedBenchmarkEmpIds.length}/3 Selected)
-                    </h3>
-                  </div>
-                  <p className="text-[11px] text-ink-secondary mt-0.5">
-                    Select 1 to 3 high-performing FIT HUB club employees across branches. The engine derives the ideal baseline competency medians, mode psychometrics (MBTI & DISC), and signature CliftonStrengths from these profiles.
-                  </p>
-                </div>
-                <div className="text-[11px] font-mono text-ink-tertiary bg-surface-card px-2.5 py-1 rounded-lg border border-surface-border">
-                  Active Baseline: {selectedBenchmarkEmpIds.length} Selected
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-                {benchmarkEmployeesPool.map((b) => {
-                  const isSelected = selectedBenchmarkEmpIds.includes(b.employee_id);
-                  return (
-                    <div
-                      key={b.employee_id}
-                      onClick={() => toggleBenchmarkEmployee(b.employee_id)}
-                      className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
-                        isSelected
-                          ? "bg-brand-teal/10 border-brand-teal shadow-sm"
-                          : "bg-surface-card border-surface-border hover:border-brand-teal/40 opacity-85 hover:opacity-100"
-                      }`}
-                    >
-                      <div>
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className="font-mono text-[10px] font-bold text-ink-tertiary">
-                            {b.employee_id}
-                          </span>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              isSelected
-                                ? "bg-brand-teal text-surface-ground"
-                                : "bg-surface-ground text-ink-tertiary border border-surface-border"
-                            }`}
-                          >
-                            {isSelected ? "Selected Benchmark" : "Click to Select"}
-                          </span>
-                        </div>
-                        <h4 className="text-xs font-bold text-ink-primary">{b.fullname}</h4>
-                        <div className="text-[11px] text-ink-secondary font-medium">
-                          {b.role} &bull; <span className="text-brand-teal">{b.club_name}</span>
-                        </div>
-                        <div className="mt-2 flex items-center gap-1.5 text-[10px]">
-                          <span className="font-bold text-ink-primary bg-surface-ground px-1.5 py-0.5 rounded border border-surface-border">
-                            ⭐ {b.performance_rating}
-                          </span>
-                          <span className="font-bold text-ink-primary bg-surface-ground px-1.5 py-0.5 rounded border border-surface-border">
-                            DISC: {b.disc}
-                          </span>
-                          <span className="font-bold text-ink-primary bg-surface-ground px-1.5 py-0.5 rounded border border-surface-border">
-                            MBTI: {b.mbti}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="mt-2 pt-2 border-t border-surface-border/60 flex flex-wrap gap-1">
-                        {b.strengths.slice(0, 3).map((st) => (
-                          <span
-                            key={st}
-                            className="px-1.5 py-0.5 rounded text-[9px] bg-brand-teal/15 text-brand-teal font-semibold"
-                          >
-                            {st}
-                          </span>
-                        ))}
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Award className="w-4 h-4 text-brand-teal" />
+                      <h3 className="text-xs font-bold text-ink-primary uppercase tracking-wider">
+                        Select Top-Performer Benchmarks — {activeBenchmark.role_name} ({selectedBenchmarkEmpIds.length}/3 Selected)
+                      </h3>
                     </div>
-                  );
-                })}
+                    <p className="text-[11px] text-ink-secondary mt-0.5">
+                      The engine derives the ideal baseline competency medians, mode psychometrics (MBTI & DISC), and signature CliftonStrengths from these profiles.
+                    </p>
+                  </div>
+                  <div className="text-[11px] font-mono text-ink-tertiary bg-surface-card px-2.5 py-1 rounded-lg border border-surface-border whitespace-nowrap">
+                    Active Baseline: {selectedBenchmarkEmpIds.length} Selected
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {filteredBenchmarkEmployees.map((b) => {
+                    const isSelected = selectedBenchmarkEmpIds.includes(b.employee_id);
+                    return (
+                      <div
+                        key={b.employee_id}
+                        onClick={() => toggleBenchmarkEmployee(b.employee_id)}
+                        className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                          isSelected
+                            ? "bg-brand-teal/10 border-brand-teal shadow-sm"
+                            : "bg-surface-card border-surface-border hover:border-brand-teal/40 opacity-85 hover:opacity-100"
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between mb-1.5">
+                            <span className="font-mono text-[10px] font-bold text-ink-tertiary">
+                              {b.employee_id}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                isSelected
+                                  ? "bg-brand-teal text-surface-ground"
+                                  : "bg-surface-ground text-ink-tertiary border border-surface-border"
+                              }`}
+                            >
+                              {isSelected ? "Selected Benchmark" : "Click to Select"}
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-bold text-ink-primary">{b.fullname}</h4>
+                          <div className="text-[11px] text-ink-secondary font-medium">
+                            {b.role} &bull; <span className="text-brand-teal">{b.club_name}</span>
+                          </div>
+                          <div className="mt-2 flex items-center gap-1.5 text-[10px]">
+                            <span className="font-bold text-ink-primary bg-surface-ground px-1.5 py-0.5 rounded border border-surface-border">
+                              ⭐ {b.performance_rating}
+                            </span>
+                            <span className="font-bold text-ink-primary bg-surface-ground px-1.5 py-0.5 rounded border border-surface-border">
+                              DISC: {b.disc}
+                            </span>
+                            <span className="font-bold text-ink-primary bg-surface-ground px-1.5 py-0.5 rounded border border-surface-border">
+                              MBTI: {b.mbti}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-surface-border/60 flex flex-wrap gap-1">
+                          {b.strengths.slice(0, 3).map((st) => (
+                            <span
+                              key={st}
+                              className="px-1.5 py-0.5 rounded text-[9px] bg-brand-teal/15 text-brand-teal font-semibold"
+                            >
+                              {st}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Row 4: Single Run Engine Button */}
+              <div className="pt-3 border-t border-surface-border/60">
+                <button
+                  onClick={handleTriggerEngine}
+                  disabled={isGenerating}
+                  className="w-full py-3 px-4 rounded-xl bg-brand-teal text-surface-ground text-sm font-bold hover:bg-brand-teal/90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-brand-teal/20 disabled:opacity-50 cursor-pointer"
+                >
+                  {isGenerating ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-surface-ground border-t-transparent rounded-full animate-spin" />
+                      <span>Evaluating Talent Intelligence Pool...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-4 h-4" />
+                      <span>Run Dynamic Matching Engine</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
 
-            {/* 3. Conditional View: Engine Standby vs Dynamic Matching Results */}
+            {/* 2. Conditional View: Engine Standby vs Dynamic Matching Results */}
             {!hasRunEngine ? (
-              /* Standby Hero Card (Shown on initial tab visit before running engine) */
-              <div className="p-10 rounded-2xl bg-surface-card border-2 border-dashed border-brand-teal/30 flex flex-col items-center justify-center text-center space-y-4">
-                <div className="w-16 h-16 rounded-2xl bg-brand-teal/10 border border-brand-teal/30 flex items-center justify-center text-brand-teal shadow-inner">
-                  <Sparkles className="w-8 h-8 text-brand-teal animate-pulse" />
+              /* Standby Hero Card (No duplicate Run button — just status indicator) */
+              <div className="p-8 rounded-2xl bg-surface-card border-2 border-dashed border-brand-teal/30 flex flex-col items-center justify-center text-center space-y-3">
+                <div className="w-14 h-14 rounded-2xl bg-brand-teal/10 border border-brand-teal/30 flex items-center justify-center text-brand-teal shadow-inner">
+                  <Sparkles className="w-7 h-7 text-brand-teal animate-pulse" />
                 </div>
-                <div className="max-w-md space-y-1.5">
+                <div className="max-w-md space-y-1">
                   <h3 className="text-base font-bold font-display text-ink-primary">
                     Dynamic Frontline Matching Engine is on Standby
                   </h3>
                   <p className="text-xs text-ink-secondary leading-relaxed">
-                    Review your linked open requisition parameters and select up to 3 benchmark high performers above, then click <strong>&quot;Run Dynamic Matching Engine&quot;</strong> to evaluate all internal workforce records using 100% natural, multi-dimensional scoring.
+                    Configure your requisition parameters, select benchmark performers, then click <strong>&quot;Run Dynamic Matching Engine&quot;</strong> above to evaluate all internal records.
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-[11px]">
@@ -1759,20 +1854,12 @@ function TeamContent() {
                     Role: <strong className="text-brand-teal">{activeBenchmark.role_name}</strong>
                   </span>
                   <span className="px-3 py-1 rounded-full bg-surface-ground border border-surface-border text-ink-primary font-semibold">
-                    Target: <strong className="text-brand-teal">{targetLocation} Cluster</strong>
+                    Target: <strong className="text-brand-teal">{selectedRegion} / {selectedProvince} / {targetLocation}</strong>
                   </span>
                   <span className="px-3 py-1 rounded-full bg-surface-ground border border-surface-border text-ink-primary font-semibold">
                     Benchmarks: <strong className="text-brand-teal">{selectedBenchmarkEmpIds.length} Selected</strong>
                   </span>
                 </div>
-                <button
-                  onClick={handleTriggerEngine}
-                  disabled={isGenerating}
-                  className="px-6 py-3 rounded-xl bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all flex items-center gap-2 shadow-lg shadow-brand-teal/20 cursor-pointer"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>Run Dynamic Matching Engine</span>
-                </button>
               </div>
             ) : (
               /* Active Matching Results (Dynamically populated after Run Engine) */

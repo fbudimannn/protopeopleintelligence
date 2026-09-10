@@ -12,7 +12,7 @@ export interface TargetCapabilityRequirement {
 export interface TargetRoleBenchmark {
   role_id: string;
   role_name: string;
-  job_level: "Staff" | "Lead / Supervisor" | "Assistant Manager" | "Manager";
+  job_level: "Staff" | "Lead / Supervisor" | "Assistant Manager" | "Manager" | "Senior Staff";
   job_family: "Club Operations" | "Fitness & Coaching" | "Commercial & Sales";
   role_purpose: string;
   benchmark_tenure_months: number;
@@ -87,6 +87,86 @@ export interface DynamicMatchResult {
   is_feeder_role: boolean;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// Location Hierarchy (Consistent with fithub_analysis.ipynb)
+// 3-Tier: Region Cluster → Province → City
+// Source: PROV_MAP & get_region_cluster from notebook analysis
+// ═══════════════════════════════════════════════════════════════
+export interface LocationNode {
+  provinces: Record<string, string[]>;
+}
+
+export const locationHierarchy: Record<string, LocationNode> = {
+  "Jabodetabek": {
+    provinces: {
+      "DKI Jakarta": ["Jakarta Selatan", "Jakarta Barat", "Jakarta Utara", "Jakarta Timur", "Jakarta Pusat"],
+      "Jawa Barat": ["Bekasi", "Bogor", "Depok", "Karawang", "Cileungsi"],
+      "Banten": ["Tangerang", "Cilegon"],
+    },
+  },
+  "Jawa & Bali": {
+    provinces: {
+      "Jawa Barat": ["Bandung", "Cirebon"],
+      "Jawa Timur": ["Surabaya", "Malang", "Sidoarjo", "Gresik"],
+      "Jawa Tengah": ["Semarang", "Surakarta"],
+      "DI Yogyakarta": ["Yogyakarta"],
+      "Bali": ["Bali"],
+    },
+  },
+  "Luar Jawa": {
+    provinces: {
+      "Kepulauan Riau": ["Batam"],
+      "Kalimantan Timur": ["Balikpapan", "Samarinda"],
+      "Sulawesi Selatan": ["Makassar"],
+      "Sumatera Selatan": ["Palembang"],
+    },
+  },
+};
+
+// Helper: Get all cities flattened
+export function getAllCities(): string[] {
+  const cities: string[] = [];
+  Object.values(locationHierarchy).forEach((region) => {
+    Object.values(region.provinces).forEach((cityList) => {
+      cities.push(...cityList);
+    });
+  });
+  return cities;
+}
+
+// Helper: Get Region Cluster for a given city (mirrors get_region_cluster from notebook)
+export function getRegionCluster(city: string): string {
+  for (const [regionName, region] of Object.entries(locationHierarchy)) {
+    for (const cityList of Object.values(region.provinces)) {
+      if (cityList.includes(city)) return regionName;
+    }
+  }
+  return "Luar Jawa";
+}
+
+// Helper: Get Province for a given city (mirrors PROV_MAP from notebook)
+export function getProvince(city: string): string {
+  for (const region of Object.values(locationHierarchy)) {
+    for (const [prov, cityList] of Object.entries(region.provinces)) {
+      if (cityList.includes(city)) return prov;
+    }
+  }
+  return "Other";
+}
+
+// Helper: Get provinces for a region
+export function getProvincesForRegion(regionName: string): string[] {
+  const region = locationHierarchy[regionName];
+  return region ? Object.keys(region.provinces) : [];
+}
+
+// Helper: Get cities for a region + province combo
+export function getCitiesForProvince(regionName: string, provinceName: string): string[] {
+  const region = locationHierarchy[regionName];
+  if (!region) return [];
+  return region.provinces[provinceName] || [];
+}
+
 // Target Role Benchmarks
 export const targetRoleBenchmarks: TargetRoleBenchmark[] = [
   {
@@ -155,6 +235,57 @@ export const targetRoleBenchmarks: TargetRoleBenchmark[] = [
       { name: "Member Retention", required_level: 4, weight: 30, description: "Maintain club renewal rate > 75% and minimize monthly member churn." },
       { name: "Member Acquisition", required_level: 3, weight: 20, description: "Oversee regional brand partnerships and commercial targets." },
       { name: "POS Service Excellence", required_level: 3, weight: 20, description: "Manage monthly club P&L, budget compliance, and facilities audits." },
+    ],
+  },
+  {
+    role_id: "role-opspec",
+    role_name: "Operation Specialist",
+    job_level: "Staff",
+    job_family: "Club Operations",
+    role_purpose: "Execute daily club floor operations including front desk check-in, POS transactions, facility cleanliness audits, shift handover protocols, and member complaint resolution.",
+    benchmark_tenure_months: 14,
+    benchmark_min_rating: 4.0,
+    natural_feeder_roles: ["Front Desk Officer", "Housekeeping Staff", "Customer Service"],
+    open_requisition_codes: ["REQ-BLI-0104", "REQ-SBY-0202", "REQ-JKB-0301", "REQ-TNG-0502", "REQ-BDG-0601"],
+    required_capabilities: [
+      { name: "POS Service Excellence", required_level: 3, weight: 30, description: "Process member check-ins, handle billing inquiries, and audit daily cash reconciliation." },
+      { name: "Gym Floor Safety", required_level: 3, weight: 30, description: "Maintain equipment safety standards, incident logging, and emergency protocols." },
+      { name: "Shift Leadership", required_level: 2, weight: 25, description: "Coordinate shift handovers, manage front desk roster coverage during peak hours." },
+      { name: "Member Retention", required_level: 2, weight: 15, description: "Proactive member greeting, complaint resolution, and visit frequency tracking." },
+    ],
+  },
+  {
+    role_id: "role-pt",
+    role_name: "Personal Trainer",
+    job_level: "Staff",
+    job_family: "Fitness & Coaching",
+    role_purpose: "Deliver personalized training sessions, conduct fitness assessments, drive PT package sales through consultative techniques, and maintain client retention through progressive program design.",
+    benchmark_tenure_months: 14,
+    benchmark_min_rating: 4.1,
+    natural_feeder_roles: ["Gym Instructor", "PT Intern", "Group Fitness Instructor"],
+    open_requisition_codes: ["REQ-BLI-0109", "REQ-SBY-0218", "REQ-JKS-0405"],
+    required_capabilities: [
+      { name: "Biomechanics & Coaching", required_level: 3, weight: 35, description: "Design progressive training programs, correct movement patterns, and manage injury prevention." },
+      { name: "PT Revenue Architecture", required_level: 3, weight: 30, description: "Consultative session selling, package renewal tactics, and client lifetime value optimization." },
+      { name: "Gym Floor Safety", required_level: 2, weight: 20, description: "Equipment safety checks, AED readiness, and free-weight zone supervision." },
+      { name: "Member Retention", required_level: 2, weight: 15, description: "Client engagement tracking, session attendance follow-up, and VIP experience delivery." },
+    ],
+  },
+  {
+    role_id: "role-fc",
+    role_name: "Fitness Consultant",
+    job_level: "Staff",
+    job_family: "Commercial & Sales",
+    role_purpose: "Drive membership acquisition through walk-in conversion, corporate B2B partnerships, presale campaign execution, and consultative needs assessment for prospective members.",
+    benchmark_tenure_months: 13,
+    benchmark_min_rating: 4.0,
+    natural_feeder_roles: ["Customer Service", "Front Desk Officer", "Sales Intern"],
+    open_requisition_codes: ["REQ-BLI-0115", "REQ-JKB-0312", "REQ-SBY-0224"],
+    required_capabilities: [
+      { name: "Member Acquisition", required_level: 3, weight: 40, description: "Lead generation, walk-in conversion, corporate outreach, and presale target achievement." },
+      { name: "Member Retention", required_level: 2, weight: 25, description: "Post-signup onboarding experience and lapsed member re-engagement." },
+      { name: "POS Service Excellence", required_level: 2, weight: 20, description: "Contract processing, promotional package setup, and refund authorization." },
+      { name: "Shift Leadership", required_level: 2, weight: 15, description: "Coordinate daily sales blitz schedules and track team closing ratios." },
     ],
   },
 ];
@@ -314,6 +445,207 @@ export const benchmarkEmployeesPool: BenchmarkEmployeeProfile[] = [
       "Member Acquisition": 2,
     },
     papi: { P: 7.7, S: 6.4, G: 7.5, T: 7.2, W: 5.5 },
+  },
+  // Top-Performing Operation Specialists (Benchmark Pool)
+  {
+    employee_id: "EMP-1081",
+    employee_code: "FH-EMP-1081",
+    fullname: "Rudi Hartono",
+    role: "Operation Specialist",
+    club_name: "FIT HUB Senopati",
+    cluster_location: "Jakarta Selatan",
+    performance_rating: 4.7,
+    tenure_months: 22,
+    mbti: "ESTJ",
+    disc: "DC",
+    strengths: ["Achiever", "Discipline", "Responsibility", "Arranger", "Command"],
+    capabilities: {
+      "POS Service Excellence": 4,
+      "Gym Floor Safety": 4,
+      "Shift Leadership": 3,
+      "Member Retention": 3,
+      "Member Acquisition": 2,
+      "Biomechanics & Coaching": 1,
+    },
+    papi: { P: 8.0, S: 5.6, G: 8.1, T: 7.8, W: 6.2 },
+  },
+  {
+    employee_id: "EMP-1083",
+    employee_code: "FH-EMP-1083",
+    fullname: "Andi Prasetya",
+    role: "Operation Specialist",
+    club_name: "FIT HUB Merr Surabaya",
+    cluster_location: "Surabaya",
+    performance_rating: 4.6,
+    tenure_months: 20,
+    mbti: "ISTJ",
+    disc: "SC",
+    strengths: ["Discipline", "Responsibility", "Arranger", "Achiever", "Restorative"],
+    capabilities: {
+      "POS Service Excellence": 4,
+      "Gym Floor Safety": 3,
+      "Shift Leadership": 3,
+      "Member Retention": 3,
+      "Member Acquisition": 1,
+      "Biomechanics & Coaching": 1,
+    },
+    papi: { P: 7.5, S: 5.8, G: 7.9, T: 7.4, W: 6.4 },
+  },
+  {
+    employee_id: "EMP-1085",
+    employee_code: "FH-EMP-1085",
+    fullname: "Kadek Surya Dharma",
+    role: "Operation Specialist",
+    club_name: "FIT HUB Canggu",
+    cluster_location: "Bali",
+    performance_rating: 4.5,
+    tenure_months: 18,
+    mbti: "ESFJ",
+    disc: "IS",
+    strengths: ["Responsibility", "Arranger", "Relator", "Discipline", "Achiever"],
+    capabilities: {
+      "POS Service Excellence": 3,
+      "Gym Floor Safety": 4,
+      "Shift Leadership": 3,
+      "Member Retention": 3,
+      "Member Acquisition": 2,
+      "Biomechanics & Coaching": 1,
+    },
+    papi: { P: 7.2, S: 6.0, G: 7.6, T: 7.0, W: 6.0 },
+  },
+  // Top-Performing Personal Trainers (Benchmark Pool)
+  {
+    employee_id: "EMP-1091",
+    employee_code: "FH-EMP-1091",
+    fullname: "Gilang Ramadhan",
+    role: "Personal Trainer",
+    club_name: "FIT HUB Kuningan",
+    cluster_location: "Jakarta Selatan",
+    performance_rating: 4.8,
+    tenure_months: 24,
+    mbti: "ESTP",
+    disc: "DI",
+    strengths: ["Command", "Developer", "Focus", "Achiever", "Competition"],
+    capabilities: {
+      "Biomechanics & Coaching": 4,
+      "PT Revenue Architecture": 4,
+      "Gym Floor Safety": 4,
+      "Member Retention": 3,
+      "Shift Leadership": 2,
+      "Member Acquisition": 2,
+    },
+    papi: { P: 8.2, S: 6.0, G: 8.4, T: 7.8, W: 5.0 },
+  },
+  {
+    employee_id: "EMP-1093",
+    employee_code: "FH-EMP-1093",
+    fullname: "Wayan Krisna",
+    role: "Personal Trainer",
+    club_name: "FIT HUB Sunset Road",
+    cluster_location: "Bali",
+    performance_rating: 4.7,
+    tenure_months: 21,
+    mbti: "ENTJ",
+    disc: "DI",
+    strengths: ["Developer", "Command", "Focus", "Relator", "Achiever"],
+    capabilities: {
+      "Biomechanics & Coaching": 4,
+      "PT Revenue Architecture": 3,
+      "Gym Floor Safety": 4,
+      "Shift Leadership": 3,
+      "Member Retention": 3,
+      "Member Acquisition": 2,
+    },
+    papi: { P: 7.9, S: 6.2, G: 8.0, T: 7.5, W: 5.2 },
+  },
+  {
+    employee_id: "EMP-1095",
+    employee_code: "FH-EMP-1095",
+    fullname: "Rizal Firmansyah",
+    role: "Personal Trainer",
+    club_name: "FIT HUB Gubeng",
+    cluster_location: "Surabaya",
+    performance_rating: 4.6,
+    tenure_months: 19,
+    mbti: "ESTP",
+    disc: "IS",
+    strengths: ["Developer", "Relator", "Competition", "Focus", "Positivity"],
+    capabilities: {
+      "Biomechanics & Coaching": 4,
+      "PT Revenue Architecture": 3,
+      "Gym Floor Safety": 3,
+      "Shift Leadership": 2,
+      "Member Retention": 3,
+      "Member Acquisition": 2,
+    },
+    papi: { P: 7.4, S: 6.5, G: 7.7, T: 7.2, W: 5.4 },
+  },
+  // Top-Performing Fitness Consultants (Benchmark Pool)
+  {
+    employee_id: "EMP-1101",
+    employee_code: "FH-EMP-1101",
+    fullname: "Maya Anggraini",
+    role: "Fitness Consultant",
+    club_name: "FIT HUB Puri Indah",
+    cluster_location: "Jakarta Barat",
+    performance_rating: 4.7,
+    tenure_months: 20,
+    mbti: "ENTP",
+    disc: "ID",
+    strengths: ["Communication", "Woo", "Competition", "Activator", "Strategic"],
+    capabilities: {
+      "Member Acquisition": 4,
+      "Member Retention": 4,
+      "POS Service Excellence": 3,
+      "Shift Leadership": 2,
+      "Gym Floor Safety": 2,
+      "Biomechanics & Coaching": 1,
+    },
+    papi: { P: 7.5, S: 7.4, G: 8.0, T: 7.6, W: 5.0 },
+  },
+  {
+    employee_id: "EMP-1103",
+    employee_code: "FH-EMP-1103",
+    fullname: "Dian Permata Sari",
+    role: "Fitness Consultant",
+    club_name: "FIT HUB Merr Surabaya",
+    cluster_location: "Surabaya",
+    performance_rating: 4.6,
+    tenure_months: 18,
+    mbti: "ENFP",
+    disc: "IS",
+    strengths: ["Woo", "Communication", "Relator", "Competition", "Activator"],
+    capabilities: {
+      "Member Acquisition": 4,
+      "Member Retention": 3,
+      "POS Service Excellence": 3,
+      "Shift Leadership": 2,
+      "Gym Floor Safety": 1,
+      "Biomechanics & Coaching": 1,
+    },
+    papi: { P: 7.0, S: 7.2, G: 7.6, T: 7.1, W: 5.2 },
+  },
+  {
+    employee_id: "EMP-1105",
+    employee_code: "FH-EMP-1105",
+    fullname: "Putu Ayu Lestari",
+    role: "Fitness Consultant",
+    club_name: "FIT HUB Sunset Road",
+    cluster_location: "Bali",
+    performance_rating: 4.5,
+    tenure_months: 16,
+    mbti: "ENFP",
+    disc: "ID",
+    strengths: ["Communication", "Woo", "Positivity", "Relator", "Competition"],
+    capabilities: {
+      "Member Acquisition": 4,
+      "Member Retention": 3,
+      "POS Service Excellence": 2,
+      "Shift Leadership": 2,
+      "Gym Floor Safety": 2,
+      "Biomechanics & Coaching": 1,
+    },
+    papi: { P: 6.8, S: 7.0, G: 7.4, T: 6.9, W: 5.0 },
   },
 ];
 
