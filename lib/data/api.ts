@@ -159,7 +159,11 @@ export async function getEngagementSummaries(): Promise<{ data: EngagementSummar
 
 export async function getInternalMobilityMatches(
   targetRole: string = "Assistant Club Manager",
-  targetLocation: string = "ALL"
+  targetLocation: string = "ALL",
+  benchmarkEmpIds: string[] = [],
+  minPerformance: number = 3.5,
+  minTenure: number = 6,
+  feederOnly: boolean = false
 ): Promise<{ data: InternalMobilityMatch[]; isLive: boolean }> {
   if (!supabase) {
     return { data: fallbackMobilityMatches, isLive: false };
@@ -169,6 +173,10 @@ export async function getInternalMobilityMatches(
     const { data: rpcData, error: rpcError } = await supabase.rpc("calculate_mobility_match", {
       p_target_role: targetRole,
       p_target_location: targetLocation,
+      p_benchmark_emp_ids: benchmarkEmpIds,
+      p_min_performance: minPerformance,
+      p_min_tenure: minTenure,
+      p_feeder_only: feederOnly,
     });
     if (!rpcError && rpcData && rpcData.length > 0) {
       return { data: rpcData as InternalMobilityMatch[], isLive: true };
@@ -181,6 +189,24 @@ export async function getInternalMobilityMatches(
     return { data: data as InternalMobilityMatch[], isLive: true };
   } catch {
     return { data: fallbackMobilityMatches, isLive: false };
+  }
+}
+
+export async function getMartRequisitions(): Promise<{ data: RequisitionItem[]; isLive: boolean }> {
+  if (!supabase) {
+    return { data: fallbackRequisitions, isLive: false };
+  }
+  try {
+    const { data, error } = await supabase
+      .from("mart_requisitions")
+      .select("*")
+      .order("days_open", { ascending: false });
+    if (error || !data || data.length === 0) {
+      return { data: fallbackRequisitions, isLive: false };
+    }
+    return { data: data as RequisitionItem[], isLive: true };
+  } catch {
+    return { data: fallbackRequisitions, isLive: false };
   }
 }
 

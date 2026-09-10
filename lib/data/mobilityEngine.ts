@@ -22,15 +22,36 @@ export interface TargetRoleBenchmark {
   open_requisition_codes: string[];
 }
 
+export interface BenchmarkEmployeeProfile {
+  employee_id: string;
+  employee_code: string;
+  fullname: string;
+  role: string;
+  club_name: string;
+  cluster_location: string;
+  performance_rating: number;
+  tenure_months: number;
+  mbti: string;
+  disc: string;
+  strengths: string[];
+  capabilities: Record<string, number>;
+  papi?: Record<string, number>;
+}
+
 export interface ActiveEmployeeCandidate {
   employee_id: string;
   employee_code: string;
   fullname: string;
   current_role: string;
   current_location: string;
+  current_club: string;
   tenure_months: number;
   performance_rating: number; // 1.0 to 5.0
   capability_scores: Record<string, number>; // 1 to 4
+  mbti: string;
+  disc: string;
+  papi: Record<string, number>;
+  strengths: string[];
   top_strength: string;
   development_priority: string;
   willing_to_relocate: boolean;
@@ -43,15 +64,19 @@ export interface DynamicMatchResult {
   fullname: string;
   current_role: string;
   current_location: string;
+  current_club: string;
   target_role: string;
   target_location: string;
   match_rate_pct: number;
   readiness_status: "Ready" | "Near Ready" | "Development Needed";
   capability_coverage_pct: number;
   performance_score_pct: number;
+  psychometric_score_pct: number;
   tenure_score_pct: number;
   performance_rating: number;
   tenure_months: number;
+  mbti: string;
+  disc: string;
   critical_gaps: Array<{
     capability: string;
     current_level: number;
@@ -72,7 +97,7 @@ export const targetRoleBenchmarks: TargetRoleBenchmark[] = [
     role_purpose: "Oversee daily gym floor shifts, supervise frontline staff, manage POS reconciliations, and ensure member safety standards across high-traffic operating hours.",
     benchmark_tenure_months: 18,
     benchmark_min_rating: 4.2,
-    natural_feeder_roles: ["Operation Specialist", "Fitness Consultant"],
+    natural_feeder_roles: ["Operation Specialist", "Front Desk Officer", "Fitness Consultant"],
     open_requisition_codes: ["REQ-BLI-0120", "REQ-SBY-0202"],
     required_capabilities: [
       { name: "Shift Leadership", required_level: 3, weight: 30, description: "Supervise floor roster, resolve staff shortages, and lead daily huddles." },
@@ -89,7 +114,7 @@ export const targetRoleBenchmarks: TargetRoleBenchmark[] = [
     role_purpose: "Direct club trainer team, conduct technical PT auditions, coach junior trainers on client conversion, and maintain studio revenue targets.",
     benchmark_tenure_months: 16,
     benchmark_min_rating: 4.3,
-    natural_feeder_roles: ["Personal Trainer"],
+    natural_feeder_roles: ["Personal Trainer", "PT Team Leader"],
     open_requisition_codes: ["REQ-BLI-0109", "REQ-JKS-0405"],
     required_capabilities: [
       { name: "Biomechanics & Coaching", required_level: 4, weight: 35, description: "Advanced corrective movement patterns and VIP training architecture." },
@@ -106,7 +131,7 @@ export const targetRoleBenchmarks: TargetRoleBenchmark[] = [
     role_purpose: "Drive monthly club membership presales and corporate partnerships, train Fitness Consultants on objection handling, and hit club gross revenue quotas.",
     benchmark_tenure_months: 15,
     benchmark_min_rating: 4.1,
-    natural_feeder_roles: ["Fitness Consultant"],
+    natural_feeder_roles: ["Fitness Consultant", "FC Team Leader"],
     open_requisition_codes: ["REQ-BLI-0115", "REQ-JKB-0312"],
     required_capabilities: [
       { name: "Member Acquisition", required_level: 4, weight: 40, description: "Consistent monthly lead generation and B2B corporate outreach." },
@@ -123,7 +148,7 @@ export const targetRoleBenchmarks: TargetRoleBenchmark[] = [
     role_purpose: "Full P&L and operational accountability for club branch, including local marketing, facilities maintenance, staff retention, and EBITDA margin delivery.",
     benchmark_tenure_months: 24,
     benchmark_min_rating: 4.5,
-    natural_feeder_roles: ["Assistant Club Manager", "Fitness Lead", "Sales Lead"],
+    natural_feeder_roles: ["Assistant Club Manager", "Fitness Lead", "Sales Lead", "PT Team Leader", "FC Team Leader"],
     open_requisition_codes: ["REQ-BLI-0104"],
     required_capabilities: [
       { name: "Shift Leadership", required_level: 4, weight: 30, description: "Develop club successor bench and foster high-performance club culture." },
@@ -134,7 +159,165 @@ export const targetRoleBenchmarks: TargetRoleBenchmark[] = [
   },
 ];
 
-// Active Employee Pool (16 Active Candidates)
+// Top Benchmark Performers Roster (from synthetic_employees across FIT HUB branches)
+export const benchmarkEmployeesPool: BenchmarkEmployeeProfile[] = [
+  {
+    employee_id: "EMP-1003",
+    employee_code: "FH-EMP-1003",
+    fullname: "Wahyu Hidayat",
+    role: "Club Manager",
+    club_name: "FIT HUB Kelapa Gading",
+    cluster_location: "Jakarta Utara",
+    performance_rating: 4.7,
+    tenure_months: 28,
+    mbti: "ESTJ",
+    disc: "DI",
+    strengths: ["Achiever", "Command", "Responsibility", "Maximizer", "Strategic"],
+    capabilities: {
+      "Shift Leadership": 4,
+      "POS Service Excellence": 4,
+      "Gym Floor Safety": 4,
+      "Member Retention": 4,
+      "Member Acquisition": 3,
+      "Biomechanics & Coaching": 2,
+    },
+    papi: { P: 8.2, S: 5.5, G: 8.0, T: 7.8, W: 6.0 },
+  },
+  {
+    employee_id: "EMP-1005",
+    employee_code: "FH-EMP-1005",
+    fullname: "Hadi Wibowo",
+    role: "Club Manager",
+    club_name: "FIT HUB BSD City",
+    cluster_location: "Tangerang",
+    performance_rating: 4.7,
+    tenure_months: 26,
+    mbti: "ENTJ",
+    disc: "DC",
+    strengths: ["Achiever", "Command", "Responsibility", "Focus", "Discipline"],
+    capabilities: {
+      "Shift Leadership": 4,
+      "POS Service Excellence": 3,
+      "Gym Floor Safety": 4,
+      "Member Retention": 4,
+      "Member Acquisition": 4,
+      "Biomechanics & Coaching": 3,
+    },
+    papi: { P: 8.5, S: 5.2, G: 7.9, T: 7.5, W: 5.8 },
+  },
+  {
+    employee_id: "EMP-1002",
+    employee_code: "FH-EMP-1002",
+    fullname: "Putri Santoso",
+    role: "Club Manager",
+    club_name: "FIT HUB Kuningan",
+    cluster_location: "Jakarta Selatan",
+    performance_rating: 4.5,
+    tenure_months: 24,
+    mbti: "ESTJ",
+    disc: "ID",
+    strengths: ["Achiever", "Arranger", "Responsibility", "Relator", "Strategic"],
+    capabilities: {
+      "Shift Leadership": 3,
+      "POS Service Excellence": 4,
+      "Gym Floor Safety": 3,
+      "Member Retention": 4,
+      "Member Acquisition": 3,
+      "Biomechanics & Coaching": 2,
+    },
+    papi: { P: 7.8, S: 6.2, G: 7.6, T: 7.0, W: 6.4 },
+  },
+  {
+    employee_id: "EMP-1011",
+    employee_code: "FH-EMP-1011",
+    fullname: "Putri Hidayat",
+    role: "Club Manager",
+    club_name: "FIT HUB Canggu",
+    cluster_location: "Bali",
+    performance_rating: 4.6,
+    tenure_months: 22,
+    mbti: "ENTJ",
+    disc: "DI",
+    strengths: ["Achiever", "Command", "Relator", "Strategic", "Responsibility"],
+    capabilities: {
+      "Shift Leadership": 4,
+      "POS Service Excellence": 4,
+      "Gym Floor Safety": 3,
+      "Member Retention": 4,
+      "Member Acquisition": 4,
+      "Biomechanics & Coaching": 2,
+    },
+    papi: { P: 8.0, S: 5.8, G: 7.8, T: 7.4, W: 5.5 },
+  },
+  {
+    employee_id: "EMP-1041",
+    employee_code: "FH-EMP-1041",
+    fullname: "Wahyu Putra",
+    role: "Sales Lead",
+    club_name: "FIT HUB Kelapa Gading",
+    cluster_location: "Jakarta Utara",
+    performance_rating: 4.8,
+    tenure_months: 20,
+    mbti: "ESTP",
+    disc: "IS",
+    strengths: ["Competition", "Woo", "Communication", "Command", "Relator"],
+    capabilities: {
+      "Member Acquisition": 4,
+      "Member Retention": 4,
+      "Shift Leadership": 3,
+      "POS Service Excellence": 3,
+      "Gym Floor Safety": 2,
+      "Biomechanics & Coaching": 2,
+    },
+    papi: { P: 7.5, S: 7.1, G: 8.2, T: 8.0, W: 5.0 },
+  },
+  {
+    employee_id: "EMP-1061",
+    employee_code: "FH-EMP-1061",
+    fullname: "Aditya Santoso",
+    role: "Fitness Lead",
+    club_name: "FIT HUB Senopati",
+    cluster_location: "Jakarta Selatan",
+    performance_rating: 4.8,
+    tenure_months: 21,
+    mbti: "ESTP",
+    disc: "DI",
+    strengths: ["Command", "Developer", "Focus", "Achiever", "Competition"],
+    capabilities: {
+      "Biomechanics & Coaching": 4,
+      "PT Revenue Architecture": 4,
+      "Gym Floor Safety": 4,
+      "Shift Leadership": 3,
+      "Member Retention": 3,
+      "Member Acquisition": 2,
+    },
+    papi: { P: 8.0, S: 6.0, G: 8.1, T: 7.6, W: 5.2 },
+  },
+  {
+    employee_id: "EMP-1065",
+    employee_code: "FH-EMP-1065",
+    fullname: "Bima Setiawan",
+    role: "Fitness Lead",
+    club_name: "FIT HUB Sunset Road",
+    cluster_location: "Bali",
+    performance_rating: 4.6,
+    tenure_months: 19,
+    mbti: "ENTJ",
+    disc: "ID",
+    strengths: ["Developer", "Relator", "Command", "Achiever", "Focus"],
+    capabilities: {
+      "Biomechanics & Coaching": 4,
+      "PT Revenue Architecture": 3,
+      "Gym Floor Safety": 4,
+      "Shift Leadership": 3,
+      "Member Retention": 3,
+      "Member Acquisition": 2,
+    },
+    papi: { P: 7.7, S: 6.4, G: 7.5, T: 7.2, W: 5.5 },
+  },
+];
+
+// Active Employee Pool (16 Frontline Candidates)
 export const activeEmployeePool: ActiveEmployeeCandidate[] = [
   {
     employee_id: "emp-1042",
@@ -142,6 +325,7 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
     fullname: "Dimas Arya Pratama",
     current_role: "Operation Specialist",
     current_location: "Surabaya",
+    current_club: "FIT HUB Merr Surabaya",
     tenure_months: 22,
     performance_rating: 4.65,
     capability_scores: {
@@ -152,153 +336,192 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
       "Member Acquisition": 2,
       "Biomechanics & Coaching": 1,
     },
-    top_strength: "Floor Leadership & Safety Protocol Mastery",
-    development_priority: "Area Manager 30-day shift shadow on P&L management",
+    mbti: "ESTJ",
+    disc: "DI",
+    papi: { P: 7.8, S: 5.9, G: 7.9, T: 7.5, W: 5.8 },
+    strengths: ["Achiever", "Arranger", "Responsibility", "Relator", "Discipline"],
+    top_strength: "Shift Incident De-escalation & POS Reconciliation",
+    development_priority: "Complete level 3 floor manager safety audit",
     willing_to_relocate: true,
-    preferred_locations: ["Bali", "Surabaya", "Jakarta Barat"],
+    preferred_locations: ["Bali", "Surabaya", "Jakarta Selatan"],
   },
   {
-    employee_id: "emp-1088",
-    employee_code: "FH-EMP-1088",
-    fullname: "Siti Nurhaliza",
+    employee_id: "emp-1108",
+    employee_code: "FH-EMP-1108",
+    fullname: "Rizky Firmansyah",
     current_role: "Operation Specialist",
-    current_location: "Jakarta Barat",
-    tenure_months: 18,
+    current_location: "Bali",
+    current_club: "FIT HUB Sunset Road Bali",
+    tenure_months: 19,
     performance_rating: 4.5,
     capability_scores: {
       "Shift Leadership": 3,
       "POS Service Excellence": 3,
-      "Gym Floor Safety": 2,
-      "Member Retention": 3,
+      "Gym Floor Safety": 3,
+      "Member Retention": 2,
       "Member Acquisition": 2,
       "Biomechanics & Coaching": 1,
     },
-    top_strength: "POS Resolution & Member Retention Excellence",
-    development_priority: "Complete level 3 floor safety and incident logging certification",
-    willing_to_relocate: true,
-    preferred_locations: ["Tangerang", "Jakarta Barat", "Jakarta Selatan"],
+    mbti: "ESTJ",
+    disc: "DC",
+    papi: { P: 7.6, S: 5.5, G: 7.8, T: 7.2, W: 6.0 },
+    strengths: ["Achiever", "Command", "Responsibility", "Focus", "Discipline"],
+    top_strength: "Club Opening/Closing SOP Compliance (99.2% Audit)",
+    development_priority: "Lead quarterly member retention outreach cohort",
+    willing_to_relocate: false,
+    preferred_locations: ["Bali"],
   },
   {
-    employee_id: "emp-1120",
-    employee_code: "FH-EMP-1120",
-    fullname: "Kevin Christian",
+    employee_id: "emp-1144",
+    employee_code: "FH-EMP-1144",
+    fullname: "Siti Rahmawati",
+    current_role: "Fitness Consultant",
+    current_location: "Bali",
+    current_club: "FIT HUB Canggu Bali",
+    tenure_months: 20,
+    performance_rating: 4.55,
+    capability_scores: {
+      "Member Acquisition": 4,
+      "Member Retention": 3,
+      "POS Service Excellence": 3,
+      "Shift Leadership": 2,
+      "Gym Floor Safety": 2,
+      "Biomechanics & Coaching": 1,
+    },
+    mbti: "ENTP",
+    disc: "ID",
+    papi: { P: 7.2, S: 7.0, G: 7.8, T: 7.5, W: 5.2 },
+    strengths: ["Communication", "Woo", "Competition", "Activator", "Relator"],
+    top_strength: "Corporate B2B Fitness Partnerships (Rp 85M New ACV)",
+    development_priority: "Gym safety first-aid & CPR level 2 certification",
+    willing_to_relocate: true,
+    preferred_locations: ["Bali", "Surabaya"],
+  },
+  {
+    employee_id: "emp-1180",
+    employee_code: "FH-EMP-1180",
+    fullname: "Bagus Setiawan",
+    current_role: "Personal Trainer",
+    current_location: "Bali",
+    current_club: "FIT HUB Sunset Road Bali",
+    tenure_months: 18,
+    performance_rating: 4.4,
+    capability_scores: {
+      "Biomechanics & Coaching": 4,
+      "PT Revenue Architecture": 3,
+      "Gym Floor Safety": 3,
+      "Member Retention": 3,
+      "Shift Leadership": 2,
+      "Member Acquisition": 2,
+    },
+    mbti: "ESTP",
+    disc: "DI",
+    papi: { P: 7.4, S: 6.2, G: 7.6, T: 7.2, W: 5.4 },
+    strengths: ["Developer", "Relator", "Individualization", "Positivity", "Achiever"],
+    top_strength: "VIP Client PT Renewal Rate (88% Retention)",
+    development_priority: "Floor operations roster and shift coverage training",
+    willing_to_relocate: false,
+    preferred_locations: ["Bali"],
+  },
+  {
+    employee_id: "emp-1215",
+    employee_code: "FH-EMP-1215",
+    fullname: "Agus Santoso",
+    current_role: "Operation Specialist",
+    current_location: "Jakarta Barat",
+    current_club: "FIT HUB Puri Indah",
+    tenure_months: 24,
+    performance_rating: 4.6,
+    capability_scores: {
+      "Shift Leadership": 3,
+      "POS Service Excellence": 3,
+      "Gym Floor Safety": 3,
+      "Member Retention": 3,
+      "Member Acquisition": 1,
+      "Biomechanics & Coaching": 1,
+    },
+    mbti: "ESTJ",
+    disc: "DI",
+    papi: { P: 7.7, S: 5.8, G: 8.0, T: 7.6, W: 6.2 },
+    strengths: ["Achiever", "Arranger", "Responsibility", "Discipline", "Strategic"],
+    top_strength: "Multi-Club Staff Relief Coordination & Audit Readiness",
+    development_priority: "Execute regional membership campaign simulation",
+    willing_to_relocate: true,
+    preferred_locations: ["Bali", "Jakarta Barat", "Tangerang"],
+  },
+  {
+    employee_id: "emp-1250",
+    employee_code: "FH-EMP-1250",
+    fullname: "Nadia Putri",
+    current_role: "Fitness Consultant",
+    current_location: "Jakarta Selatan",
+    current_club: "FIT HUB Kuningan",
+    tenure_months: 17,
+    performance_rating: 4.3,
+    capability_scores: {
+      "Member Acquisition": 4,
+      "Member Retention": 3,
+      "POS Service Excellence": 2,
+      "Shift Leadership": 2,
+      "Gym Floor Safety": 2,
+      "Biomechanics & Coaching": 1,
+    },
+    mbti: "ENFP",
+    disc: "ID",
+    papi: { P: 6.8, S: 7.4, G: 7.2, T: 7.0, W: 5.0 },
+    strengths: ["Communication", "Woo", "Competition", "Activator", "Maximizer"],
+    top_strength: "Club Walk-In Trial Conversion (48% vs 32% Target)",
+    development_priority: "Complete POS refund and chargeback compliance module",
+    willing_to_relocate: true,
+    preferred_locations: ["Jakarta Selatan", "Bali"],
+  },
+  {
+    employee_id: "emp-1288",
+    employee_code: "FH-EMP-1288",
+    fullname: "Fajar Nugraha",
     current_role: "Personal Trainer",
     current_location: "Surabaya",
+    current_club: "FIT HUB Gubeng",
     tenure_months: 16,
     performance_rating: 4.25,
     capability_scores: {
       "Biomechanics & Coaching": 4,
       "PT Revenue Architecture": 3,
-      "Gym Floor Safety": 3,
-      "Shift Leadership": 2,
-      "Member Retention": 2,
-      "Member Acquisition": 2,
-    },
-    top_strength: "Biomechanics & High-Ticket PT Revenue Coaching",
-    development_priority: "Complete Level 2 supervisory coaching module for trainer auditions",
-    willing_to_relocate: true,
-    preferred_locations: ["Bali", "Surabaya"],
-  },
-  {
-    employee_id: "emp-1154",
-    employee_code: "FH-EMP-1154",
-    fullname: "Reza Fahlevi",
-    current_role: "Fitness Consultant",
-    current_location: "Jakarta Selatan",
-    tenure_months: 14,
-    performance_rating: 4.1,
-    capability_scores: {
-      "Member Acquisition": 3,
-      "Member Retention": 3,
-      "Shift Leadership": 2,
-      "POS Service Excellence": 2,
-      "Gym Floor Safety": 1,
-      "Biomechanics & Coaching": 1,
-    },
-    top_strength: "B2B Corporate Outreach & Consultative Closing",
-    development_priority: "Shadow regional sales lead on territory quota management",
-    willing_to_relocate: true,
-    preferred_locations: ["Bali", "Jakarta Selatan", "Bandung"],
-  },
-  {
-    employee_id: "emp-1205",
-    employee_code: "FH-EMP-1205",
-    fullname: "Agus Setiawan",
-    current_role: "Operation Specialist",
-    current_location: "Bali",
-    tenure_months: 10,
-    performance_rating: 3.85,
-    capability_scores: {
-      "Shift Leadership": 2,
-      "POS Service Excellence": 2,
-      "Gym Floor Safety": 3,
-      "Member Retention": 2,
-      "Member Acquisition": 1,
-      "Biomechanics & Coaching": 1,
-    },
-    top_strength: "Gym Floor Hygiene & Equipment SOP Adherence",
-    development_priority: "Structured mentoring program on member dispute resolution",
-    willing_to_relocate: false,
-    preferred_locations: ["Bali"],
-  },
-  {
-    employee_id: "emp-1240",
-    employee_code: "FH-EMP-1240",
-    fullname: "Nadia Safitri",
-    current_role: "Personal Trainer",
-    current_location: "Jakarta Barat",
-    tenure_months: 20,
-    performance_rating: 4.7,
-    capability_scores: {
-      "Biomechanics & Coaching": 4,
-      "PT Revenue Architecture": 3,
-      "Gym Floor Safety": 3,
-      "Shift Leadership": 3,
-      "Member Retention": 3,
-      "Member Acquisition": 2,
-    },
-    top_strength: "PT Program Architecture & Client Session Retention",
-    development_priority: "Lead trainer onboarding workshop in West Jakarta hub",
-    willing_to_relocate: true,
-    preferred_locations: ["Jakarta Barat", "Tangerang", "Jakarta Selatan"],
-  },
-  {
-    employee_id: "emp-1277",
-    employee_code: "FH-EMP-1277",
-    fullname: "Budi Santoso",
-    current_role: "Operation Specialist",
-    current_location: "Tangerang",
-    tenure_months: 15,
-    performance_rating: 4.3,
-    capability_scores: {
-      "Shift Leadership": 2,
-      "POS Service Excellence": 3,
       "Gym Floor Safety": 2,
       "Member Retention": 2,
-      "Member Acquisition": 1,
-      "Biomechanics & Coaching": 1,
+      "Shift Leadership": 2,
+      "Member Acquisition": 2,
     },
-    top_strength: "Member Inquiries & Front-Desk Administration SOP",
-    development_priority: "Financial administration and multi-shift roster planning",
+    mbti: "ESTP",
+    disc: "IS",
+    papi: { P: 6.9, S: 6.5, G: 7.2, T: 7.0, W: 5.1 },
+    strengths: ["Developer", "Relator", "Competition", "Focus", "Achiever"],
+    top_strength: "Technical Kinesiology & Small-Group Training",
+    development_priority: "Equipment maintenance protocols and AED emergency drill",
     willing_to_relocate: true,
-    preferred_locations: ["Jakarta Barat", "Tangerang"],
+    preferred_locations: ["Surabaya", "Bali"],
   },
   {
-    employee_id: "emp-1312",
-    employee_code: "FH-EMP-1312",
-    fullname: "Fitri Handayani",
+    employee_id: "emp-1320",
+    employee_code: "FH-EMP-1320",
+    fullname: "Anisa Lestari",
     current_role: "Fitness Consultant",
-    current_location: "Bandung",
-    tenure_months: 19,
-    performance_rating: 4.6,
+    current_location: "Surabaya",
+    current_club: "FIT HUB Merr Surabaya",
+    tenure_months: 14,
+    performance_rating: 4.35,
     capability_scores: {
       "Member Acquisition": 4,
       "Member Retention": 3,
-      "Shift Leadership": 2,
       "POS Service Excellence": 2,
+      "Shift Leadership": 2,
       "Gym Floor Safety": 1,
       "Biomechanics & Coaching": 1,
     },
+    mbti: "ENFP",
+    disc: "IS",
+    papi: { P: 6.6, S: 7.2, G: 7.3, T: 6.9, W: 5.3 },
+    strengths: ["Communication", "Woo", "Competition", "Relator", "Positivity"],
     top_strength: "Consistent Monthly Target Overachievement (120% Quota)",
     development_priority: "Regional new-club presale management assignment",
     willing_to_relocate: true,
@@ -310,6 +533,7 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
     fullname: "Eko Prasetyo",
     current_role: "Operation Specialist",
     current_location: "Bali",
+    current_club: "FIT HUB Canggu Bali",
     tenure_months: 17,
     performance_rating: 4.45,
     capability_scores: {
@@ -320,6 +544,10 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
       "Member Acquisition": 1,
       "Biomechanics & Coaching": 1,
     },
+    mbti: "ISFJ",
+    disc: "SC",
+    papi: { P: 6.8, S: 6.0, G: 7.5, T: 6.8, W: 6.5 },
+    strengths: ["Discipline", "Responsibility", "Arranger", "Relator", "Restorative"],
     top_strength: "High-Traffic Check-In Management & Staff Motivation",
     development_priority: "POS refund authorization audit procedures",
     willing_to_relocate: false,
@@ -331,6 +559,7 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
     fullname: "Yuliana Dewi",
     current_role: "Fitness Consultant",
     current_location: "Surabaya",
+    current_club: "FIT HUB Gubeng",
     tenure_months: 13,
     performance_rating: 4.15,
     capability_scores: {
@@ -341,6 +570,10 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
       "Gym Floor Safety": 1,
       "Biomechanics & Coaching": 1,
     },
+    mbti: "ESFP",
+    disc: "IS",
+    papi: { P: 6.4, S: 7.0, G: 6.8, T: 6.6, W: 5.2 },
+    strengths: ["Communication", "Woo", "Relator", "Individualization", "Positivity"],
     top_strength: "Member Consultative Needs Assessment",
     development_priority: "B2B partnership pitching simulation",
     willing_to_relocate: true,
@@ -352,6 +585,7 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
     fullname: "Bayu Wicaksono",
     current_role: "Personal Trainer",
     current_location: "Bali",
+    current_club: "FIT HUB Sunset Road Bali",
     tenure_months: 15,
     performance_rating: 4.35,
     capability_scores: {
@@ -362,6 +596,10 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
       "Member Retention": 2,
       "Member Acquisition": 2,
     },
+    mbti: "ESTP",
+    disc: "DI",
+    papi: { P: 7.0, S: 6.2, G: 7.4, T: 7.1, W: 5.5 },
+    strengths: ["Developer", "Relator", "Command", "Achiever", "Focus"],
     top_strength: "Client Injury Prevention & VIP Onboarding",
     development_priority: "Lead trainer mentoring and conversion workshops",
     willing_to_relocate: false,
@@ -373,6 +611,7 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
     fullname: "Taufik Hidayat",
     current_role: "Operation Specialist",
     current_location: "Jakarta Selatan",
+    current_club: "FIT HUB Senopati",
     tenure_months: 21,
     performance_rating: 4.55,
     capability_scores: {
@@ -383,6 +622,10 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
       "Member Acquisition": 2,
       "Biomechanics & Coaching": 1,
     },
+    mbti: "ESTJ",
+    disc: "DI",
+    papi: { P: 7.6, S: 5.7, G: 7.9, T: 7.4, W: 6.0 },
+    strengths: ["Achiever", "Command", "Responsibility", "Arranger", "Discipline"],
     top_strength: "Flagship Club Roster Coordination & Incident Resolution",
     development_priority: "Complete executive leadership development module",
     willing_to_relocate: true,
@@ -394,6 +637,7 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
     fullname: "Dewi Puspita",
     current_role: "Personal Trainer",
     current_location: "Bandung",
+    current_club: "FIT HUB Dago Bandung",
     tenure_months: 18,
     performance_rating: 4.4,
     capability_scores: {
@@ -404,6 +648,10 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
       "Member Retention": 3,
       "Member Acquisition": 2,
     },
+    mbti: "ISFP",
+    disc: "SI",
+    papi: { P: 6.8, S: 6.6, G: 7.3, T: 6.9, W: 5.4 },
+    strengths: ["Developer", "Relator", "Individualization", "Positivity", "Empathy"],
     top_strength: "Female Member Strength Conditioning Programs",
     development_priority: "Trainer floor audit and safety standards refresh",
     willing_to_relocate: true,
@@ -415,6 +663,7 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
     fullname: "Ahmad Fauzi",
     current_role: "Fitness Consultant",
     current_location: "Jakarta Barat",
+    current_club: "FIT HUB Puri Indah",
     tenure_months: 16,
     performance_rating: 4.25,
     capability_scores: {
@@ -425,6 +674,10 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
       "Gym Floor Safety": 1,
       "Biomechanics & Coaching": 1,
     },
+    mbti: "ENTP",
+    disc: "ID",
+    papi: { P: 7.1, S: 6.8, G: 7.4, T: 7.2, W: 5.0 },
+    strengths: ["Communication", "Woo", "Competition", "Activator", "Strategic"],
     top_strength: "Digital Lead Inflow Closing Speed",
     development_priority: "Member onboarding touchpoint consistency",
     willing_to_relocate: true,
@@ -436,6 +689,7 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
     fullname: "Rina Marlina",
     current_role: "Operation Specialist",
     current_location: "Bandung",
+    current_club: "FIT HUB Dago Bandung",
     tenure_months: 12,
     performance_rating: 4.1,
     capability_scores: {
@@ -446,6 +700,10 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
       "Member Acquisition": 1,
       "Biomechanics & Coaching": 1,
     },
+    mbti: "ISFJ",
+    disc: "SC",
+    papi: { P: 6.2, S: 6.1, G: 7.0, T: 6.5, W: 6.6 },
+    strengths: ["Discipline", "Responsibility", "Arranger", "Relator", "Restorative"],
     top_strength: "Front Desk Cashier & Audit Compliance",
     development_priority: "Cross-shift escalation and staff dispute handling",
     willing_to_relocate: true,
@@ -457,6 +715,7 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
     fullname: "Hendrik Gunawan",
     current_role: "Personal Trainer",
     current_location: "Tangerang",
+    current_club: "FIT HUB BSD City",
     tenure_months: 14,
     performance_rating: 4.2,
     capability_scores: {
@@ -467,6 +726,10 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
       "Member Retention": 2,
       "Member Acquisition": 1,
     },
+    mbti: "ISTP",
+    disc: "SI",
+    papi: { P: 6.7, S: 6.0, G: 7.2, T: 6.8, W: 5.6 },
+    strengths: ["Developer", "Relator", "Individualization", "Achiever", "Focus"],
     top_strength: "High Client Session Volume Delivery",
     development_priority: "New client consultation and conversion pitch",
     willing_to_relocate: true,
@@ -477,83 +740,167 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
 export interface MatchingParams {
   targetRoleId: string;
   targetLocation: string;
+  benchmarkEmpIds?: string[];
   minPerformance: number;
   minTenureMonths: number;
   feederOnly: boolean;
-  weights: {
+  weights?: {
     capability: number;
     performance: number;
+    psychometric: number;
     tenure: number;
   };
 }
 
-// Dynamic Matching Logic (Operationalizing 010_internal_mobility_engine.sql)
+// Helper: Calculate median of numeric array
+function calculateMedian(arr: number[]): number {
+  if (arr.length === 0) return 3.0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+// Helper: Calculate mode of string array
+function calculateMode(arr: string[], fallback: string): string {
+  if (arr.length === 0) return fallback;
+  const freq: Record<string, number> = {};
+  let maxCount = 0;
+  let mode = fallback;
+  arr.forEach((item) => {
+    freq[item] = (freq[item] || 0) + 1;
+    if (freq[item] > maxCount) {
+      maxCount = freq[item];
+      mode = item;
+    }
+  });
+  return mode;
+}
+
+// Dynamic Matching Logic (Operationalizing calculate_mobility_match SQL function)
 export function runDynamicMobilityMatching(params: MatchingParams): {
   benchmark: TargetRoleBenchmark;
   results: DynamicMatchResult[];
+  derivedBaseline: {
+    medianRating: number;
+    medianTenure: number;
+    modeMbti: string;
+    modeDisc: string;
+    benchmarkStrengths: string[];
+    capabilities: Record<string, number>;
+  };
 } {
-  const benchmark = targetRoleBenchmarks.find((b) => b.role_id === params.targetRoleId) || targetRoleBenchmarks[0];
+  const benchmark =
+    targetRoleBenchmarks.find((b) => b.role_id === params.targetRoleId) || targetRoleBenchmarks[0];
 
-  const totalWeight = params.weights.capability + params.weights.performance + params.weights.tenure;
-  const capWeightNorm = params.weights.capability / totalWeight;
-  const perfWeightNorm = params.weights.performance / totalWeight;
-  const tenureWeightNorm = params.weights.tenure / totalWeight;
+  // 1. Identify selected benchmark performers
+  const selectedBenchmarks = (params.benchmarkEmpIds && params.benchmarkEmpIds.length > 0)
+    ? benchmarkEmployeesPool.filter((b) => params.benchmarkEmpIds!.includes(b.employee_id))
+    : benchmarkEmployeesPool.slice(0, 3);
+
+  const effectiveBenchmarks = selectedBenchmarks.length > 0 ? selectedBenchmarks : benchmarkEmployeesPool.slice(0, 3);
+
+  // 2. Synthesize Dynamic Ideal Baseline from selected performers
+  const medianRating = calculateMedian(effectiveBenchmarks.map((b) => b.performance_rating));
+  const medianTenure = calculateMedian(effectiveBenchmarks.map((b) => b.tenure_months));
+  const modeMbti = calculateMode(effectiveBenchmarks.map((b) => b.mbti), "ESTJ");
+  const modeDisc = calculateMode(effectiveBenchmarks.map((b) => b.disc), "DI");
+
+  const benchmarkStrengthsSet = new Set<string>();
+  effectiveBenchmarks.forEach((b) => {
+    b.strengths.forEach((s) => benchmarkStrengthsSet.add(s));
+  });
+  const benchmarkStrengths = Array.from(benchmarkStrengthsSet);
+
+  const baselineCaps: Record<string, number> = {};
+  benchmark.required_capabilities.forEach((req) => {
+    const scores = effectiveBenchmarks.map((b) => b.capabilities[req.name] || req.required_level);
+    baselineCaps[req.name] = calculateMedian(scores);
+  });
+
+  // Weights (Exact 45% + 25% + 20% + 10% = 100%)
+  const wCap = params.weights?.capability ?? 45;
+  const wPerf = params.weights?.performance ?? 25;
+  const wPsych = params.weights?.psychometric ?? 20;
+  const wTenure = params.weights?.tenure ?? 10;
+  const totalWeight = wCap + wPerf + wPsych + wTenure;
+
+  const capWeightNorm = wCap / totalWeight;
+  const perfWeightNorm = wPerf / totalWeight;
+  const psychWeightNorm = wPsych / totalWeight;
+  const tenureWeightNorm = wTenure / totalWeight;
 
   const scoredCandidates = activeEmployeePool.map((candidate) => {
     const isFeeder = benchmark.natural_feeder_roles.includes(candidate.current_role);
 
-    // 1. Calculate Capability Coverage Score
+    // 1. Capability Coverage Score (Bobot 45%)
     let totalCapScore = 0;
     let totalCapWeight = 0;
     const criticalGaps: Array<{ capability: string; current_level: number; required_level: number }> = [];
 
     benchmark.required_capabilities.forEach((req) => {
       const candidateLevel = candidate.capability_scores[req.name] || 1;
-      const coverageRatio = Math.min(1.0, candidateLevel / req.required_level);
+      const targetLevel = baselineCaps[req.name] || req.required_level;
+      const coverageRatio = Math.min(1.0, candidateLevel / targetLevel);
       totalCapScore += coverageRatio * req.weight;
       totalCapWeight += req.weight;
 
-      if (candidateLevel < req.required_level) {
+      if (candidateLevel < targetLevel) {
         criticalGaps.push({
           capability: req.name,
           current_level: candidateLevel,
-          required_level: req.required_level,
+          required_level: Math.round(targetLevel),
         });
       }
     });
 
     const capabilityCoveragePct = totalCapWeight > 0 ? (totalCapScore / totalCapWeight) * 100 : 70;
 
-    // 2. Calculate Performance Score (normalized to 100)
-    const performanceScorePct = Math.min(100, (candidate.performance_rating / 5.0) * 100);
+    // 2. Performance Score (Bobot 25%)
+    const performanceScorePct = Math.min(100, (candidate.performance_rating / medianRating) * 100);
 
-    // 3. Calculate Tenure Score (normalized against benchmark tenure)
-    const tenureScorePct = Math.min(100, (candidate.tenure_months / benchmark.benchmark_tenure_months) * 100);
+    // 3. Psychometrics & Personality Score (Bobot 20%)
+    // PAPI (6%) + DISC (5%) + MBTI (4%) + Strengths Overlap (5%)
+    const papiMatchRatio = Math.min(1.0, (candidate.papi.P / 8.0) * 0.3 + (candidate.papi.G / 8.0) * 0.3 + (candidate.papi.T / 7.5) * 0.4) * 100;
+    const discMatchRatio = candidate.disc === modeDisc ? 100 : candidate.disc[0] === modeDisc[0] ? 75 : 50;
+    const mbtiMatchRatio = candidate.mbti === modeMbti ? 100 : candidate.mbti[0] === modeMbti[0] ? 70 : 40;
+    
+    // Strengths Overlap Ratio
+    const overlapCount = candidate.strengths.filter((s) => benchmarkStrengthsSet.has(s)).length;
+    const strengthsOverlapRatio = Math.min(100, (overlapCount / 5.0) * 100);
 
-    // 4. Feeder Role Multiplier
-    const feederMultiplier = isFeeder ? 1.0 : 0.85;
+    const psychometricScorePct = (
+      papiMatchRatio * 0.30 +
+      discMatchRatio * 0.25 +
+      mbtiMatchRatio * 0.20 +
+      strengthsOverlapRatio * 0.25
+    );
 
-    // 5. Location Affinity Multiplier
+    // 4. Contextual & Mobility Score (Bobot 10%)
+    const tenureMaturityPct = Math.min(100, (candidate.tenure_months / medianTenure) * 100);
     const isSameLocation = candidate.current_location === params.targetLocation;
     const isWillingRelocate = candidate.willing_to_relocate && (
       candidate.preferred_locations.includes(params.targetLocation) || candidate.preferred_locations.length === 0
     );
-    const locationMultiplier = isSameLocation ? 1.0 : isWillingRelocate ? 0.94 : 0.75;
+    const locationScore = isSameLocation ? 100 : isWillingRelocate ? 85 : 60;
+    const feederBonus = isFeeder ? 100 : 70;
+    const contextualScorePct = tenureMaturityPct * 0.5 + ((locationScore * 0.6 + feederBonus * 0.4) * 0.5);
 
-    // Composite Match Rate Calculation
+    // 5. Composite Unclamped Match Rate (Exact 100%)
     const rawMatchRate = (
       capabilityCoveragePct * capWeightNorm +
       performanceScorePct * perfWeightNorm +
-      tenureScorePct * tenureWeightNorm
-    ) * feederMultiplier * locationMultiplier;
+      psychometricScorePct * psychWeightNorm +
+      contextualScorePct * tenureWeightNorm
+    );
 
-    const matchRatePct = Math.round(Math.min(98.5, Math.max(45.0, rawMatchRate)) * 10) / 10;
+    // Pure mathematical bounding (0.0% to 100.0%) - NO ARTIFICIAL CLAMPING!
+    const matchRatePct = Math.round(Math.min(100.0, Math.max(0.0, rawMatchRate)) * 10) / 10;
 
     // Determine Readiness Status Tier
     let readinessStatus: "Ready" | "Near Ready" | "Development Needed";
     if (matchRatePct >= 85.0 && criticalGaps.length === 0 && candidate.performance_rating >= 4.2) {
       readinessStatus = "Ready";
-    } else if (matchRatePct >= 72.0 && criticalGaps.length <= 1) {
+    } else if (matchRatePct >= 70.0 && criticalGaps.length <= 1) {
       readinessStatus = "Near Ready";
     } else {
       readinessStatus = "Development Needed";
@@ -566,7 +913,8 @@ export function runDynamicMobilityMatching(params: MatchingParams): {
       readinessStatus,
       capabilityCoveragePct: Math.round(capabilityCoveragePct * 10) / 10,
       performanceScorePct: Math.round(performanceScorePct * 10) / 10,
-      tenureScorePct: Math.round(tenureScorePct * 10) / 10,
+      psychometricScorePct: Math.round(psychometricScorePct * 10) / 10,
+      tenureScorePct: Math.round(contextualScorePct * 10) / 10,
       criticalGaps,
     };
   });
@@ -596,15 +944,19 @@ export function runDynamicMobilityMatching(params: MatchingParams): {
       fullname: item.candidate.fullname,
       current_role: item.candidate.current_role,
       current_location: item.candidate.current_location,
+      current_club: item.candidate.current_club,
       target_role: benchmark.role_name,
       target_location: params.targetLocation,
       match_rate_pct: item.matchRatePct,
       readiness_status: item.readinessStatus,
       capability_coverage_pct: item.capabilityCoveragePct,
       performance_score_pct: item.performanceScorePct,
+      psychometric_score_pct: item.psychometricScorePct,
       tenure_score_pct: item.tenureScorePct,
       performance_rating: item.candidate.performance_rating,
       tenure_months: item.candidate.tenure_months,
+      mbti: item.candidate.mbti,
+      disc: item.candidate.disc,
       critical_gaps: item.criticalGaps,
       top_strength: item.candidate.top_strength,
       recommended_action: item.candidate.development_priority,
@@ -612,5 +964,16 @@ export function runDynamicMobilityMatching(params: MatchingParams): {
     };
   });
 
-  return { benchmark, results };
+  return {
+    benchmark,
+    results,
+    derivedBaseline: {
+      medianRating,
+      medianTenure,
+      modeMbti,
+      modeDisc,
+      benchmarkStrengths,
+      capabilities: baselineCaps,
+    },
+  };
 }

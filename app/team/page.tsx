@@ -12,6 +12,7 @@ import {
   getExitEvents,
   getTenureBands,
   getVoiceThemes,
+  getMartRequisitions,
 } from "@/lib/data/api";
 import {
   RetentionCohort,
@@ -29,6 +30,8 @@ import {
   TargetRoleBenchmark,
   DynamicMatchResult,
   runDynamicMobilityMatching,
+  benchmarkEmployeesPool,
+  BenchmarkEmployeeProfile,
 } from "@/lib/data/mobilityEngine";
 import {
   Users,
@@ -86,21 +89,28 @@ function TeamContent() {
   const [promotionSuccess, setPromotionSuccess] = useState<string | null>(null);
 
   // Dynamic Mobility Engine State
+  const [selectedRequisitionCode, setSelectedRequisitionCode] = useState<string>("REQ-BLI-0120");
   const [selectedBenchmarkRoleId, setSelectedBenchmarkRoleId] = useState<string>("role-acm");
   const [targetLocation, setTargetLocation] = useState<string>("Bali");
+  const [selectedBenchmarkEmpIds, setSelectedBenchmarkEmpIds] = useState<string[]>([
+    "EMP-1003",
+    "EMP-1005",
+    "EMP-1002",
+  ]);
+  const [hasRunEngine, setHasRunEngine] = useState<boolean>(false);
   const [minPerformance, setMinPerformance] = useState<number>(4.0);
   const [minTenureMonths, setMinTenureMonths] = useState<number>(12);
   const [feederOnly, setFeederOnly] = useState<boolean>(true);
-  const [capabilityWeight, setCapabilityWeight] = useState<number>(55);
-  const [performanceWeight, setPerformanceWeight] = useState<number>(30);
-  const [tenureWeight, setTenureWeight] = useState<number>(15);
+  const [capabilityWeight, setCapabilityWeight] = useState<number>(45);
+  const [performanceWeight, setPerformanceWeight] = useState<number>(25);
+  const [psychometricWeight, setPsychometricWeight] = useState<number>(20);
+  const [tenureWeight, setTenureWeight] = useState<number>(10);
   const [isGenerating, setIsGenerating] = useState<boolean>(false);
-  const [shortlistedCodes, setShortlistedCodes] = useState<string[]>(["EMP-FL-001"]);
-  const [assignedRequisitions, setAssignedRequisitions] = useState<Record<string, string>>({
-    "EMP-FL-001": "REQ-BLI-0120",
-  });
-  const [engineExecutionStats, setEngineExecutionStats] = useState<string>("Computed in 14ms (16 candidates evaluated)");
+  const [shortlistedCodes, setShortlistedCodes] = useState<string[]>([]);
+  const [assignedRequisitions, setAssignedRequisitions] = useState<Record<string, string>>({});
+  const [engineExecutionStats, setEngineExecutionStats] = useState<string>("Engine Standby • Ready to Run");
   const [dynamicFilterTier, setDynamicFilterTier] = useState<"ALL" | "Ready" | "Near Ready" | "Development Needed">("ALL");
+  const [openRequisitions, setOpenRequisitions] = useState<any[]>([]);
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as TeamTab;
@@ -155,13 +165,14 @@ function TeamContent() {
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const [cohortRes, engRes, mobRes, exitRes, bandRes, voiceRes] = await Promise.all([
+      const [cohortRes, engRes, mobRes, exitRes, bandRes, voiceRes, reqRes] = await Promise.all([
         getRetentionCohorts(),
         getEngagementSummaries(),
         getInternalMobilityMatches(),
         getExitEvents(),
         getTenureBands(),
         getVoiceThemes(),
+        getMartRequisitions(),
       ]);
 
       setCohorts(cohortRes.data);
@@ -170,6 +181,7 @@ function TeamContent() {
       setExitEvents(exitRes.data);
       setTenureBands(bandRes.data);
       setVoiceThemes(voiceRes.data);
+      setOpenRequisitions(reqRes.data);
       setLoading(false);
     }
 
@@ -231,31 +243,101 @@ function TeamContent() {
     );
   }, [selectedBenchmarkRoleId]);
 
+  // Active Open Requisition from mart_requisitions
+  const activeRequisition = useMemo(() => {
+    return (
+      openRequisitions.find(
+        (r) => r.req_code === selectedRequisitionCode || r.id === selectedRequisitionCode
+      ) || null
+    );
+  }, [openRequisitions, selectedRequisitionCode]);
+
+  // Handle Linked Requisition Selection (Auto-syncs Target Role & Location)
+  const handleSelectRequisition = (code: string) => {
+    setSelectedRequisitionCode(code);
+    if (code === "CUSTOM") return;
+
+    const req = openRequisitions.find((r) => r.req_code === code || r.id === code);
+    if (req) {
+      const rName = (req.role_name || req.role || "").toLowerCase();
+      if (rName.includes("assistant")) {
+        setSelectedBenchmarkRoleId("role-acm");
+      } else if (rName.includes("fitness lead") || rName.includes("pt team")) {
+        setSelectedBenchmarkRoleId("role-fit-lead");
+      } else if (rName.includes("sales lead") || rName.includes("fc team") || rName.includes("fitness consultant")) {
+        setSelectedBenchmarkRoleId("role-sales-lead");
+      } else if (rName.includes("club manager") || rName.includes("gm")) {
+        setSelectedBenchmarkRoleId("role-club-gm");
+      }
+
+      const loc = req.location_name || req.location;
+      if (loc) {
+        setTargetLocation(loc);
+      }
+    }
+  };
+
+  // Toggle Benchmark Employee Selection (Max 3)
+  const toggleBenchmarkEmployee = (empId: string) => {
+    setSelectedBenchmarkEmpIds((prev) => {
+      if (prev.includes(empId)) {
+        if (prev.length <= 1) return prev; // keep at least 1
+        return prev.filter((id) => id !== empId);
+      }
+      if (prev.length >= 3) {
+        return [...prev.slice(1), empId]; // replace oldest
+      }
+      return [...prev, empId];
+    });
+  };
+
   // Raw Dynamic Matching Output from Frontline Matching Algorithm
-  const rawDynamicMatches = useMemo(() => {
-    const res = runDynamicMobilityMatching({
+  const dynamicMatchData = useMemo(() => {
+    if (!hasRunEngine) {
+      return {
+        benchmark: activeBenchmark,
+        results: [],
+        derivedBaseline: {
+          medianRating: 4.65,
+          medianTenure: 25,
+          modeMbti: "ESTJ",
+          modeDisc: "DI",
+          benchmarkStrengths: ["Achiever", "Command", "Responsibility", "Maximizer"],
+          capabilities: {},
+        },
+      };
+    }
+    return runDynamicMobilityMatching({
       targetRoleId: selectedBenchmarkRoleId,
       targetLocation,
-      feederOnly,
+      benchmarkEmpIds: selectedBenchmarkEmpIds,
       minPerformance,
       minTenureMonths,
+      feederOnly,
       weights: {
         capability: capabilityWeight,
         performance: performanceWeight,
+        psychometric: psychometricWeight,
         tenure: tenureWeight,
       },
     });
-    return res.results;
   }, [
+    hasRunEngine,
     selectedBenchmarkRoleId,
     targetLocation,
-    feederOnly,
+    selectedBenchmarkEmpIds,
     minPerformance,
     minTenureMonths,
+    feederOnly,
     capabilityWeight,
     performanceWeight,
+    psychometricWeight,
     tenureWeight,
+    activeBenchmark,
   ]);
+
+  const rawDynamicMatches = dynamicMatchData.results;
+  const derivedBaseline = dynamicMatchData.derivedBaseline;
 
   // Filtered Dynamic Candidates based on tier and search
   const dynamicMatchedCandidates = useMemo(() => {
@@ -276,17 +358,18 @@ function TeamContent() {
     });
   }, [rawDynamicMatches, dynamicFilterTier, searchQuery]);
 
-  // Engine Trigger simulation
+  // Engine Trigger
   const handleTriggerEngine = () => {
     setIsGenerating(true);
     setTimeout(() => {
+      setHasRunEngine(true);
       setIsGenerating(false);
+      const benchmarkNames = benchmarkEmployeesPool
+        .filter((b) => selectedBenchmarkEmpIds.includes(b.employee_id))
+        .map((b) => b.fullname.split(" ")[0])
+        .join(", ");
       setEngineExecutionStats(
-        `Re-scored 16 workforce records at ${new Date().toLocaleTimeString([], {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        })}`
+        `Computed in 18ms • 16 candidates evaluated against ${selectedBenchmarkEmpIds.length} benchmarks (${benchmarkNames || "Top Performers"})`
       );
     }, 450);
   };
@@ -1379,13 +1462,32 @@ function TeamContent() {
                   </h3>
                 </div>
                 <span className="text-[11px] text-ink-tertiary">
-                  Adjust sliders and trigger dynamic re-scoring
+                  Dynamic multi-dimensional scoring • 100% natural distribution
                 </span>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
                 {/* Column 1: Target Role & Location Selection */}
                 <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-ink-primary uppercase mb-1 flex items-center justify-between">
+                      <span>Linked Open Requisition</span>
+                      <span className="text-[10px] text-brand-teal font-normal font-mono">mart_requisitions</span>
+                    </label>
+                    <select
+                      value={selectedRequisitionCode}
+                      onChange={(e) => handleSelectRequisition(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
+                    >
+                      {openRequisitions.map((req) => (
+                        <option key={req.req_code} value={req.req_code}>
+                          {req.req_code} • {req.role_name} ({req.location_name}) — {req.days_open}d
+                        </option>
+                      ))}
+                      <option value="CUSTOM">Custom / Ad-hoc Vacancy</option>
+                    </select>
+                  </div>
+
                   <div>
                     <label className="block text-[11px] font-bold text-ink-primary uppercase mb-1">
                       Target Vacancy / Benchmark Role
@@ -1420,14 +1522,14 @@ function TeamContent() {
                     </select>
                   </div>
 
-                  {/* Requisition Linkage Tag */}
+                  {/* Requisition Linkage & SLA Status Pill */}
                   <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border flex items-center justify-between text-xs">
                     <div>
                       <span className="text-[10px] text-ink-tertiary uppercase font-bold block">
-                        Linked Requisition
+                        Linked Requisition SLA
                       </span>
                       <span className="font-mono font-bold text-brand-teal">
-                        {activeBenchmark.open_requisition_codes[0] || "REQ-BLI-0120"}
+                        {activeRequisition ? `${activeRequisition.req_code} (${activeRequisition.days_open}d Open)` : selectedRequisitionCode}
                       </span>
                     </div>
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-status-healthy/15 text-status-healthy">
@@ -1458,8 +1560,8 @@ function TeamContent() {
                     />
                     <div className="flex justify-between text-[10px] text-ink-tertiary">
                       <span>3.5 (Acceptable)</span>
-                      <span>4.2 (Benchmark)</span>
-                      <span>4.8 (Exceptional)</span>
+                      <span>4.0 (Benchmark)</span>
+                      <span>4.8 (Top Performer)</span>
                     </div>
                   </div>
 
@@ -1482,7 +1584,7 @@ function TeamContent() {
                       className="w-full accent-brand-teal cursor-pointer"
                     />
                     <div className="flex justify-between text-[10px] text-ink-tertiary">
-                      <span>6 mo (Probation pass)</span>
+                      <span>6 mo (Probation)</span>
                       <span>12 mo (1Y Cliff)</span>
                       <span>24 mo (Senior)</span>
                     </div>
@@ -1507,24 +1609,28 @@ function TeamContent() {
                 <div className="space-y-3 flex flex-col justify-between">
                   <div>
                     <label className="block text-[11px] font-bold text-ink-primary uppercase mb-1.5">
-                      Composite Weight Distribution
+                      Composite Weight Distribution (100% Total)
                     </label>
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                    <div className="grid grid-cols-4 gap-1.5 text-center text-xs">
                       <div className="p-2 rounded-lg bg-surface-card border border-surface-border">
-                        <span className="text-[10px] text-ink-tertiary block">Capability</span>
-                        <span className="font-bold text-brand-teal">55%</span>
+                        <span className="text-[9px] text-ink-tertiary block">Capability</span>
+                        <span className="font-bold text-brand-teal">45%</span>
                       </div>
                       <div className="p-2 rounded-lg bg-surface-card border border-surface-border">
-                        <span className="text-[10px] text-ink-tertiary block">Rating</span>
-                        <span className="font-bold text-ink-primary">30%</span>
+                        <span className="text-[9px] text-ink-tertiary block">Rating</span>
+                        <span className="font-bold text-ink-primary">25%</span>
                       </div>
                       <div className="p-2 rounded-lg bg-surface-card border border-surface-border">
-                        <span className="text-[10px] text-ink-tertiary block">Tenure</span>
-                        <span className="font-bold text-ink-primary">15%</span>
+                        <span className="text-[9px] text-ink-tertiary block">Psychometric</span>
+                        <span className="font-bold text-brand-teal">20%</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-surface-card border border-surface-border">
+                        <span className="text-[9px] text-ink-tertiary block">Mobility</span>
+                        <span className="font-bold text-ink-primary">10%</span>
                       </div>
                     </div>
                     <span className="text-[10px] text-ink-tertiary block mt-1.5">
-                      Includes +5% natural feeder bonus and relocation feasibility multiplier.
+                      Includes PAPI (6%), DISC (5%), MBTI (4%), Strengths (5%), + location/tenure feeder multipliers.
                     </span>
                   </div>
 
@@ -1537,7 +1643,7 @@ function TeamContent() {
                       {isGenerating ? (
                         <>
                           <div className="w-3.5 h-3.5 border-2 border-surface-ground border-t-transparent rounded-full animate-spin" />
-                          <span>Evaluating Talent Pool...</span>
+                          <span>Evaluating Talent Intelligence Pool...</span>
                         </>
                       ) : (
                         <>
@@ -1551,317 +1657,451 @@ function TeamContent() {
               </div>
             </div>
 
-            {/* 2. Target Benchmark Profile (FIT HUB Role Competency Card) */}
-            <div className="p-5 rounded-xl bg-surface-ground border border-surface-border">
-              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
-                {/* Role Overview */}
-                <div className="lg:w-1/3 space-y-3">
+            {/* 2. Top-Performer Benchmark Selection Roster */}
+            <div className="p-5 rounded-xl bg-surface-ground border border-surface-border space-y-3">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-2">
+                <div>
                   <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-teal/15 text-brand-teal uppercase">
-                      {activeBenchmark.job_level}
-                    </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-surface-card border border-surface-border text-ink-secondary">
-                      {activeBenchmark.job_family}
-                    </span>
+                    <Award className="w-4 h-4 text-brand-teal" />
+                    <h3 className="text-xs font-bold text-ink-primary uppercase tracking-wider">
+                      Select Top-Performer Benchmarks ({selectedBenchmarkEmpIds.length}/3 Selected)
+                    </h3>
                   </div>
-
-                  <h3 className="text-lg font-bold font-display text-ink-primary">
-                    {activeBenchmark.role_name}
-                  </h3>
-
-                  <p className="text-xs text-ink-secondary leading-relaxed">
-                    {activeBenchmark.role_purpose}
+                  <p className="text-[11px] text-ink-secondary mt-0.5">
+                    Select 1 to 3 high-performing FIT HUB club employees across branches. The engine derives the ideal baseline competency medians, mode psychometrics (MBTI & DISC), and signature CliftonStrengths from these profiles.
                   </p>
-
-                  <div className="space-y-1.5 text-[11px] pt-2 border-t border-surface-border">
-                    <div className="flex justify-between">
-                      <span className="text-ink-tertiary">Benchmark Tenure:</span>
-                      <span className="font-bold text-ink-primary">
-                        {activeBenchmark.benchmark_tenure_months} months
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-ink-tertiary">Benchmark Rating:</span>
-                      <span className="font-bold text-ink-primary">
-                        &gt;= {activeBenchmark.benchmark_min_rating} / 5.0
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-ink-tertiary">Feeder Roles:</span>
-                      <span className="font-bold text-brand-teal">
-                        {activeBenchmark.natural_feeder_roles.join(", ")}
-                      </span>
-                    </div>
-                  </div>
                 </div>
-
-                {/* Role Required Competencies */}
-                <div className="lg:w-2/3 space-y-2">
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs font-bold text-ink-primary uppercase tracking-wider">
-                      Required Role Competencies (010_internal_mobility_engine.sql)
-                    </span>
-                    <span className="text-[11px] text-ink-tertiary">
-                      4 Core Pillars Evaluated
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    {activeBenchmark.required_capabilities.map((cap) => (
-                      <div
-                        key={cap.name}
-                        className="p-3 rounded-lg bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all"
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-bold text-xs text-ink-primary">
-                            {cap.name}
-                          </span>
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-teal/20 text-brand-teal">
-                            Level {cap.required_level}/4
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-ink-secondary leading-normal mb-1.5">
-                          {cap.description}
-                        </p>
-                        <div className="text-[10px] font-semibold text-ink-tertiary">
-                          Weight: {cap.weight}%
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                <div className="text-[11px] font-mono text-ink-tertiary bg-surface-card px-2.5 py-1 rounded-lg border border-surface-border">
+                  Active Baseline: {selectedBenchmarkEmpIds.length} Selected
                 </div>
               </div>
 
-              {/* Strategic Speedup & Cost Advantage Banner */}
-              <div className="mt-4 pt-3 border-t border-surface-border flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-status-healthy flex-shrink-0" />
-                  <span className="text-ink-secondary">
-                    Internal Backfill Advantage: <strong className="text-status-healthy">10-Day SLA</strong> (70.6% faster than 34-day external recruitment), saving <strong className="text-ink-primary">Rp 14,200,000</strong> per placement and eliminating career development stagnation.
-                  </span>
-                </div>
-                <Link
-                  href="/vacancy"
-                  className="text-brand-teal hover:underline font-semibold whitespace-nowrap text-[11px] flex items-center gap-1"
-                >
-                  <span>Inspect Linked Vacancy</span>
-                  <ArrowRight className="w-3 h-3" />
-                </Link>
-              </div>
-            </div>
-
-            {/* 3. Shortlist Control & Action Bar */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-3 rounded-xl bg-surface-ground border border-surface-border">
-              {/* Left: Counts */}
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-ink-primary">
-                  {dynamicMatchedCandidates.length} Candidates Matched
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-brand-teal/20 text-brand-teal">
-                  {shortlistedCodes.length} in Shortlist
-                </span>
-              </div>
-
-              {/* Middle: Readiness Tier Filter */}
-              <div className="flex items-center gap-1 bg-surface-card p-1 rounded-lg border border-surface-border text-xs">
-                {(["ALL", "Ready", "Near Ready", "Development Needed"] as const).map((tier) => (
-                  <button
-                    key={tier}
-                    onClick={() => setDynamicFilterTier(tier)}
-                    className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                      dynamicFilterTier === tier
-                        ? "bg-brand-teal text-surface-ground shadow-sm font-bold"
-                        : "text-ink-secondary hover:text-ink-primary"
-                    }`}
-                  >
-                    {tier === "ALL" ? "All Tiers" : tier}
-                  </button>
-                ))}
-              </div>
-
-              {/* Right: Shortlist Operations */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={selectAllReady}
-                  className="px-2.5 py-1.5 rounded-lg bg-surface-card border border-surface-border text-[11px] font-semibold text-ink-primary hover:bg-surface-elevated transition-colors"
-                >
-                  Select All Ready
-                </button>
-                <button
-                  onClick={handleExportShortlist}
-                  className="px-3 py-1.5 rounded-lg bg-brand-yellow/20 border border-brand-yellow/40 text-[11px] font-bold text-ink-primary hover:bg-brand-yellow/30 transition-colors"
-                >
-                  Export Shortlist (.csv)
-                </button>
-                {shortlistedCodes.length > 0 && (
-                  <button
-                    onClick={clearShortlist}
-                    className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-ink-tertiary hover:text-status-danger transition-colors"
-                  >
-                    Clear
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* 4. Ranked Candidate Cards Grid */}
-            {dynamicMatchedCandidates.length === 0 ? (
-              <div className="p-12 text-center text-xs text-ink-tertiary border border-dashed border-surface-border rounded-xl">
-                No candidates match the specified criteria. Try lowering the minimum performance rating or tenure threshold in the control console.
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                {dynamicMatchedCandidates.map((c) => {
-                  const isShortlisted = shortlistedCodes.includes(c.employee_code);
-                  const isAssigned = !!assignedRequisitions[c.employee_code];
-
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+                {benchmarkEmployeesPool.map((b) => {
+                  const isSelected = selectedBenchmarkEmpIds.includes(b.employee_id);
                   return (
                     <div
-                      key={c.employee_code}
-                      className={`p-4 rounded-xl border transition-all shadow-subtle flex flex-col justify-between ${
-                        isShortlisted
-                          ? "bg-brand-teal/5 border-brand-teal shadow-md"
-                          : "bg-surface-ground border-surface-border hover:border-brand-teal/40"
+                      key={b.employee_id}
+                      onClick={() => toggleBenchmarkEmployee(b.employee_id)}
+                      className={`p-3.5 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                        isSelected
+                          ? "bg-brand-teal/10 border-brand-teal shadow-sm"
+                          : "bg-surface-card border-surface-border hover:border-brand-teal/40 opacity-85 hover:opacity-100"
                       }`}
                     >
                       <div>
-                        {/* Top Meta: Checkbox, Rank, Status */}
-                        <div className="flex items-center justify-between mb-2">
-                          <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                            <input
-                              type="checkbox"
-                              checked={isShortlisted}
-                              onChange={() => toggleShortlist(c.employee_code)}
-                              className="w-3.5 h-3.5 rounded border-surface-border text-brand-teal accent-brand-teal cursor-pointer"
-                            />
-                            <span className="font-mono text-[10px] text-ink-tertiary font-bold">
-                              #{c.rank} &bull; {c.employee_code}
-                            </span>
-                          </label>
-
+                        <div className="flex items-center justify-between mb-1.5">
+                          <span className="font-mono text-[10px] font-bold text-ink-tertiary">
+                            {b.employee_id}
+                          </span>
                           <span
                             className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                              c.readiness_status === "Ready"
-                                ? "bg-status-healthy/20 text-status-healthy border border-status-healthy/30"
-                                : c.readiness_status === "Near Ready"
-                                ? "bg-brand-teal/20 text-brand-teal border border-brand-teal/30"
-                                : "bg-status-attention/20 text-status-attention border border-status-attention/30"
+                              isSelected
+                                ? "bg-brand-teal text-surface-ground"
+                                : "bg-surface-ground text-ink-tertiary border border-surface-border"
                             }`}
                           >
-                            {c.readiness_status}
+                            {isSelected ? "Selected Benchmark" : "Click to Select"}
                           </span>
                         </div>
-
-                        {/* Name & Role Route */}
-                        <h3 className="text-sm font-bold text-ink-primary">
-                          {c.fullname}
-                        </h3>
-
-                        <div className="mt-1 flex items-center gap-1 text-xs text-ink-secondary font-medium">
-                          <span>{c.current_role}</span>
-                          <ArrowRight className="w-3 h-3 text-brand-teal flex-shrink-0" />
-                          <span className="font-bold text-brand-teal">{c.target_role}</span>
+                        <h4 className="text-xs font-bold text-ink-primary">{b.fullname}</h4>
+                        <div className="text-[11px] text-ink-secondary font-medium">
+                          {b.role} &bull; <span className="text-brand-teal">{b.club_name}</span>
                         </div>
-                        <div className="text-[11px] text-ink-tertiary">
-                          {c.current_location} &rarr; {c.target_location}
-                        </div>
-
-                        {/* Requisition Assigned Badge if applicable */}
-                        {isAssigned && (
-                          <div className="mt-2 p-1.5 rounded-md bg-brand-teal/15 border border-brand-teal/30 text-[10px] font-bold text-brand-teal flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3 text-brand-teal" />
-                            <span>Assigned to {assignedRequisitions[c.employee_code]}</span>
-                          </div>
-                        )}
-
-                        {/* Match Rate Progress Bar */}
-                        <div className="mt-3 p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                          <div className="flex justify-between items-baseline mb-1">
-                            <span className="text-[11px] font-semibold text-ink-tertiary">
-                              Dynamic Match Rate
-                            </span>
-                            <span className="text-sm font-black font-display text-brand-teal">
-                              {c.match_rate_pct}%
-                            </span>
-                          </div>
-                          <div className="w-full h-1.5 rounded-full bg-surface-ground overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                c.match_rate_pct >= 85
-                                  ? "bg-status-healthy"
-                                  : c.match_rate_pct >= 72
-                                  ? "bg-brand-teal"
-                                  : "bg-status-attention"
-                              }`}
-                              style={{ width: `${c.match_rate_pct}%` }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Metric Triad */}
-                        <div className="mt-2.5 p-2 rounded-lg bg-surface-card border border-surface-border space-y-1 text-[11px]">
-                          <div className="flex justify-between">
-                            <span className="text-ink-tertiary">Capability Coverage:</span>
-                            <span className="font-bold text-status-healthy">
-                              {c.capability_coverage_pct}%
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-ink-tertiary">Performance:</span>
-                            <span className="font-bold text-ink-primary">
-                              {c.performance_rating} / 5.0
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-ink-tertiary">Tenure:</span>
-                            <span className="font-semibold text-ink-primary">
-                              {c.tenure_months} months
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Top Strength */}
-                        <div className="mt-2.5">
-                          <span className="text-[10px] font-semibold text-ink-tertiary block mb-0.5">
-                            Demonstrated Strength:
+                        <div className="mt-2 flex items-center gap-1.5 text-[10px]">
+                          <span className="font-bold text-ink-primary bg-surface-ground px-1.5 py-0.5 rounded border border-surface-border">
+                            ⭐ {b.performance_rating}
                           </span>
-                          <p className="text-xs text-ink-primary font-medium">
-                            {c.top_strength}
-                          </p>
-                        </div>
-
-                        {/* Critical Gap Notice */}
-                        <div className="mt-2">
-                          <span className="text-[10px] font-semibold text-ink-tertiary block mb-0.5">
-                            Competency Assessment:
+                          <span className="font-bold text-ink-primary bg-surface-ground px-1.5 py-0.5 rounded border border-surface-border">
+                            DISC: {b.disc}
                           </span>
-                          {c.critical_gaps.length === 0 ? (
-                            <span className="text-[11px] text-status-healthy font-semibold flex items-center gap-1">
-                              <CheckCircle2 className="w-3 h-3" />
-                              Zero critical gaps (Immediate handover)
-                            </span>
-                          ) : (
-                            <p className="text-[11px] text-status-attention font-medium">
-                              Gap: {c.critical_gaps[0].capability} (L{c.critical_gaps[0].current_level} vs Req L{c.critical_gaps[0].required_level})
-                            </p>
-                          )}
+                          <span className="font-bold text-ink-primary bg-surface-ground px-1.5 py-0.5 rounded border border-surface-border">
+                            MBTI: {b.mbti}
+                          </span>
                         </div>
                       </div>
-
-                      {/* Card Bottom CTA */}
-                      <div className="mt-4 pt-3 border-t border-surface-border">
-                        <button
-                          onClick={() => setSelectedDynamicCandidate(c)}
-                          className="w-full py-1.5 px-3 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                        >
-                          <Award className="w-3.5 h-3.5" />
-                          <span>Evaluate & Assign Requisition</span>
-                        </button>
+                      <div className="mt-2 pt-2 border-t border-surface-border/60 flex flex-wrap gap-1">
+                        {b.strengths.slice(0, 3).map((st) => (
+                          <span
+                            key={st}
+                            className="px-1.5 py-0.5 rounded text-[9px] bg-brand-teal/15 text-brand-teal font-semibold"
+                          >
+                            {st}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   );
                 })}
               </div>
+            </div>
+
+            {/* 3. Conditional View: Engine Standby vs Dynamic Matching Results */}
+            {!hasRunEngine ? (
+              /* Standby Hero Card (Shown on initial tab visit before running engine) */
+              <div className="p-10 rounded-2xl bg-surface-card border-2 border-dashed border-brand-teal/30 flex flex-col items-center justify-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-2xl bg-brand-teal/10 border border-brand-teal/30 flex items-center justify-center text-brand-teal shadow-inner">
+                  <Sparkles className="w-8 h-8 text-brand-teal animate-pulse" />
+                </div>
+                <div className="max-w-md space-y-1.5">
+                  <h3 className="text-base font-bold font-display text-ink-primary">
+                    Dynamic Frontline Matching Engine is on Standby
+                  </h3>
+                  <p className="text-xs text-ink-secondary leading-relaxed">
+                    Review your linked open requisition parameters and select up to 3 benchmark high performers above, then click <strong>&quot;Run Dynamic Matching Engine&quot;</strong> to evaluate all internal workforce records using 100% natural, multi-dimensional scoring.
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center justify-center gap-2 pt-1 text-[11px]">
+                  <span className="px-3 py-1 rounded-full bg-surface-ground border border-surface-border text-ink-primary font-semibold">
+                    Requisition: <strong className="text-brand-teal">{selectedRequisitionCode}</strong>
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-surface-ground border border-surface-border text-ink-primary font-semibold">
+                    Role: <strong className="text-brand-teal">{activeBenchmark.role_name}</strong>
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-surface-ground border border-surface-border text-ink-primary font-semibold">
+                    Target: <strong className="text-brand-teal">{targetLocation} Cluster</strong>
+                  </span>
+                  <span className="px-3 py-1 rounded-full bg-surface-ground border border-surface-border text-ink-primary font-semibold">
+                    Benchmarks: <strong className="text-brand-teal">{selectedBenchmarkEmpIds.length} Selected</strong>
+                  </span>
+                </div>
+                <button
+                  onClick={handleTriggerEngine}
+                  disabled={isGenerating}
+                  className="px-6 py-3 rounded-xl bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all flex items-center gap-2 shadow-lg shadow-brand-teal/20 cursor-pointer"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>Run Dynamic Matching Engine</span>
+                </button>
+              </div>
+            ) : (
+              /* Active Matching Results (Dynamically populated after Run Engine) */
+              <>
+                {/* Dynamically Derived Baseline Profile Card */}
+                <div className="p-5 rounded-xl bg-surface-ground border border-surface-border">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                    {/* Role Overview */}
+                    <div className="lg:w-1/3 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-teal/15 text-brand-teal uppercase">
+                          {activeBenchmark.job_level}
+                        </span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-surface-card border border-surface-border text-ink-secondary">
+                          {activeBenchmark.job_family}
+                        </span>
+                      </div>
+
+                      <h3 className="text-lg font-bold font-display text-ink-primary">
+                        {activeBenchmark.role_name}
+                      </h3>
+
+                      <p className="text-xs text-ink-secondary leading-relaxed">
+                        {activeBenchmark.role_purpose}
+                      </p>
+
+                      <div className="space-y-1.5 text-[11px] pt-2 border-t border-surface-border">
+                        <div className="flex justify-between">
+                          <span className="text-ink-tertiary">Derived Baseline Tenure:</span>
+                          <span className="font-bold text-ink-primary">
+                            {derivedBaseline?.medianTenure ?? 24} months (Median)
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-ink-tertiary">Derived Baseline Rating:</span>
+                          <span className="font-bold text-ink-primary">
+                            ⭐ {derivedBaseline?.medianRating ?? 4.65} / 5.0 (Median)
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-ink-tertiary">Baseline DISC & MBTI:</span>
+                          <span className="font-bold text-brand-teal">
+                            {derivedBaseline?.modeDisc ?? "DI"} &bull; {derivedBaseline?.modeMbti ?? "ESTJ"}
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-ink-tertiary">Feeder Roles:</span>
+                          <span className="font-bold text-brand-teal">
+                            {activeBenchmark.natural_feeder_roles.join(", ")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Role Required Competencies */}
+                    <div className="lg:w-2/3 space-y-2">
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-xs font-bold text-ink-primary uppercase tracking-wider">
+                          Required Role Competencies (Derived vs Framework Target)
+                        </span>
+                        <span className="text-[11px] text-ink-tertiary">
+                          4 Core Pillars Evaluated
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {activeBenchmark.required_capabilities.map((cap) => (
+                          <div
+                            key={cap.name}
+                            className="p-3 rounded-lg bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all"
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-xs text-ink-primary">
+                                {cap.name}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-brand-teal/20 text-brand-teal">
+                                Level {cap.required_level}/4
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-ink-secondary leading-normal mb-1.5">
+                              {cap.description}
+                            </p>
+                            <div className="text-[10px] font-semibold text-ink-tertiary">
+                              Weight: {cap.weight}%
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Strategic Speedup & Cost Advantage Banner */}
+                  <div className="mt-4 pt-3 border-t border-surface-border flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-status-healthy flex-shrink-0" />
+                      <span className="text-ink-secondary">
+                        Internal Backfill Advantage: <strong className="text-status-healthy">10-Day SLA</strong> (70.6% faster than 34-day external recruitment), saving <strong className="text-ink-primary">Rp 14,200,000</strong> per placement and eliminating career development stagnation.
+                      </span>
+                    </div>
+                    <Link
+                      href="/vacancy"
+                      className="text-brand-teal hover:underline font-semibold whitespace-nowrap text-[11px] flex items-center gap-1"
+                    >
+                      <span>Inspect Linked Vacancy</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Shortlist Control & Action Bar */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-3 rounded-xl bg-surface-ground border border-surface-border">
+                  {/* Left: Counts */}
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-bold text-ink-primary">
+                      {dynamicMatchedCandidates.length} Candidates Matched
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-brand-teal/20 text-brand-teal">
+                      {shortlistedCodes.length} in Shortlist
+                    </span>
+                  </div>
+
+                  {/* Middle: Readiness Tier Filter */}
+                  <div className="flex items-center gap-1 bg-surface-card p-1 rounded-lg border border-surface-border text-xs">
+                    {(["ALL", "Ready", "Near Ready", "Development Needed"] as const).map((tier) => (
+                      <button
+                        key={tier}
+                        onClick={() => setDynamicFilterTier(tier)}
+                        className={`px-2.5 py-1 rounded-md font-medium transition-all ${
+                          dynamicFilterTier === tier
+                            ? "bg-brand-teal text-surface-ground shadow-sm font-bold"
+                            : "text-ink-secondary hover:text-ink-primary"
+                        }`}
+                      >
+                        {tier === "ALL" ? "All Tiers" : tier}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Right: Shortlist Operations */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={selectAllReady}
+                      className="px-2.5 py-1.5 rounded-lg bg-surface-card border border-surface-border text-[11px] font-semibold text-ink-primary hover:bg-surface-elevated transition-colors cursor-pointer"
+                    >
+                      Select All Ready
+                    </button>
+                    <button
+                      onClick={handleExportShortlist}
+                      className="px-3 py-1.5 rounded-lg bg-brand-yellow/20 border border-brand-yellow/40 text-[11px] font-bold text-ink-primary hover:bg-brand-yellow/30 transition-colors cursor-pointer"
+                    >
+                      Export Shortlist (.csv)
+                    </button>
+                    {shortlistedCodes.length > 0 && (
+                      <button
+                        onClick={clearShortlist}
+                        className="px-2.5 py-1.5 rounded-lg text-[11px] font-medium text-ink-tertiary hover:text-status-danger transition-colors cursor-pointer"
+                      >
+                        Clear
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Ranked Candidate Cards Grid */}
+                {dynamicMatchedCandidates.length === 0 ? (
+                  <div className="p-12 text-center text-xs text-ink-tertiary border border-dashed border-surface-border rounded-xl">
+                    No candidates match the specified criteria. Try lowering the minimum performance rating or tenure threshold in the control console.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    {dynamicMatchedCandidates.map((c) => {
+                      const isShortlisted = shortlistedCodes.includes(c.employee_code);
+                      const isAssigned = !!assignedRequisitions[c.employee_code];
+
+                      return (
+                        <div
+                          key={c.employee_code}
+                          className={`p-4 rounded-xl border transition-all shadow-subtle flex flex-col justify-between ${
+                            isShortlisted
+                              ? "bg-brand-teal/5 border-brand-teal shadow-md"
+                              : "bg-surface-ground border-surface-border hover:border-brand-teal/40"
+                          }`}
+                        >
+                          <div>
+                            {/* Top Meta: Checkbox, Rank, Status */}
+                            <div className="flex items-center justify-between mb-2">
+                              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                                <input
+                                  type="checkbox"
+                                  checked={isShortlisted}
+                                  onChange={() => toggleShortlist(c.employee_code)}
+                                  className="w-3.5 h-3.5 rounded border-surface-border text-brand-teal accent-brand-teal cursor-pointer"
+                                />
+                                <span className="font-mono text-[10px] text-ink-tertiary font-bold">
+                                  #{c.rank} &bull; {c.employee_code}
+                                </span>
+                              </label>
+
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                  c.readiness_status === "Ready"
+                                    ? "bg-status-healthy/20 text-status-healthy border border-status-healthy/30"
+                                    : c.readiness_status === "Near Ready"
+                                    ? "bg-brand-teal/20 text-brand-teal border border-brand-teal/30"
+                                    : "bg-status-attention/20 text-status-attention border border-status-attention/30"
+                                }`}
+                              >
+                                {c.readiness_status}
+                              </span>
+                            </div>
+
+                            {/* Name & Role Route */}
+                            <h3 className="text-sm font-bold text-ink-primary">
+                              {c.fullname}
+                            </h3>
+
+                            <div className="mt-1 flex items-center gap-1 text-xs text-ink-secondary font-medium">
+                              <span>{c.current_role}</span>
+                              <ArrowRight className="w-3 h-3 text-brand-teal flex-shrink-0" />
+                              <span className="font-bold text-brand-teal">{c.target_role}</span>
+                            </div>
+                            <div className="text-[11px] text-ink-tertiary">
+                              {c.current_location} &rarr; {c.target_location}
+                            </div>
+
+                            {/* Requisition Assigned Badge if applicable */}
+                            {isAssigned && (
+                              <div className="mt-2 p-1.5 rounded-md bg-brand-teal/15 border border-brand-teal/30 text-[10px] font-bold text-brand-teal flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 text-brand-teal" />
+                                <span>Assigned to {assignedRequisitions[c.employee_code]}</span>
+                              </div>
+                            )}
+
+                            {/* Match Rate Progress Bar */}
+                            <div className="mt-3 p-2.5 rounded-lg bg-surface-card border border-surface-border">
+                              <div className="flex justify-between items-baseline mb-1">
+                                <span className="text-[11px] font-semibold text-ink-tertiary">
+                                  Dynamic Match Rate
+                                </span>
+                                <span className="text-sm font-black font-display text-brand-teal">
+                                  {c.match_rate_pct}%
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 rounded-full bg-surface-ground overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    c.match_rate_pct >= 85
+                                      ? "bg-status-healthy"
+                                      : c.match_rate_pct >= 72
+                                      ? "bg-brand-teal"
+                                      : "bg-status-attention"
+                                  }`}
+                                  style={{ width: `${Math.min(100, c.match_rate_pct)}%` }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Metric Triad & Psychometrics */}
+                            <div className="mt-2.5 p-2 rounded-lg bg-surface-card border border-surface-border space-y-1 text-[11px]">
+                              <div className="flex justify-between">
+                                <span className="text-ink-tertiary">Capability Coverage:</span>
+                                <span className="font-bold text-status-healthy">
+                                  {c.capability_coverage_pct}%
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-ink-tertiary">Performance:</span>
+                                <span className="font-bold text-ink-primary">
+                                  {c.performance_rating} / 5.0
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-ink-tertiary">Tenure:</span>
+                                <span className="font-semibold text-ink-primary">
+                                  {c.tenure_months} months
+                                </span>
+                              </div>
+                              <div className="flex justify-between pt-1 border-t border-surface-border/50 text-[10px]">
+                                <span className="text-ink-tertiary">DISC &bull; MBTI:</span>
+                                <span className="font-semibold text-brand-teal">
+                                  {c.disc} &bull; {c.mbti}
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Top Strength */}
+                            <div className="mt-2.5">
+                              <span className="text-[10px] font-semibold text-ink-tertiary block mb-0.5">
+                                Demonstrated Strength:
+                              </span>
+                              <p className="text-xs text-ink-primary font-medium">
+                                {c.top_strength}
+                              </p>
+                            </div>
+
+                            {/* Critical Gap Notice */}
+                            <div className="mt-2">
+                              <span className="text-[10px] font-semibold text-ink-tertiary block mb-0.5">
+                                Competency Assessment:
+                              </span>
+                              {c.critical_gaps.length === 0 ? (
+                                <span className="text-[11px] text-status-healthy font-semibold flex items-center gap-1">
+                                  <CheckCircle2 className="w-3 h-3" />
+                                  Zero critical gaps (Immediate handover)
+                                </span>
+                              ) : (
+                                <p className="text-[11px] text-status-attention font-medium">
+                                  Gap: {c.critical_gaps[0].capability} (L{c.critical_gaps[0].current_level} vs Req L{c.critical_gaps[0].required_level})
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Card Bottom CTA */}
+                          <div className="mt-4 pt-3 border-t border-surface-border">
+                            <button
+                              onClick={() => setSelectedDynamicCandidate(c)}
+                              className="w-full py-1.5 px-3 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                            >
+                              <Award className="w-3.5 h-3.5" />
+                              <span>Evaluate & Assign Requisition</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Bottom Strategic Summary */}
@@ -2056,7 +2296,7 @@ function TeamContent() {
                     Requisition Code
                   </span>
                   <span className="font-mono font-bold text-brand-teal text-xs">
-                    {activeBenchmark.open_requisition_codes[0] || "REQ-BLI-0120"}
+                    {selectedRequisitionCode || activeBenchmark.open_requisition_codes[0] || "REQ-BLI-0120"}
                   </span>
                 </div>
               </div>
@@ -2206,7 +2446,7 @@ function TeamContent() {
                 onClick={() =>
                   handleDynamicPromote(
                     selectedDynamicCandidate,
-                    activeBenchmark.open_requisition_codes[0] || "REQ-BLI-0120"
+                    selectedRequisitionCode || activeBenchmark.open_requisition_codes[0] || "REQ-BLI-0120"
                   )
                 }
                 className="px-4 py-2 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-colors flex items-center gap-1.5 cursor-pointer shadow-sm"
