@@ -102,7 +102,7 @@ export const fallbackVacancyKPIs: VacancyKPI[] = [
   },
   {
     kpi_id: "vac-03",
-    role_name: "Membership Consultant",
+    role_name: "Fitness Consultant",
     location_name: "Bali",
     open_requisitions: 6,
     replacement_share_pct: 66.7,
@@ -150,7 +150,7 @@ export const fallbackVacancyKPIs: VacancyKPI[] = [
   },
   {
     kpi_id: "vac-07",
-    role_name: "Membership Consultant",
+    role_name: "Fitness Consultant",
     location_name: "Jakarta Barat",
     open_requisitions: 15,
     replacement_share_pct: 60.0,
@@ -240,7 +240,7 @@ export const fallbackRetentionCohorts: RetentionCohort[] = [
   },
   {
     cohort_id: "ret-04",
-    role_name: "Membership Consultant",
+    role_name: "Fitness Consultant",
     location_name: "Surabaya",
     headcount: 42,
     annualized_turnover_pct: 52.4,
@@ -431,7 +431,7 @@ export const fallbackMobilityMatches: InternalMobilityMatch[] = [
     match_id: "mob-04",
     candidate_name: "Reza Fahlevi",
     employee_code: "FH-EMP-1154",
-    current_role_name: "Membership Consultant",
+    current_role_name: "Fitness Consultant",
     current_location_name: "Jakarta Selatan",
     target_role_name: "Sales Lead",
     target_location_name: "Bali",
@@ -503,7 +503,7 @@ export const fallbackMobilityMatches: InternalMobilityMatch[] = [
     match_id: "mob-08",
     candidate_name: "Fitri Handayani",
     employee_code: "FH-EMP-1312",
-    current_role_name: "Membership Consultant",
+    current_role_name: "Fitness Consultant",
     current_location_name: "Bandung",
     target_role_name: "Sales Lead",
     target_location_name: "Surabaya",
@@ -689,7 +689,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-BLI-0115",
-    role_name: "Membership Consultant",
+    role_name: "Fitness Consultant",
     location_name: "Bali",
     hiring_type: "Replacement",
     openings: 2,
@@ -756,7 +756,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-JKB-0312",
-    role_name: "Membership Consultant",
+    role_name: "Fitness Consultant",
     location_name: "Jakarta Barat",
     hiring_type: "Replacement",
     openings: 4,
@@ -840,7 +840,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-SBY-0224",
-    role_name: "Membership Consultant",
+    role_name: "Fitness Consultant",
     location_name: "Surabaya",
     hiring_type: "Replacement",
     openings: 3,
@@ -1005,7 +1005,7 @@ export const fallbackTalentPool: TalentPoolCandidate[] = [
   {
     candidate_id: "CAN-BLI-052",
     display_name: "Putu Ayu Lestari",
-    role_target: "Membership Consultant",
+    role_target: "Fitness Consultant",
     location_preference: "Bali",
     readiness_status: "Pre-qualified",
     source_channel: "Alumni Network",
@@ -1192,7 +1192,7 @@ export const fallbackExitEvents: ExitEvent[] = [
   {
     exit_code: "EXT-BLI-0102",
     employee_code: "FH-EMP-0845",
-    role_name: "Membership Consultant",
+    role_name: "Fitness Consultant",
     location_name: "Bali",
     exit_date: "2024-07-15",
     tenure_months: 4,
@@ -1237,7 +1237,7 @@ export const fallbackExitEvents: ExitEvent[] = [
   {
     exit_code: "EXT-JKB-0245",
     employee_code: "FH-EMP-0554",
-    role_name: "Membership Consultant",
+    role_name: "Fitness Consultant",
     location_name: "Jakarta Barat",
     exit_date: "2024-08-01",
     tenure_months: 15,
@@ -1331,7 +1331,7 @@ export const fallbackVoiceThemes: VoiceTheme[] = [
     national_benchmark: 5.5,
     sentiment: "CONCERN",
     verbatim_sample: "Base salary follows UMK, but when member PT sessions drop during low months, take-home pay is too volatile to sustain living costs in Bali and South Jakarta.",
-    segment_concentration: "Personal Trainers & Membership Consultants in Bali",
+    segment_concentration: "Personal Trainers & Fitness Consultants in Bali",
     strategic_action: "Introduce base commission floor during low season to stabilize income security",
   },
   {

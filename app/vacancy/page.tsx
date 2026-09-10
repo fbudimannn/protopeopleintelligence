@@ -139,7 +139,7 @@ function VacancyContent() {
     if (!itemRole) return false;
     if (itemRole.toLowerCase() === filterRole.toLowerCase()) return true;
     if (filterRole === "Operation Specialist" && (itemRole === "Front Desk Officer" || itemRole === "Operation Specialist")) return true;
-    if (filterRole === "Membership Consultant" && (itemRole === "Fitness Consultant" || itemRole === "Membership Consultant")) return true;
+    if ((filterRole === "Fitness Consultant" || filterRole === "Membership Consultant") && (itemRole === "Fitness Consultant" || itemRole === "Membership Consultant" || itemRole === "FC")) return true;
     if (filterRole === "Personal Trainer" && (itemRole === "Personal Trainer" || itemRole === "PT")) return true;
     if (filterRole === "Club Manager" && (itemRole.includes("Manager") || itemRole.includes("Leader") || itemRole === "Club General Manager")) return true;
     return false;

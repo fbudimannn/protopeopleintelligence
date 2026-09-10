@@ -12749,7 +12749,7 @@
     },
     {
       "req_code": "REQ-BLI-0115",
-      "role_name": "Membership Consultant",
+      "role_name": "Fitness Consultant",
       "location_name": "Bali",
       "hiring_type": "Replacement",
       "openings": 2,
@@ -12816,7 +12816,7 @@
     },
     {
       "req_code": "REQ-JKB-0312",
-      "role_name": "Membership Consultant",
+      "role_name": "Fitness Consultant",
       "location_name": "Jakarta Barat",
       "hiring_type": "Replacement",
       "openings": 4,
@@ -12900,7 +12900,7 @@
     },
     {
       "req_code": "REQ-SBY-0224",
-      "role_name": "Membership Consultant",
+      "role_name": "Fitness Consultant",
       "location_name": "Surabaya",
       "hiring_type": "Replacement",
       "openings": 3,
@@ -13070,7 +13070,7 @@
     {
       "candidate_id": "CAN-BLI-052",
       "display_name": "Putu Ayu Lestari",
-      "role_target": "Membership Consultant",
+      "role_target": "Fitness Consultant",
       "location_preference": "Bali",
       "readiness_status": "Pre-qualified",
       "source_channel": "Alumni Network",
@@ -13225,7 +13225,7 @@
       "national_benchmark": 5.5,
       "sentiment": "CONCERN",
       "verbatim_sample": "Base salary follows UMK, but when member PT sessions drop during low months, take-home pay is too volatile to sustain living costs in Bali and South Jakarta.",
-      "segment_concentration": "Personal Trainers & Membership Consultants in Bali",
+      "segment_concentration": "Personal Trainers & Fitness Consultants in Bali",
       "strategic_action": "Introduce base commission floor during low season to stabilize income security"
     },
     {
@@ -13342,7 +13342,7 @@
     {
       "exit_code": "EXT-BLI-0102",
       "employee_code": "FH-EMP-0845",
-      "role_name": "Membership Consultant",
+      "role_name": "Fitness Consultant",
       "location_name": "Bali",
       "exit_date": "2024-07-15",
       "tenure_months": 4,
@@ -13387,7 +13387,7 @@
     {
       "exit_code": "EXT-JKB-0245",
       "employee_code": "FH-EMP-0554",
-      "role_name": "Membership Consultant",
+      "role_name": "Fitness Consultant",
       "location_name": "Jakarta Barat",
       "exit_date": "2024-08-01",
       "tenure_months": 15,

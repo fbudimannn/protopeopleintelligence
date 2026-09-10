@@ -165,7 +165,7 @@ export default function TopHeader() {
                   <option value="ALL">All Roles</option>
                   <option value="Operation Specialist">Operation Specialist</option>
                   <option value="Personal Trainer">Personal Trainer</option>
-                  <option value="Membership Consultant">Membership Consultant</option>
+                  <option value="Fitness Consultant">Fitness Consultant</option>
                   <option value="Club Manager">Club Manager</option>
                 </select>
                 <Briefcase className="w-3.5 h-3.5 text-ink-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
