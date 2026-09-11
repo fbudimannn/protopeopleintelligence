@@ -174,8 +174,10 @@ const OPERATIONAL_ROLES: RoleMeta[] = [
 
 const DOMAIN_STYLES: Record<string, { bg: string; text: string; border: string }> = {
   Operations: { bg: 'bg-sky-500/15', text: 'text-sky-400', border: 'border-sky-500/30' },
+  Operational: { bg: 'bg-sky-500/15', text: 'text-sky-400', border: 'border-sky-500/30' },
   Fitness: { bg: 'bg-emerald-500/15', text: 'text-emerald-400', border: 'border-emerald-500/30' },
   Commercial: { bg: 'bg-purple-500/15', text: 'text-purple-400', border: 'border-purple-500/30' },
+  Retention: { bg: 'bg-rose-500/15', text: 'text-rose-400', border: 'border-rose-500/30' },
   Leadership: { bg: 'bg-amber-500/15', text: 'text-amber-400', border: 'border-amber-500/30' },
 };
 
@@ -192,9 +194,11 @@ export default function CapabilityFrameworkPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
   const [modalTab, setModalTab] = useState<'CATALOG' | 'NEW'>('CATALOG');
 
-  // Tab 1: Catalog Reuse State
+  // Tab 1: Catalog Reuse State (Filters & Scope)
   const [catalogSearch, setCatalogSearch] = useState<string>('');
   const [catalogDomainFilter, setCatalogDomainFilter] = useState<string>('ALL');
+  const [catalogRoleFilter, setCatalogRoleFilter] = useState<string>('ALL');
+  const [catalogScope, setCatalogScope] = useState<'UNASSIGNED' | 'ALL'>('UNASSIGNED');
   const [selectedCatalogCode, setSelectedCatalogCode] = useState<string>('');
   const [catalogLevel, setCatalogLevel] = useState<number>(3);
   const [catalogWeight, setCatalogWeight] = useState<number>(20);
@@ -203,7 +207,7 @@ export default function CapabilityFrameworkPage() {
   // Tab 2: Brand-New Capability State
   const [newCapCode, setNewCapCode] = useState<string>('');
   const [newCapName, setNewCapName] = useState<string>('');
-  const [newCapDomain, setNewCapDomain] = useState<'Operations' | 'Fitness' | 'Commercial' | 'Leadership'>('Operations');
+  const [newCapDomain, setNewCapDomain] = useState<'Operations' | 'Fitness' | 'Commercial' | 'Leadership' | 'Retention'>('Operations');
   const [newCapDesc, setNewCapDesc] = useState<string>('');
   const [newCapLevel, setNewCapLevel] = useState<number>(3);
   const [newCapWeight, setNewCapWeight] = useState<number>(20);
@@ -253,27 +257,69 @@ export default function CapabilityFrameworkPage() {
       .reduce((sum, r) => sum + (r.weight || 0), 0);
   }, [roleReqs]);
 
-  // Capabilities in catalog that are not currently active on the selected role
-  const availableCatalogCapabilities = useMemo(() => {
-    const activeCodesOnRole = new Set(
+  // Active capability codes on the currently inspected role
+  const activeCodesOnRole = useMemo(() => {
+    return new Set(
       roleReqs.filter((r) => r.active_flag !== false).map((r) => r.capability_code)
     );
-    return capabilities.filter((c) => !activeCodesOnRole.has(c.capability_code));
-  }, [capabilities, roleReqs]);
+  }, [roleReqs]);
 
+  // Unassigned capabilities for this role
+  const unassignedCatalogCapabilities = useMemo(() => {
+    return capabilities.filter((c) => !activeCodesOnRole.has(c.capability_code));
+  }, [capabilities, activeCodesOnRole]);
+
+  // Filtered capabilities based on Scope (Unassigned vs All), Originating Role, Domain, and Search
   const filteredCatalogCapabilities = useMemo(() => {
-    return availableCatalogCapabilities.filter((c) => {
+    return capabilities.filter((c) => {
+      const isAlreadyOnThisRole = activeCodesOnRole.has(c.capability_code);
+
+      // Scope filter: if 'UNASSIGNED', hide competencies already on this role
+      if (catalogScope === 'UNASSIGNED' && isAlreadyOnThisRole) {
+        return false;
+      }
+
+      // Originating role filter: only show competencies required by the chosen role
+      if (catalogRoleFilter !== 'ALL') {
+        const isUsedByFilterRole = allRequirements.some(
+          (r) =>
+            r.role_name.toLowerCase() === catalogRoleFilter.toLowerCase() &&
+            r.capability_code === c.capability_code &&
+            r.active_flag !== false
+        );
+        if (!isUsedByFilterRole) return false;
+      }
+
+      // Domain filter
+      if (catalogDomainFilter !== 'ALL') {
+        const dNorm = c.domain.toLowerCase();
+        const fNorm = catalogDomainFilter.toLowerCase();
+        const isOpMatch =
+          (fNorm === 'operations' || fNorm === 'operational') &&
+          (dNorm === 'operations' || dNorm === 'operational');
+        if (!isOpMatch && dNorm !== fNorm) return false;
+      }
+
+      // Text search
       const q = catalogSearch.toLowerCase().trim();
-      const matchSearch =
-        q === '' ||
-        c.capability_name.toLowerCase().includes(q) ||
-        c.capability_code.toLowerCase().includes(q) ||
-        c.description.toLowerCase().includes(q);
-      const matchDomain =
-        catalogDomainFilter === 'ALL' || c.domain.toLowerCase() === catalogDomainFilter.toLowerCase();
-      return matchSearch && matchDomain;
+      if (q !== '') {
+        const matchCode = c.capability_code.toLowerCase().includes(q);
+        const matchName = c.capability_name.toLowerCase().includes(q);
+        const matchDesc = c.description.toLowerCase().includes(q);
+        if (!matchCode && !matchName && !matchDesc) return false;
+      }
+
+      return true;
     });
-  }, [availableCatalogCapabilities, catalogSearch, catalogDomainFilter]);
+  }, [
+    capabilities,
+    activeCodesOnRole,
+    catalogScope,
+    catalogRoleFilter,
+    catalogDomainFilter,
+    catalogSearch,
+    allRequirements,
+  ]);
 
   // Which roles currently require a given capability code
   const getRolesUsingCapability = useCallback(
@@ -283,26 +329,46 @@ export default function CapabilityFrameworkPage() {
         .map((r) => ({
           roleName: r.role_name,
           level: r.required_level,
+          weight: r.weight,
         }));
     },
     [allRequirements]
   );
 
+  // Smart selection: if already on current role, prefill current level & weight; otherwise pick peer recommendation
+  const handleSelectCatalogItem = (capCode: string) => {
+    setSelectedCatalogCode(capCode);
+    const existingOnRole = roleReqs.find(
+      (r) => r.capability_code === capCode && r.active_flag !== false
+    );
+    if (existingOnRole) {
+      setCatalogLevel(existingOnRole.required_level);
+      setCatalogWeight(existingOnRole.weight);
+    } else {
+      const peerReq = allRequirements.find(
+        (r) => r.capability_code === capCode && r.active_flag !== false
+      );
+      setCatalogLevel(peerReq ? peerReq.required_level : 3);
+      setCatalogWeight(peerReq ? peerReq.weight : 20);
+    }
+  };
+
   const handleOpenAddModal = () => {
     setCapModalError(null);
     setCatalogSearch('');
     setCatalogDomainFilter('ALL');
-    const firstAvailable = availableCatalogCapabilities[0]?.capability_code || '';
-    setSelectedCatalogCode(firstAvailable);
-    setCatalogLevel(3);
-    setCatalogWeight(20);
+    setCatalogRoleFilter('ALL');
+    setCatalogScope('UNASSIGNED');
+    const unassigned = capabilities.filter((c) => !activeCodesOnRole.has(c.capability_code));
+    const firstAvailable = unassigned[0]?.capability_code || capabilities[0]?.capability_code || '';
+    handleSelectCatalogItem(firstAvailable);
     setNewCapCode('');
     setNewCapName('');
     setNewCapDesc('');
     setNewCapLevel(3);
     setNewCapWeight(20);
     setMultiRoleAttachments({});
-    setModalTab(availableCatalogCapabilities.length > 0 ? 'CATALOG' : 'NEW');
+    setModalTab('CATALOG');
     setIsAddModalOpen(true);
   };
 
@@ -1039,7 +1105,7 @@ export default function CapabilityFrameworkPage() {
                         : 'bg-surface-card text-ink-tertiary border border-surface-border'
                     }`}
                   >
-                    {availableCatalogCapabilities.length} Available
+                    {unassignedCatalogCapabilities.length} Available ({capabilities.length} Catalog)
                   </span>
                 </button>
 
@@ -1074,29 +1140,89 @@ export default function CapabilityFrameworkPage() {
               {/* TAB 1: REUSE FROM EXISTING CATALOG */}
               {modalTab === 'CATALOG' && (
                 <form onSubmit={handleAttachCatalogCapability} className="space-y-4">
-                  {/* Search and Domain Filters */}
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <div className="relative flex-1">
+                  {/* Scope Toggle: Unassigned Only vs All Company Library */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 p-2 rounded-xl bg-surface-ground/60 border border-surface-border">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-ink-tertiary uppercase tracking-wider pl-1">
+                        View:
+                      </span>
+                      <div className="flex gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setCatalogScope('UNASSIGNED')}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            catalogScope === 'UNASSIGNED'
+                              ? 'bg-brand-teal text-surface-ground shadow-sm'
+                              : 'bg-surface-card border border-surface-border text-ink-secondary hover:text-ink-primary'
+                          }`}
+                        >
+                          Unassigned ({unassignedCatalogCapabilities.length})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setCatalogScope('ALL')}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            catalogScope === 'ALL'
+                              ? 'bg-brand-teal text-surface-ground shadow-sm'
+                              : 'bg-surface-card border border-surface-border text-ink-secondary hover:text-ink-primary'
+                          }`}
+                        >
+                          All Company Library ({capabilities.length})
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="text-[10px] text-ink-tertiary">
+                      Target Role: <strong className="text-brand-teal">{selectedRoleName}</strong>
+                    </div>
+                  </div>
+
+                  {/* Search and Filters Toolbar (Role Filter + Domain Filter + Search) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                    {/* Search Input */}
+                    <div className="relative sm:col-span-6">
                       <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
                       <input
                         type="text"
-                        placeholder="Search existing skills by name, code, or description..."
+                        placeholder="Search 18 capabilities by name, code, or description..."
                         value={catalogSearch}
                         onChange={(e) => setCatalogSearch(e.target.value)}
                         className="w-full pl-8 pr-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs text-ink-primary placeholder:text-ink-muted focus:border-brand-teal focus:outline-none"
                       />
                     </div>
-                    <select
-                      value={catalogDomainFilter}
-                      onChange={(e) => setCatalogDomainFilter(e.target.value)}
-                      className="px-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs font-medium text-ink-primary focus:border-brand-teal focus:outline-none cursor-pointer"
-                    >
-                      <option value="ALL">All Domains</option>
-                      <option value="Operations">Operations</option>
-                      <option value="Fitness">Fitness</option>
-                      <option value="Commercial">Commercial</option>
-                      <option value="Leadership">Leadership</option>
-                    </select>
+
+                    {/* Filter by Originating Role */}
+                    <div className="sm:col-span-3">
+                      <select
+                        value={catalogRoleFilter}
+                        onChange={(e) => setCatalogRoleFilter(e.target.value)}
+                        className="w-full px-2.5 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs font-medium text-ink-primary focus:border-brand-teal focus:outline-none cursor-pointer truncate"
+                        title="Filter competencies by the role they belong to"
+                      >
+                        <option value="ALL">All Originating Roles</option>
+                        {OPERATIONAL_ROLES.map((r) => (
+                          <option key={r.name} value={r.name}>
+                            Used in: {r.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Filter by Domain */}
+                    <div className="sm:col-span-3">
+                      <select
+                        value={catalogDomainFilter}
+                        onChange={(e) => setCatalogDomainFilter(e.target.value)}
+                        className="w-full px-2.5 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs font-medium text-ink-primary focus:border-brand-teal focus:outline-none cursor-pointer truncate"
+                      >
+                        <option value="ALL">All Domains</option>
+                        <option value="Fitness">Fitness</option>
+                        <option value="Commercial">Commercial</option>
+                        <option value="Operations">Operations</option>
+                        <option value="Retention">Retention</option>
+                        <option value="Leadership">Leadership</option>
+                      </select>
+                    </div>
                   </div>
 
                   {/* Catalog Capabilities Grid / List */}
@@ -1104,31 +1230,54 @@ export default function CapabilityFrameworkPage() {
                     <div className="p-8 text-center border border-dashed border-surface-border rounded-xl bg-surface-ground/30 space-y-2">
                       <Layers className="w-8 h-8 text-ink-tertiary mx-auto opacity-50" />
                       <p className="text-xs font-semibold text-ink-primary">
-                        {availableCatalogCapabilities.length === 0
-                          ? `All master capabilities are already assigned to ${selectedRoleName}!`
-                          : 'No unassigned capabilities match your search criteria.'}
+                        {unassignedCatalogCapabilities.length === 0 && catalogScope === 'UNASSIGNED'
+                          ? `All 18 master capabilities are already active on ${selectedRoleName}!`
+                          : 'No capabilities match the selected filters.'}
                       </p>
                       <p className="text-[11px] text-ink-secondary max-w-sm mx-auto">
-                        Switch to the <strong className="text-brand-teal cursor-pointer underline" onClick={() => setModalTab('NEW')}>Create Brand-New</strong> tab to define a new operational competency.
+                        Try clearing search terms or switch to{' '}
+                        <strong
+                          className="text-brand-teal cursor-pointer underline"
+                          onClick={() => {
+                            setCatalogScope('ALL');
+                            setCatalogRoleFilter('ALL');
+                            setCatalogDomainFilter('ALL');
+                            setCatalogSearch('');
+                          }}
+                        >
+                          Reset Filters (Show All 18)
+                        </strong>
+                        .
                       </p>
                     </div>
                   ) : (
-                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                      <div className="text-[10px] font-bold text-ink-tertiary uppercase tracking-wider mb-1">
-                        Select an existing competency to attach:
+                    <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      <div className="flex items-center justify-between text-[10px] font-bold text-ink-tertiary uppercase tracking-wider mb-1">
+                        <span>Select a competency ({filteredCatalogCapabilities.length} results):</span>
+                        {catalogRoleFilter !== 'ALL' && (
+                          <span className="text-brand-teal normal-case font-medium">
+                            Showing competencies from {catalogRoleFilter}
+                          </span>
+                        )}
                       </div>
                       {filteredCatalogCapabilities.map((cap) => {
                         const isSelected = selectedCatalogCode === cap.capability_code;
                         const domainStyle = DOMAIN_STYLES[cap.domain] || DOMAIN_STYLES.Operations;
                         const usingRoles = getRolesUsingCapability(cap.capability_code);
+                        const currentOnThisRole = roleReqs.find(
+                          (r) => r.capability_code === cap.capability_code && r.active_flag !== false
+                        );
+                        const isAlreadyOnThisRole = Boolean(currentOnThisRole);
 
                         return (
                           <div
                             key={cap.capability_code}
-                            onClick={() => setSelectedCatalogCode(cap.capability_code)}
+                            onClick={() => handleSelectCatalogItem(cap.capability_code)}
                             className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
                               isSelected
                                 ? 'bg-brand-teal/10 border-brand-teal shadow-subtle ring-1 ring-brand-teal'
+                                : isAlreadyOnThisRole
+                                ? 'bg-surface-card/60 border-surface-border hover:border-brand-teal/40'
                                 : 'bg-surface-ground border-surface-border hover:border-brand-teal/40 hover:bg-surface-ground/80'
                             }`}
                           >
@@ -1140,6 +1289,12 @@ export default function CapabilityFrameworkPage() {
                                 <span className="font-mono text-[11px] font-bold text-brand-teal">
                                   {cap.capability_code}
                                 </span>
+                                {currentOnThisRole && (
+                                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-brand-teal/15 text-brand-teal border border-brand-teal/30 flex items-center gap-1">
+                                    <Check className="w-2.5 h-2.5" />
+                                    Active on {selectedRoleName} (L{currentOnThisRole.required_level} • {currentOnThisRole.weight}%)
+                                  </span>
+                                )}
                               </div>
                               <span className="text-[10px] text-ink-tertiary">
                                 {usingRoles.length > 0 ? (
@@ -1164,11 +1319,15 @@ export default function CapabilityFrameworkPage() {
 
                             {usingRoles.length > 0 && (
                               <div className="flex items-center gap-1 flex-wrap pt-1 text-[10px] text-ink-tertiary">
-                                <span className="font-medium">Active in:</span>
+                                <span className="font-medium">Originating Roles:</span>
                                 {usingRoles.map((ur) => (
                                   <span
                                     key={ur.roleName}
-                                    className="px-1.5 py-0.2 rounded bg-surface-card border border-surface-border text-ink-secondary font-mono"
+                                    className={`px-1.5 py-0.2 rounded font-mono text-[9px] ${
+                                      ur.roleName === selectedRoleName
+                                        ? 'bg-brand-teal/20 text-brand-teal font-bold border border-brand-teal/40'
+                                        : 'bg-surface-card border border-surface-border text-ink-secondary'
+                                    }`}
                                   >
                                     {ur.roleName} (L{ur.level})
                                   </span>
@@ -1187,7 +1346,11 @@ export default function CapabilityFrameworkPage() {
                       <div className="flex items-center justify-between border-b border-surface-border/60 pb-2">
                         <div className="text-xs font-bold text-ink-primary flex items-center gap-1.5">
                           <CheckCircle2 className="w-3.5 h-3.5 text-brand-teal" />
-                          <span>Configure Requirement for: </span>
+                          <span>
+                            {roleReqs.some((r) => r.capability_code === selectedCatalogCode && r.active_flag !== false)
+                              ? 'Re-tune Requirement for: '
+                              : 'Configure Requirement for: '}
+                          </span>
                           <span className="text-brand-teal">{selectedRoleName}</span>
                         </div>
                         <span className="font-mono text-[11px] font-bold text-ink-tertiary">
@@ -1278,7 +1441,13 @@ export default function CapabilityFrameworkPage() {
                       className="px-4 py-2 rounded-xl bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
                     >
                       <Check className="w-3.5 h-3.5" />
-                      <span>{isAttachingCatalog ? 'Attaching & Publishing...' : `Attach to ${selectedRoleName}`}</span>
+                      <span>
+                        {isAttachingCatalog
+                          ? 'Publishing to Database...'
+                          : roleReqs.some((r) => r.capability_code === selectedCatalogCode && r.active_flag !== false)
+                          ? `Update Requirement on ${selectedRoleName}`
+                          : `+ Attach to ${selectedRoleName}`}
+                      </span>
                     </button>
                   </div>
                 </form>

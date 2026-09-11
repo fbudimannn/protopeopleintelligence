@@ -2168,41 +2168,122 @@ export interface CapabilityItem {
 }
 
 export const fallbackCapabilities: CapabilityItem[] = [
-  {
-    capability_code: "CAP-LEAD-01",
-    capability_name: "Shift Supervision & Operational Leadership",
-    domain: "Leadership",
-    description: "Managing daily club shifts, coaching frontline staff, and driving club revenue targets.",
-  },
-  {
-    capability_code: "CAP-OPS-02",
-    capability_name: "POS & Front-Desk Service Excellence",
-    domain: "Operational",
-    description: "Mastery of club point-of-sale systems, check-in flow, and member inquiry resolution.",
-  },
-  {
-    capability_code: "CAP-OPS-01",
-    capability_name: "Gym Floor Maintenance & Safety",
-    domain: "Operational",
-    description: "Ensuring gym equipment uptime, hygiene compliance, safety protocols, and SOP adherence.",
-  },
-  {
-    capability_code: "CAP-RET-01",
-    capability_name: "Member Retention & Onboarding Care",
-    domain: "Retention",
-    description: "Proactive engagement with at-risk gym members to maximize attendance and contract renewals.",
-  },
-  {
-    capability_code: "CAP-COMM-01",
-    capability_name: "Member Acquisition & Conversion",
-    domain: "Commercial",
-    description: "Ability to present club value propositions, handle sales objections, and close gym memberships.",
-  },
+  // Fitness Domain
   {
     capability_code: "CAP-FIT-01",
     capability_name: "Biomechanics & PT Session Programming",
     domain: "Fitness",
     description: "Designing safe, goal-oriented progressive resistance and cardiovascular workout programs.",
+  },
+  {
+    capability_code: "CAP-FIT-02",
+    capability_name: "Movement Screening, Posture & Injury Prevention",
+    domain: "Fitness",
+    description: "Functional movement assessment, muscle imbalance screening, and exercise injury risk mitigation.",
+  },
+  {
+    capability_code: "CAP-FIT-03",
+    capability_name: "Nutrition Basics & Dietary Habit Coaching",
+    domain: "Fitness",
+    description: "Advising members on balanced macronutrients, hydration, and positive lifestyle dietary habits.",
+  },
+  {
+    capability_code: "CAP-FIT-04",
+    capability_name: "Group Fitness Class & Studio Energy",
+    domain: "Fitness",
+    description: "Leading group workout classes with high-energy coaching, musical rhythm, and inclusive motivation.",
+  },
+
+  // Commercial / Sales Domain
+  {
+    capability_code: "CAP-COMM-01",
+    capability_name: "Walk-in Trial Pitch & Value Presentation",
+    domain: "Commercial",
+    description: "Presenting club facilities, value propositions, and trial onboarding for prospect conversion.",
+  },
+  {
+    capability_code: "CAP-COMM-02",
+    capability_name: "Sales Objection Handling & Contract Closing",
+    domain: "Commercial",
+    description: "Overcoming prospect hesitation on pricing/commitment and securing membership agreements.",
+  },
+  {
+    capability_code: "CAP-COMM-03",
+    capability_name: "B2B Corporate Gym Partnership & Community Outreach",
+    domain: "Commercial",
+    description: "Negotiating corporate wellness partnerships, B2B gym bulk enrollments, and external events.",
+  },
+  {
+    capability_code: "CAP-COMM-04",
+    capability_name: "Digital Lead Nurturing & WhatsApp Follow-up",
+    domain: "Commercial",
+    description: "Rapid omnichannel outreach, qualification of incoming leads, and scheduling facility tours.",
+  },
+
+  // Operational Domain
+  {
+    capability_code: "CAP-OPS-01",
+    capability_name: "Gym Floor Maintenance & Safety Inspection",
+    domain: "Operational",
+    description: "Ensuring gym equipment uptime, hygiene compliance, safety protocols, and SOP adherence.",
+  },
+  {
+    capability_code: "CAP-OPS-02",
+    capability_name: "POS & Front-Desk Cash Reconciliation",
+    domain: "Operational",
+    description: "Mastery of club point-of-sale systems, check-in flow, daily cash register closing, and shift balancing.",
+  },
+  {
+    capability_code: "CAP-OPS-03",
+    capability_name: "Emergency First Aid, CPR & Incident Response",
+    domain: "Operational",
+    description: "Frontline certified medical first-response, automated external defibrillator (AED) readiness, and crisis handling.",
+  },
+  {
+    capability_code: "CAP-OPS-04",
+    capability_name: "Equipment Asset Tracking & Preventive Maintenance",
+    domain: "Operational",
+    description: "Managing machine maintenance logs, technician servicing schedules, and spare parts inventory.",
+  },
+
+  // Retention Domain
+  {
+    capability_code: "CAP-RET-01",
+    capability_name: "Member Attrition Risk Detection & Check-in Care",
+    domain: "Retention",
+    description: "Proactive engagement with low-frequency gym attendees to maximize workout habits and renewals.",
+  },
+  {
+    capability_code: "CAP-RET-02",
+    capability_name: "Member Complaint De-escalation & Incident Resolution",
+    domain: "Retention",
+    description: "Handling front-desk friction, customer dissatisfaction, and membership disputes with composure.",
+  },
+  {
+    capability_code: "CAP-RET-03",
+    capability_name: "Loyalty Activation & Member Community Building",
+    domain: "Retention",
+    description: "Organizing member challenges, referral campaigns, and social fitness milestones to drive sense of belonging.",
+  },
+
+  // Leadership Domain
+  {
+    capability_code: "CAP-LEAD-01",
+    capability_name: "Shift Supervision & Operational Roster Scheduling",
+    domain: "Leadership",
+    description: "Managing shift rotations, daily handover briefing, frontline role execution, and opening/closing checklists.",
+  },
+  {
+    capability_code: "CAP-LEAD-02",
+    capability_name: "Staff 1-on-1 Coaching & Performance KPI Review",
+    domain: "Leadership",
+    description: "Mentoring subordinates, evaluating monthly conversion/PT delivery targets, and performance coaching.",
+  },
+  {
+    capability_code: "CAP-LEAD-03",
+    capability_name: "Club P&L Financial Awareness & Opex Control",
+    domain: "Leadership",
+    description: "Monitoring club operating expenditures, utility conservation, petty cash, and EBITDA margin contribution.",
   },
 ];
 
@@ -2219,76 +2300,76 @@ export interface RoleCapabilityRequirement {
 }
 
 export const fallbackRoleCapabilityRequirements: RoleCapabilityRequirement[] = [
-  // Club Manager
-  { role_name: "Club Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 4, weight: 30 },
-  { role_name: "Club Manager", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 4, weight: 30 },
-  { role_name: "Club Manager", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 3, weight: 20 },
-  { role_name: "Club Manager", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 3, weight: 20 },
+  // Club Manager (100%)
+  { role_name: "Club Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Roster Scheduling", required_level: 4, weight: 30 },
+  { role_name: "Club Manager", capability_code: "CAP-LEAD-03", capability_name: "Club P&L Financial Awareness & Opex Control", required_level: 3, weight: 25 },
+  { role_name: "Club Manager", capability_code: "CAP-RET-01", capability_name: "Member Attrition Risk Detection & Check-in Care", required_level: 4, weight: 25 },
+  { role_name: "Club Manager", capability_code: "CAP-COMM-01", capability_name: "Walk-in Trial Pitch & Value Presentation", required_level: 3, weight: 20 },
 
-  // Area General Manager
-  { role_name: "Area General Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 4, weight: 30 },
-  { role_name: "Area General Manager", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 4, weight: 30 },
-  { role_name: "Area General Manager", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 4, weight: 20 },
-  { role_name: "Area General Manager", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 3, weight: 20 },
+  // Area General Manager (100%)
+  { role_name: "Area General Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Roster Scheduling", required_level: 4, weight: 25 },
+  { role_name: "Area General Manager", capability_code: "CAP-LEAD-03", capability_name: "Club P&L Financial Awareness & Opex Control", required_level: 4, weight: 35 },
+  { role_name: "Area General Manager", capability_code: "CAP-COMM-03", capability_name: "B2B Corporate Gym Partnership & Community Outreach", required_level: 4, weight: 25 },
+  { role_name: "Area General Manager", capability_code: "CAP-RET-03", capability_name: "Loyalty Activation & Member Community Building", required_level: 4, weight: 15 },
 
-  // Operation Manager
-  { role_name: "Operation Manager", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 4, weight: 30 },
-  { role_name: "Operation Manager", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 4, weight: 30 },
-  { role_name: "Operation Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 3, weight: 20 },
-  { role_name: "Operation Manager", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 20 },
+  // Operation Manager (100%)
+  { role_name: "Operation Manager", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety Inspection", required_level: 4, weight: 30 },
+  { role_name: "Operation Manager", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Cash Reconciliation", required_level: 4, weight: 25 },
+  { role_name: "Operation Manager", capability_code: "CAP-OPS-04", capability_name: "Equipment Asset Tracking & Preventive Maintenance", required_level: 4, weight: 25 },
+  { role_name: "Operation Manager", capability_code: "CAP-OPS-03", capability_name: "Emergency First Aid, CPR & Incident Response", required_level: 3, weight: 20 },
 
-  // Customer Service Leader
-  { role_name: "Customer Service Leader", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 4, weight: 35 },
-  { role_name: "Customer Service Leader", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 4, weight: 30 },
-  { role_name: "Customer Service Leader", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 3, weight: 20 },
-  { role_name: "Customer Service Leader", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 2, weight: 15 },
+  // Customer Service Leader (100%)
+  { role_name: "Customer Service Leader", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Cash Reconciliation", required_level: 4, weight: 35 },
+  { role_name: "Customer Service Leader", capability_code: "CAP-RET-02", capability_name: "Member Complaint De-escalation & Incident Resolution", required_level: 4, weight: 30 },
+  { role_name: "Customer Service Leader", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Roster Scheduling", required_level: 3, weight: 20 },
+  { role_name: "Customer Service Leader", capability_code: "CAP-OPS-03", capability_name: "Emergency First Aid, CPR & Incident Response", required_level: 3, weight: 15 },
 
-  // Customer Service
-  { role_name: "Customer Service", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 3, weight: 35 },
-  { role_name: "Customer Service", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 30 },
-  { role_name: "Customer Service", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 2, weight: 20 },
-  { role_name: "Customer Service", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 2, weight: 15 },
+  // Customer Service (100%)
+  { role_name: "Customer Service", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Cash Reconciliation", required_level: 3, weight: 35 },
+  { role_name: "Customer Service", capability_code: "CAP-RET-01", capability_name: "Member Attrition Risk Detection & Check-in Care", required_level: 3, weight: 25 },
+  { role_name: "Customer Service", capability_code: "CAP-RET-02", capability_name: "Member Complaint De-escalation & Incident Resolution", required_level: 3, weight: 25 },
+  { role_name: "Customer Service", capability_code: "CAP-COMM-01", capability_name: "Walk-in Trial Pitch & Value Presentation", required_level: 2, weight: 15 },
 
-  // Personal Trainer Leader
+  // Personal Trainer Leader (100%)
   { role_name: "Personal Trainer Leader", capability_code: "CAP-FIT-01", capability_name: "Biomechanics & PT Session Programming", required_level: 4, weight: 35 },
-  { role_name: "Personal Trainer Leader", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 3, weight: 30 },
-  { role_name: "Personal Trainer Leader", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 3, weight: 20 },
-  { role_name: "Personal Trainer Leader", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 15 },
+  { role_name: "Personal Trainer Leader", capability_code: "CAP-FIT-02", capability_name: "Movement Screening, Posture & Injury Prevention", required_level: 4, weight: 25 },
+  { role_name: "Personal Trainer Leader", capability_code: "CAP-LEAD-02", capability_name: "Staff 1-on-1 Coaching & Performance KPI Review", required_level: 3, weight: 25 },
+  { role_name: "Personal Trainer Leader", capability_code: "CAP-OPS-03", capability_name: "Emergency First Aid, CPR & Incident Response", required_level: 3, weight: 15 },
 
-  // Personal Trainer Master
+  // Personal Trainer Master (100%)
   { role_name: "Personal Trainer Master", capability_code: "CAP-FIT-01", capability_name: "Biomechanics & PT Session Programming", required_level: 4, weight: 40 },
-  { role_name: "Personal Trainer Master", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 4, weight: 30 },
-  { role_name: "Personal Trainer Master", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 3, weight: 20 },
-  { role_name: "Personal Trainer Master", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 2, weight: 10 },
+  { role_name: "Personal Trainer Master", capability_code: "CAP-FIT-02", capability_name: "Movement Screening, Posture & Injury Prevention", required_level: 4, weight: 30 },
+  { role_name: "Personal Trainer Master", capability_code: "CAP-FIT-03", capability_name: "Nutrition Basics & Dietary Habit Coaching", required_level: 3, weight: 20 },
+  { role_name: "Personal Trainer Master", capability_code: "CAP-RET-01", capability_name: "Member Attrition Risk Detection & Check-in Care", required_level: 3, weight: 10 },
 
-  // Personal Trainer
-  { role_name: "Personal Trainer", capability_code: "CAP-FIT-01", capability_name: "Biomechanics & PT Session Programming", required_level: 3, weight: 35 },
-  { role_name: "Personal Trainer", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 30 },
-  { role_name: "Personal Trainer", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 2, weight: 20 },
-  { role_name: "Personal Trainer", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 2, weight: 15 },
+  // Personal Trainer (100%)
+  { role_name: "Personal Trainer", capability_code: "CAP-FIT-01", capability_name: "Biomechanics & PT Session Programming", required_level: 3, weight: 40 },
+  { role_name: "Personal Trainer", capability_code: "CAP-FIT-02", capability_name: "Movement Screening, Posture & Injury Prevention", required_level: 3, weight: 25 },
+  { role_name: "Personal Trainer", capability_code: "CAP-RET-01", capability_name: "Member Attrition Risk Detection & Check-in Care", required_level: 2, weight: 20 },
+  { role_name: "Personal Trainer", capability_code: "CAP-COMM-01", capability_name: "Walk-in Trial Pitch & Value Presentation", required_level: 2, weight: 15 },
 
-  // Fitness Consultant Leader
-  { role_name: "Fitness Consultant Leader", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 4, weight: 40 },
-  { role_name: "Fitness Consultant Leader", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 3, weight: 25 },
-  { role_name: "Fitness Consultant Leader", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 20 },
-  { role_name: "Fitness Consultant Leader", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 2, weight: 15 },
+  // Fitness Consultant Leader (100%)
+  { role_name: "Fitness Consultant Leader", capability_code: "CAP-COMM-01", capability_name: "Walk-in Trial Pitch & Value Presentation", required_level: 4, weight: 35 },
+  { role_name: "Fitness Consultant Leader", capability_code: "CAP-COMM-02", capability_name: "Sales Objection Handling & Contract Closing", required_level: 4, weight: 30 },
+  { role_name: "Fitness Consultant Leader", capability_code: "CAP-LEAD-02", capability_name: "Staff 1-on-1 Coaching & Performance KPI Review", required_level: 3, weight: 20 },
+  { role_name: "Fitness Consultant Leader", capability_code: "CAP-COMM-04", capability_name: "Digital Lead Nurturing & WhatsApp Follow-up", required_level: 3, weight: 15 },
 
-  // Fitness Consultant
-  { role_name: "Fitness Consultant", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 3, weight: 40 },
-  { role_name: "Fitness Consultant", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 25 },
-  { role_name: "Fitness Consultant", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 2, weight: 20 },
-  { role_name: "Fitness Consultant", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 1, weight: 15 },
+  // Fitness Consultant (100%)
+  { role_name: "Fitness Consultant", capability_code: "CAP-COMM-01", capability_name: "Walk-in Trial Pitch & Value Presentation", required_level: 3, weight: 35 },
+  { role_name: "Fitness Consultant", capability_code: "CAP-COMM-02", capability_name: "Sales Objection Handling & Contract Closing", required_level: 3, weight: 30 },
+  { role_name: "Fitness Consultant", capability_code: "CAP-COMM-04", capability_name: "Digital Lead Nurturing & WhatsApp Follow-up", required_level: 3, weight: 20 },
+  { role_name: "Fitness Consultant", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Cash Reconciliation", required_level: 2, weight: 15 },
 
-  // Fitness Manager
-  { role_name: "Fitness Manager", capability_code: "CAP-FIT-01", capability_name: "Biomechanics & PT Session Programming", required_level: 4, weight: 35 },
-  { role_name: "Fitness Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 4, weight: 35 },
-  { role_name: "Fitness Manager", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 15 },
-  { role_name: "Fitness Manager", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 3, weight: 15 },
+  // Fitness Manager (100%)
+  { role_name: "Fitness Manager", capability_code: "CAP-FIT-01", capability_name: "Biomechanics & PT Session Programming", required_level: 4, weight: 30 },
+  { role_name: "Fitness Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Roster Scheduling", required_level: 4, weight: 25 },
+  { role_name: "Fitness Manager", capability_code: "CAP-LEAD-02", capability_name: "Staff 1-on-1 Coaching & Performance KPI Review", required_level: 4, weight: 25 },
+  { role_name: "Fitness Manager", capability_code: "CAP-FIT-04", capability_name: "Group Fitness Class & Studio Energy", required_level: 3, weight: 20 },
 
-  // Sales Manager
-  { role_name: "Sales Manager", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 4, weight: 40 },
-  { role_name: "Sales Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 4, weight: 30 },
-  { role_name: "Sales Manager", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 20 },
-  { role_name: "Sales Manager", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 3, weight: 10 },
+  // Sales Manager (100%)
+  { role_name: "Sales Manager", capability_code: "CAP-COMM-01", capability_name: "Walk-in Trial Pitch & Value Presentation", required_level: 4, weight: 30 },
+  { role_name: "Sales Manager", capability_code: "CAP-COMM-02", capability_name: "Sales Objection Handling & Contract Closing", required_level: 4, weight: 30 },
+  { role_name: "Sales Manager", capability_code: "CAP-COMM-03", capability_name: "B2B Corporate Gym Partnership & Community Outreach", required_level: 4, weight: 25 },
+  { role_name: "Sales Manager", capability_code: "CAP-LEAD-02", capability_name: "Staff 1-on-1 Coaching & Performance KPI Review", required_level: 4, weight: 15 },
 ];
 
