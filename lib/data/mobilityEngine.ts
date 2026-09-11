@@ -1687,8 +1687,8 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
     employee_code: "FH-EMP-1607",
     fullname: "Chandra Pratama",
     current_role: "Personal Trainer",
-    current_location: "Medan",
-    current_club: "FIT HUB Centre Point Medan",
+    current_location: "Palembang",
+    current_club: "FIT HUB Palembang Icon",
     tenure_months: 22,
     performance_rating: 4.88,
     capability_scores: {
@@ -1706,7 +1706,7 @@ export const activeEmployeePool: ActiveEmployeeCandidate[] = [
     top_strength: "Top Regional PT Revenue Delivery (140% Quota)",
     development_priority: "Trainer leadership team onboarding program",
     willing_to_relocate: true,
-    preferred_locations: ["Medan", "Bali", "Jakarta Selatan", "Batam"],
+    preferred_locations: ["Palembang", "Bali", "Jakarta Selatan", "Batam"],
   },
   {
     employee_id: "emp-1608",

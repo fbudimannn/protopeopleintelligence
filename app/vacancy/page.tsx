@@ -1514,9 +1514,9 @@ function VacancyContent() {
                 <span className="label-xs text-ink-secondary block mb-2">Location Beyond-SLA Friction Heat</span>
                 <ColoredBar
                   data={[
+                    { label: "Batam", value: 44.7, color: "#C65353" },
                     { label: "Bali", value: 42.9, color: "#C65353" },
                     { label: "Surabaya", value: 31.2, color: "#C99400" },
-                    { label: "Medan", value: 28.6, color: "#C99400" },
                     { label: "Bandung", value: 22.0, color: "#23C9D3" },
                     { label: "Jabodetabek", value: 18.5, color: "#2E8B57" },
                   ]}

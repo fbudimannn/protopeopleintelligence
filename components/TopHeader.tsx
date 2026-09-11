@@ -145,21 +145,43 @@ export default function TopHeader() {
                   className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer max-w-[200px] truncate"
                 >
                   <option value="ALL">All Locations (National Total)</option>
-                  <optgroup label="Regional Clusters">
-                    <option value="Jabodetabek">Jabodetabek</option>
-                    <option value="Jawa & Bali">Jawa & Bali</option>
-                    <option value="Outside Java">Outside Java</option>
+                  <optgroup label="Regional Clusters (Aggregated)">
+                    <option value="Jabodetabek">Jabodetabek (Cluster)</option>
+                    <option value="Jawa & Bali">Jawa & Bali (Cluster)</option>
+                    <option value="Outside Java">Outside Java (Cluster)</option>
                   </optgroup>
-                  <optgroup label="Key Metro Hubs">
-                    <option value="Bali">Bali</option>
-                    <option value="Surabaya">Surabaya</option>
-                    <option value="Bandung">Bandung</option>
-                    <option value="Jakarta Selatan">Jakarta Selatan</option>
+                  <optgroup label="Jabodetabek (10 Cities)">
+                    <option value="Jakarta Pusat">Jakarta Pusat</option>
                     <option value="Jakarta Barat">Jakarta Barat</option>
+                    <option value="Jakarta Selatan">Jakarta Selatan</option>
+                    <option value="Jakarta Timur">Jakarta Timur</option>
+                    <option value="Jakarta Utara">Jakarta Utara</option>
+                    <option value="Bogor">Bogor</option>
+                    <option value="Depok">Depok</option>
                     <option value="Tangerang">Tangerang</option>
+                    <option value="Bekasi">Bekasi</option>
+                    <option value="Cileungsi">Cileungsi</option>
+                  </optgroup>
+                  <optgroup label="Jawa & Bali (12 Cities)">
+                    <option value="Bali">Bali</option>
+                    <option value="Bandung">Bandung</option>
+                    <option value="Cilegon">Cilegon</option>
+                    <option value="Cirebon">Cirebon</option>
+                    <option value="Gresik">Gresik</option>
+                    <option value="Karawang">Karawang</option>
+                    <option value="Malang">Malang</option>
                     <option value="Semarang">Semarang</option>
-                    <option value="Medan">Medan</option>
+                    <option value="Sidoarjo">Sidoarjo</option>
+                    <option value="Surabaya">Surabaya</option>
+                    <option value="Surakarta">Surakarta</option>
+                    <option value="Yogyakarta">Yogyakarta</option>
+                  </optgroup>
+                  <optgroup label="Outside Java (5 Cities)">
+                    <option value="Balikpapan">Balikpapan</option>
+                    <option value="Batam">Batam</option>
                     <option value="Makassar">Makassar</option>
+                    <option value="Palembang">Palembang</option>
+                    <option value="Samarinda">Samarinda</option>
                   </optgroup>
                 </select>
                 <MapPin className="w-3.5 h-3.5 text-ink-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />

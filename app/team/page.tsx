@@ -199,13 +199,55 @@ function TeamContent() {
     loadData();
   }, []);
 
+  // Location & Role filter helpers for clusters and job families
+  const matchesLocation = (itemLoc: string, filterLoc: string) => {
+    if (filterLoc === "All Locations" || filterLoc === "ALL") return true;
+    if (!itemLoc) return false;
+    if (itemLoc === filterLoc) return true;
+    const lowerItem = itemLoc.toLowerCase();
+    const lowerFilter = filterLoc.toLowerCase();
+    if (filterLoc === "Jabodetabek") {
+      return lowerItem === "jabodetabek" || ["jakarta", "tangerang", "bekasi", "depok", "bogor", "cileungsi"].some((c) => lowerItem.includes(c));
+    }
+    if (filterLoc === "Jawa & Bali") {
+      return lowerItem === "jawa & bali" || ["bali", "surabaya", "bandung", "semarang", "yogyakarta", "surakarta", "malang", "sidoarjo", "gresik", "cirebon", "karawang", "cilegon"].some((c) => lowerItem.includes(c));
+    }
+    if (filterLoc === "Outside Java") {
+      return lowerItem === "outside java" || ["balikpapan", "batam", "makassar", "palembang", "samarinda"].some((c) => lowerItem.includes(c));
+    }
+    return lowerItem.includes(lowerFilter);
+  };
+
+  const matchesRole = (itemRole: string, filterRole: string) => {
+    if (filterRole === "All Roles" || filterRole === "ALL") return true;
+    if (!itemRole) return false;
+    if (itemRole === filterRole) return true;
+    const lowerItem = itemRole.toLowerCase();
+    if (filterRole === "Fitness / Coaching") {
+      return lowerItem.includes("trainer") || lowerItem.includes("fitness");
+    }
+    if (filterRole === "Sales / Membership") {
+      return lowerItem.includes("consultant") || lowerItem.includes("sales");
+    }
+    if (filterRole === "Customer Service") {
+      return lowerItem.includes("customer service") || lowerItem.includes("front desk");
+    }
+    if (filterRole === "Operations Support") {
+      return lowerItem.includes("housekeeping");
+    }
+    if (filterRole === "Club Management") {
+      return lowerItem.includes("manager") || lowerItem.includes("manajerial");
+    }
+    return lowerItem.includes(filterRole.toLowerCase());
+  };
+
   // Filtered Cohorts
   const filteredCohorts = useMemo(() => {
     return cohorts.filter((c) => {
-      if (selectedLocation !== "All Locations" && c.location_name !== selectedLocation) {
+      if (!matchesLocation(c.location_name, selectedLocation)) {
         return false;
       }
-      if (selectedRole !== "All Roles" && c.role_name !== selectedRole) {
+      if (!matchesRole(c.role_name, selectedRole)) {
         return false;
       }
       if (riskFilter !== "ALL" && c.risk_level !== riskFilter) {

@@ -1130,7 +1130,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-5060",
     role_name: "FC Team Leader",
-    location_name: "Medan",
+    location_name: "Palembang",
     hiring_type: "Replacement",
     openings: 1,
     days_open: 33,
@@ -1140,7 +1140,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
     bottleneck_stage: "Final Offer",
     health: "At Risk",
     hiring_manager: "Tri Purnomo (Regional VP)",
-    urgency_reason: "Sumatra regional expansion commercial sales management",
+    urgency_reason: "Palembang Sumatra regional commercial sales management",
     data_provenance: "SYNTHETIC_ENABLER",
   },
   {
