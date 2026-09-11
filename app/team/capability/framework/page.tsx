@@ -21,6 +21,11 @@ import {
   Check,
   X,
   Database,
+  Search,
+  Users,
+  Copy,
+  CheckSquare,
+  Square,
 } from 'lucide-react';
 import { SectionCard, KpiCard, Chip } from '@/components/primitives';
 import {
@@ -183,12 +188,28 @@ export default function CapabilityFrameworkPage() {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [saveToast, setSaveToast] = useState<string | null>(null);
 
-  // Add Capability Modal State
+  // Add Capability Modal State (Dual-Mode: Catalog Reuse vs New Creation)
   const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
+  const [modalTab, setModalTab] = useState<'CATALOG' | 'NEW'>('CATALOG');
+
+  // Tab 1: Catalog Reuse State
+  const [catalogSearch, setCatalogSearch] = useState<string>('');
+  const [catalogDomainFilter, setCatalogDomainFilter] = useState<string>('ALL');
+  const [selectedCatalogCode, setSelectedCatalogCode] = useState<string>('');
+  const [catalogLevel, setCatalogLevel] = useState<number>(3);
+  const [catalogWeight, setCatalogWeight] = useState<number>(20);
+  const [isAttachingCatalog, setIsAttachingCatalog] = useState<boolean>(false);
+
+  // Tab 2: Brand-New Capability State
   const [newCapCode, setNewCapCode] = useState<string>('');
   const [newCapName, setNewCapName] = useState<string>('');
   const [newCapDomain, setNewCapDomain] = useState<'Operations' | 'Fitness' | 'Commercial' | 'Leadership'>('Operations');
   const [newCapDesc, setNewCapDesc] = useState<string>('');
+  const [newCapLevel, setNewCapLevel] = useState<number>(3);
+  const [newCapWeight, setNewCapWeight] = useState<number>(20);
+  const [multiRoleAttachments, setMultiRoleAttachments] = useState<
+    Record<string, { selected: boolean; level: number }>
+  >({});
   const [isCreatingCap, setIsCreatingCap] = useState<boolean>(false);
   const [capModalError, setCapModalError] = useState<string | null>(null);
 
@@ -232,6 +253,83 @@ export default function CapabilityFrameworkPage() {
       .reduce((sum, r) => sum + (r.weight || 0), 0);
   }, [roleReqs]);
 
+  // Capabilities in catalog that are not currently active on the selected role
+  const availableCatalogCapabilities = useMemo(() => {
+    const activeCodesOnRole = new Set(
+      roleReqs.filter((r) => r.active_flag !== false).map((r) => r.capability_code)
+    );
+    return capabilities.filter((c) => !activeCodesOnRole.has(c.capability_code));
+  }, [capabilities, roleReqs]);
+
+  const filteredCatalogCapabilities = useMemo(() => {
+    return availableCatalogCapabilities.filter((c) => {
+      const q = catalogSearch.toLowerCase().trim();
+      const matchSearch =
+        q === '' ||
+        c.capability_name.toLowerCase().includes(q) ||
+        c.capability_code.toLowerCase().includes(q) ||
+        c.description.toLowerCase().includes(q);
+      const matchDomain =
+        catalogDomainFilter === 'ALL' || c.domain.toLowerCase() === catalogDomainFilter.toLowerCase();
+      return matchSearch && matchDomain;
+    });
+  }, [availableCatalogCapabilities, catalogSearch, catalogDomainFilter]);
+
+  // Which roles currently require a given capability code
+  const getRolesUsingCapability = useCallback(
+    (capCode: string) => {
+      return allRequirements
+        .filter((r) => r.capability_code === capCode && r.active_flag !== false)
+        .map((r) => ({
+          roleName: r.role_name,
+          level: r.required_level,
+        }));
+    },
+    [allRequirements]
+  );
+
+  const handleOpenAddModal = () => {
+    setCapModalError(null);
+    setCatalogSearch('');
+    setCatalogDomainFilter('ALL');
+    const firstAvailable = availableCatalogCapabilities[0]?.capability_code || '';
+    setSelectedCatalogCode(firstAvailable);
+    setCatalogLevel(3);
+    setCatalogWeight(20);
+    setNewCapCode('');
+    setNewCapName('');
+    setNewCapDesc('');
+    setNewCapLevel(3);
+    setNewCapWeight(20);
+    setMultiRoleAttachments({});
+    setModalTab(availableCatalogCapabilities.length > 0 ? 'CATALOG' : 'NEW');
+    setIsAddModalOpen(true);
+  };
+
+  const handleToggleMultiRole = (roleName: string) => {
+    setMultiRoleAttachments((prev) => {
+      const current = prev[roleName];
+      const nextSelected = current ? !current.selected : true;
+      return {
+        ...prev,
+        [roleName]: {
+          selected: nextSelected,
+          level: current?.level || 3,
+        },
+      };
+    });
+  };
+
+  const handleUpdateMultiRoleLevel = (roleName: string, level: number) => {
+    setMultiRoleAttachments((prev) => ({
+      ...prev,
+      [roleName]: {
+        selected: prev[roleName]?.selected ?? true,
+        level,
+      },
+    }));
+  };
+
   // Handlers for modifying requirements locally
   const handleUpdateLevel = (capabilityCode: string, newLevel: number) => {
     setAllRequirements((prev) => {
@@ -245,7 +343,6 @@ export default function CapabilityFrameworkPage() {
             : r
         );
       }
-      // If not yet assigned to this role, find capability item and insert with default weight
       const capItem = capabilities.find((c) => c.capability_code === capabilityCode);
       const newReq: RoleCapabilityRequirement = {
         role_name: selectedRoleName,
@@ -283,7 +380,6 @@ export default function CapabilityFrameworkPage() {
             : r
         );
       }
-      // Add as active with default level 3, weight 20
       const capItem = capabilities.find((c) => c.capability_code === capabilityCode);
       const newReq: RoleCapabilityRequirement = {
         role_name: selectedRoleName,
@@ -324,7 +420,63 @@ export default function CapabilityFrameworkPage() {
     }
   };
 
-  // Create new capability in live Supabase database
+  // Attach selected capability from existing catalog
+  const handleAttachCatalogCapability = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedCatalogCode) {
+      setCapModalError('Please select a capability from the catalog.');
+      return;
+    }
+
+    const selectedCap = capabilities.find((c) => c.capability_code === selectedCatalogCode);
+    if (!selectedCap) return;
+
+    setIsAttachingCatalog(true);
+    setCapModalError(null);
+
+    const newReq: RoleCapabilityRequirement = {
+      role_name: selectedRoleName,
+      capability_code: selectedCap.capability_code,
+      capability_name: selectedCap.capability_name,
+      required_level: catalogLevel,
+      weight: catalogWeight,
+      active_flag: true,
+    };
+
+    setAllRequirements((prev) => {
+      const existing = prev.find(
+        (r) => r.role_name === selectedRoleName && r.capability_code === selectedCap.capability_code
+      );
+      if (existing) {
+        return prev.map((r) =>
+          r.role_name === selectedRoleName && r.capability_code === selectedCap.capability_code
+            ? { ...newReq }
+            : r
+        );
+      }
+      return [...prev, newReq];
+    });
+
+    await saveRoleCapabilityRequirements([
+      {
+        role_name: selectedRoleName,
+        capability_code: selectedCap.capability_code,
+        capability_name: selectedCap.capability_name,
+        required_level: catalogLevel,
+        weight: catalogWeight,
+      },
+    ]);
+
+    setIsAttachingCatalog(false);
+    setIsAddModalOpen(false);
+    setSelectedCatalogCode('');
+    setSaveToast(
+      `Capability "${selectedCap.capability_name}" (${selectedCap.capability_code}) attached to ${selectedRoleName} at Level ${catalogLevel} (${catalogWeight}%)!`
+    );
+    setTimeout(() => setSaveToast(null), 5000);
+  };
+
+  // Create new capability in live Supabase database and attach to multiple roles
   const handleCreateNewCapability = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newCapName.trim()) {
@@ -332,7 +484,9 @@ export default function CapabilityFrameworkPage() {
       return;
     }
 
-    const code = newCapCode.trim().toUpperCase() || `CAP-${newCapDomain.slice(0, 3).toUpperCase()}-${String(capabilities.length + 1).padStart(2, '0')}`;
+    const code =
+      newCapCode.trim().toUpperCase() ||
+      `CAP-${newCapDomain.slice(0, 3).toUpperCase()}-${String(capabilities.length + 1).padStart(2, '0')}`;
     setIsCreatingCap(true);
     setCapModalError(null);
 
@@ -343,7 +497,6 @@ export default function CapabilityFrameworkPage() {
       description: newCapDesc.trim(),
     });
 
-    setIsCreatingCap(false);
     if (result.success && result.data) {
       const newCap = result.data;
       setCapabilities((prev) => {
@@ -351,26 +504,66 @@ export default function CapabilityFrameworkPage() {
         return [...prev, newCap];
       });
 
-      // Automatically add to currently selected role with default level 3, weight 20
-      setAllRequirements((prev) => [
-        ...prev,
+      // Prepare assignments for selected role + any other checked roles
+      const requirementsToSave: Array<{
+        role_name: string;
+        capability_code: string;
+        capability_name: string;
+        required_level: number;
+        weight: number;
+      }> = [
         {
           role_name: selectedRoleName,
           capability_code: newCap.capability_code,
           capability_name: newCap.capability_name,
-          required_level: 3,
-          weight: 20,
-          active_flag: true,
+          required_level: newCapLevel,
+          weight: newCapWeight,
         },
+      ];
+
+      Object.entries(multiRoleAttachments).forEach(([roleName, config]) => {
+        if (config.selected && roleName !== selectedRoleName) {
+          requirementsToSave.push({
+            role_name: roleName,
+            capability_code: newCap.capability_code,
+            capability_name: newCap.capability_name,
+            required_level: config.level,
+            weight: newCapWeight,
+          });
+        }
+      });
+
+      setAllRequirements((prev) => [
+        ...prev.filter(
+          (r) =>
+            !requirementsToSave.some(
+              (req) => req.role_name === r.role_name && req.capability_code === r.capability_code
+            )
+        ),
+        ...requirementsToSave.map((req) => ({
+          role_name: req.role_name,
+          capability_code: req.capability_code,
+          capability_name: req.capability_name,
+          required_level: req.required_level,
+          weight: req.weight,
+          active_flag: true,
+        })),
       ]);
 
+      await saveRoleCapabilityRequirements(requirementsToSave);
+
+      setIsCreatingCap(false);
       setIsAddModalOpen(false);
       setNewCapCode('');
       setNewCapName('');
       setNewCapDesc('');
-      setSaveToast(`Capability "${newCap.capability_name}" (${newCap.capability_code}) created and added to live framework!`);
+      setMultiRoleAttachments({});
+      setSaveToast(
+        `Capability "${newCap.capability_name}" (${newCap.capability_code}) created and attached to ${requirementsToSave.length} role(s)!`
+      );
       setTimeout(() => setSaveToast(null), 5000);
     } else {
+      setIsCreatingCap(false);
       setCapModalError(result.error || 'Failed to create capability on database. Please check connection.');
     }
   };
@@ -410,11 +603,11 @@ export default function CapabilityFrameworkPage() {
           {/* Action Toolbar */}
           <div className="flex items-center gap-2.5 flex-wrap">
             <button
-              onClick={() => setIsAddModalOpen(true)}
+              onClick={handleOpenAddModal}
               className="px-3.5 py-2 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal text-ink-primary hover:text-brand-teal text-xs font-bold transition-all flex items-center gap-1.5 shadow-subtle cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5 text-brand-teal" />
-              <span>Add New Capability</span>
+              <span>Add Capability</span>
             </button>
 
             <button
@@ -794,33 +987,83 @@ export default function CapabilityFrameworkPage() {
         </div>
       </div>
 
-      {/* Add New Capability Modal */}
+      {/* Add Capability Modal (Dual-Mode: Reuse Catalog vs Create Brand-New) */}
       {isAddModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-surface-card border border-surface-border rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="p-5 border-b border-surface-border flex items-center justify-between bg-surface-ground/40">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-brand-teal/15 text-brand-teal flex items-center justify-center">
-                  <Plus className="w-4 h-4" />
+          <div className="bg-surface-card border border-surface-border rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-surface-border flex items-center justify-between bg-surface-ground/50 flex-shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-brand-teal/15 text-brand-teal flex items-center justify-center font-bold">
+                  <Plus className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="text-base font-bold font-display text-ink-primary">
-                    Add New Operational Capability
+                    Add Capability to {selectedRoleName}
                   </h3>
                   <p className="text-xs text-ink-secondary">
-                    Create a new competency in the live Supabase catalog.
+                    Reuse an existing competency from the master catalog or define a brand-new competency.
                   </p>
                 </div>
               </div>
               <button
+                type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="text-ink-tertiary hover:text-ink-primary cursor-pointer p-1"
+                className="text-ink-tertiary hover:text-ink-primary p-1.5 rounded-lg hover:bg-surface-ground transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateNewCapability} className="p-5 space-y-4">
+            {/* Segmented Mode Switcher */}
+            <div className="p-4 border-b border-surface-border bg-surface-ground/20 flex-shrink-0">
+              <div className="flex rounded-xl bg-surface-ground p-1 border border-surface-border">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCapModalError(null);
+                    setModalTab('CATALOG');
+                  }}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    modalTab === 'CATALOG'
+                      ? 'bg-brand-teal text-surface-ground shadow-sm'
+                      : 'text-ink-secondary hover:text-ink-primary'
+                  }`}
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span>Select from Existing Catalog</span>
+                  <span
+                    className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-bold ${
+                      modalTab === 'CATALOG'
+                        ? 'bg-surface-ground/25 text-surface-ground'
+                        : 'bg-surface-card text-ink-tertiary border border-surface-border'
+                    }`}
+                  >
+                    {availableCatalogCapabilities.length} Available
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCapModalError(null);
+                    setModalTab('NEW');
+                  }}
+                  className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                    modalTab === 'NEW'
+                      ? 'bg-brand-teal text-surface-ground shadow-sm'
+                      : 'text-ink-secondary hover:text-ink-primary'
+                  }`}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Create Brand-New</span>
+                  <span className="text-[10px] font-normal opacity-85">(+ Multi-Role)</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body Container with Scroll */}
+            <div className="p-5 overflow-y-auto flex-1 space-y-4">
               {capModalError && (
                 <div className="p-3 rounded-xl bg-status-critical/15 border border-status-critical/30 text-xs text-status-critical flex items-center gap-2">
                   <AlertTriangle className="w-4 h-4 flex-shrink-0" />
@@ -828,85 +1071,424 @@ export default function CapabilityFrameworkPage() {
                 </div>
               )}
 
-              <div>
-                <label className="text-xs font-bold text-ink-primary block mb-1">
-                  Capability Name <span className="text-status-critical">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g., Emergency Floor Crisis Response & First Aid"
-                  value={newCapName}
-                  onChange={(e) => setNewCapName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs text-ink-primary focus:border-brand-teal focus:outline-none"
-                />
-              </div>
+              {/* TAB 1: REUSE FROM EXISTING CATALOG */}
+              {modalTab === 'CATALOG' && (
+                <form onSubmit={handleAttachCatalogCapability} className="space-y-4">
+                  {/* Search and Domain Filters */}
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <div className="relative flex-1">
+                      <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted" />
+                      <input
+                        type="text"
+                        placeholder="Search existing skills by name, code, or description..."
+                        value={catalogSearch}
+                        onChange={(e) => setCatalogSearch(e.target.value)}
+                        className="w-full pl-8 pr-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs text-ink-primary placeholder:text-ink-muted focus:border-brand-teal focus:outline-none"
+                      />
+                    </div>
+                    <select
+                      value={catalogDomainFilter}
+                      onChange={(e) => setCatalogDomainFilter(e.target.value)}
+                      className="px-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs font-medium text-ink-primary focus:border-brand-teal focus:outline-none cursor-pointer"
+                    >
+                      <option value="ALL">All Domains</option>
+                      <option value="Operations">Operations</option>
+                      <option value="Fitness">Fitness</option>
+                      <option value="Commercial">Commercial</option>
+                      <option value="Leadership">Leadership</option>
+                    </select>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-bold text-ink-primary block mb-1">
-                    Capability Code (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g., CAP-OPS-03"
-                    value={newCapCode}
-                    onChange={(e) => setNewCapCode(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs text-ink-primary font-mono focus:border-brand-teal focus:outline-none"
-                  />
-                  <span className="text-[10px] text-ink-tertiary mt-0.5 block">
-                    Auto-generated if empty
-                  </span>
-                </div>
+                  {/* Catalog Capabilities Grid / List */}
+                  {filteredCatalogCapabilities.length === 0 ? (
+                    <div className="p-8 text-center border border-dashed border-surface-border rounded-xl bg-surface-ground/30 space-y-2">
+                      <Layers className="w-8 h-8 text-ink-tertiary mx-auto opacity-50" />
+                      <p className="text-xs font-semibold text-ink-primary">
+                        {availableCatalogCapabilities.length === 0
+                          ? `All master capabilities are already assigned to ${selectedRoleName}!`
+                          : 'No unassigned capabilities match your search criteria.'}
+                      </p>
+                      <p className="text-[11px] text-ink-secondary max-w-sm mx-auto">
+                        Switch to the <strong className="text-brand-teal cursor-pointer underline" onClick={() => setModalTab('NEW')}>Create Brand-New</strong> tab to define a new operational competency.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      <div className="text-[10px] font-bold text-ink-tertiary uppercase tracking-wider mb-1">
+                        Select an existing competency to attach:
+                      </div>
+                      {filteredCatalogCapabilities.map((cap) => {
+                        const isSelected = selectedCatalogCode === cap.capability_code;
+                        const domainStyle = DOMAIN_STYLES[cap.domain] || DOMAIN_STYLES.Operations;
+                        const usingRoles = getRolesUsingCapability(cap.capability_code);
 
-                <div>
-                  <label className="text-xs font-bold text-ink-primary block mb-1">
-                    Competency Domain
-                  </label>
-                  <select
-                    value={newCapDomain}
-                    onChange={(e) => setNewCapDomain(e.target.value as any)}
-                    className="w-full px-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs text-ink-primary focus:border-brand-teal focus:outline-none cursor-pointer"
-                  >
-                    <option value="Operations">Operations</option>
-                    <option value="Fitness">Fitness</option>
-                    <option value="Commercial">Commercial</option>
-                    <option value="Leadership">Leadership</option>
-                  </select>
-                </div>
-              </div>
+                        return (
+                          <div
+                            key={cap.capability_code}
+                            onClick={() => setSelectedCatalogCode(cap.capability_code)}
+                            className={`p-3 rounded-xl border transition-all cursor-pointer flex flex-col gap-1.5 ${
+                              isSelected
+                                ? 'bg-brand-teal/10 border-brand-teal shadow-subtle ring-1 ring-brand-teal'
+                                : 'bg-surface-ground border-surface-border hover:border-brand-teal/40 hover:bg-surface-ground/80'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${domainStyle.bg} ${domainStyle.text} ${domainStyle.border}`}>
+                                  {cap.domain}
+                                </span>
+                                <span className="font-mono text-[11px] font-bold text-brand-teal">
+                                  {cap.capability_code}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-ink-tertiary">
+                                {usingRoles.length > 0 ? (
+                                  <span className="flex items-center gap-1">
+                                    <Users className="w-3 h-3 text-ink-muted" />
+                                    <span>Used in {usingRoles.length} role(s)</span>
+                                  </span>
+                                ) : (
+                                  <span>Unassigned Master</span>
+                                )}
+                              </span>
+                            </div>
 
-              <div>
-                <label className="text-xs font-bold text-ink-primary block mb-1">
-                  Operational Description
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Describe observable behaviors, SOP protocols, and specific execution expectations..."
-                  value={newCapDesc}
-                  onChange={(e) => setNewCapDesc(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs text-ink-primary focus:border-brand-teal focus:outline-none"
-                />
-              </div>
+                            <div>
+                              <h4 className="text-xs font-bold text-ink-primary">
+                                {cap.capability_name}
+                              </h4>
+                              <p className="text-[11px] text-ink-secondary mt-0.5 line-clamp-2">
+                                {cap.description}
+                              </p>
+                            </div>
 
-              <div className="pt-3 border-t border-surface-border flex items-center justify-end gap-2.5">
-                <button
-                  type="button"
-                  onClick={() => setIsAddModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-surface-ground text-xs font-semibold text-ink-secondary hover:text-ink-primary transition-colors cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isCreatingCap}
-                  className="px-4 py-2 rounded-xl bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                >
-                  <Save className="w-3.5 h-3.5" />
-                  <span>{isCreatingCap ? 'Saving to Database...' : 'Save to Live Database'}</span>
-                </button>
-              </div>
-            </form>
+                            {usingRoles.length > 0 && (
+                              <div className="flex items-center gap-1 flex-wrap pt-1 text-[10px] text-ink-tertiary">
+                                <span className="font-medium">Active in:</span>
+                                {usingRoles.map((ur) => (
+                                  <span
+                                    key={ur.roleName}
+                                    className="px-1.5 py-0.2 rounded bg-surface-card border border-surface-border text-ink-secondary font-mono"
+                                  >
+                                    {ur.roleName} (L{ur.level})
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Level & Weight Configuration for Chosen Catalog Item */}
+                  {selectedCatalogCode && (
+                    <div className="p-4 rounded-xl bg-surface-ground border border-brand-teal/30 space-y-3 animate-in fade-in slide-in-from-bottom-2 duration-150">
+                      <div className="flex items-center justify-between border-b border-surface-border/60 pb-2">
+                        <div className="text-xs font-bold text-ink-primary flex items-center gap-1.5">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-brand-teal" />
+                          <span>Configure Requirement for: </span>
+                          <span className="text-brand-teal">{selectedRoleName}</span>
+                        </div>
+                        <span className="font-mono text-[11px] font-bold text-ink-tertiary">
+                          {selectedCatalogCode}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Target Level */}
+                        <div>
+                          <label className="text-[10px] font-bold text-ink-tertiary uppercase tracking-wider block mb-1.5">
+                            Target Required Proficiency
+                          </label>
+                          <div className="grid grid-cols-4 gap-1">
+                            {PROFICIENCY_LEVELS.map((lvl) => (
+                              <button
+                                key={lvl.level}
+                                type="button"
+                                onClick={() => setCatalogLevel(lvl.level)}
+                                className={`py-1.5 px-1 rounded-lg text-xs font-bold flex flex-col items-center justify-center transition-all cursor-pointer ${
+                                  catalogLevel === lvl.level
+                                    ? 'bg-brand-teal text-surface-ground ring-1 ring-brand-teal shadow-sm'
+                                    : 'bg-surface-card border border-surface-border text-ink-secondary hover:border-brand-teal/40 hover:text-ink-primary'
+                                }`}
+                              >
+                                <span>L{lvl.level}</span>
+                                <span className="text-[9px] font-medium opacity-90">{lvl.label}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-ink-tertiary italic mt-1 truncate">
+                            {PROFICIENCY_LEVELS.find((l) => l.level === catalogLevel)?.desc}
+                          </p>
+                        </div>
+
+                        {/* Weight */}
+                        <div>
+                          <label className="text-[10px] font-bold text-ink-tertiary uppercase tracking-wider block mb-1.5">
+                            Scoring Weight (% in Capability 45%)
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="number"
+                              min="5"
+                              max="100"
+                              step="5"
+                              value={catalogWeight}
+                              onChange={(e) => setCatalogWeight(Math.max(5, Math.min(100, Number(e.target.value))))}
+                              className="w-20 px-2.5 py-1.5 rounded-lg bg-surface-card border border-surface-border font-mono text-xs font-bold text-ink-primary text-center focus:border-brand-teal focus:outline-none"
+                            />
+                            <div className="flex gap-1">
+                              {[15, 20, 25, 30].map((w) => (
+                                <button
+                                  key={w}
+                                  type="button"
+                                  onClick={() => setCatalogWeight(w)}
+                                  className={`px-2 py-1 rounded text-[10px] font-bold border cursor-pointer transition-colors ${
+                                    catalogWeight === w
+                                      ? 'bg-brand-teal text-surface-ground border-brand-teal'
+                                      : 'bg-surface-card border-surface-border text-ink-secondary hover:border-brand-teal/40'
+                                  }`}
+                                >
+                                  {w}%
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <span className="text-[10px] text-ink-tertiary block mt-1">
+                            Impacts candidate ranking in Internal Mobility Engine ({Math.round(catalogWeight * 0.45 * 10) / 10}% total match).
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Modal Footer Actions for Catalog */}
+                  <div className="pt-3 border-t border-surface-border flex items-center justify-end gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddModalOpen(false)}
+                      className="px-4 py-2 rounded-xl bg-surface-ground text-xs font-semibold text-ink-secondary hover:text-ink-primary transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isAttachingCatalog || !selectedCatalogCode}
+                      className="px-4 py-2 rounded-xl bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{isAttachingCatalog ? 'Attaching & Publishing...' : `Attach to ${selectedRoleName}`}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* TAB 2: CREATE BRAND-NEW CAPABILITY WITH MULTI-ROLE ASSIGNMENT */}
+              {modalTab === 'NEW' && (
+                <form onSubmit={handleCreateNewCapability} className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-ink-primary block mb-1">
+                      Capability Name <span className="text-status-critical">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g., Corporate B2B Partnership Closing & Client Outreach"
+                      value={newCapName}
+                      onChange={(e) => setNewCapName(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs text-ink-primary focus:border-brand-teal focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-bold text-ink-primary block mb-1">
+                        Capability Code (Optional)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={`CAP-${newCapDomain.slice(0, 3).toUpperCase()}-${String(capabilities.length + 1).padStart(2, '0')}`}
+                        value={newCapCode}
+                        onChange={(e) => setNewCapCode(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs text-ink-primary font-mono focus:border-brand-teal focus:outline-none"
+                      />
+                      <span className="text-[10px] text-ink-tertiary mt-0.5 block">
+                        Auto-standardized if blank
+                      </span>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-ink-primary block mb-1">
+                        Competency Domain
+                      </label>
+                      <select
+                        value={newCapDomain}
+                        onChange={(e) => setNewCapDomain(e.target.value as any)}
+                        className="w-full px-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs text-ink-primary focus:border-brand-teal focus:outline-none cursor-pointer"
+                      >
+                        <option value="Operations">Operations</option>
+                        <option value="Fitness">Fitness</option>
+                        <option value="Commercial">Commercial</option>
+                        <option value="Leadership">Leadership</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-ink-primary block mb-1">
+                      Operational Description
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="Describe observable frontline behaviors, execution standards, and SOP expectations..."
+                      value={newCapDesc}
+                      onChange={(e) => setNewCapDesc(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-surface-ground border border-surface-border text-xs text-ink-primary focus:border-brand-teal focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Level & Weight for currently active role */}
+                  <div className="p-3.5 rounded-xl bg-surface-ground border border-surface-border space-y-2.5">
+                    <div className="text-xs font-bold text-ink-primary flex items-center gap-1.5">
+                      <Award className="w-3.5 h-3.5 text-brand-teal" />
+                      <span>Target Requirement for Active Role: </span>
+                      <strong className="text-brand-teal">{selectedRoleName}</strong>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <span className="text-[10px] font-bold text-ink-tertiary uppercase block mb-1">
+                          Required Level
+                        </span>
+                        <div className="grid grid-cols-4 gap-1">
+                          {PROFICIENCY_LEVELS.map((lvl) => (
+                            <button
+                              key={lvl.level}
+                              type="button"
+                              onClick={() => setNewCapLevel(lvl.level)}
+                              className={`py-1 px-1 rounded text-xs font-bold cursor-pointer transition-colors ${
+                                newCapLevel === lvl.level
+                                  ? 'bg-brand-teal text-surface-ground ring-1 ring-brand-teal'
+                                  : 'bg-surface-card border border-surface-border text-ink-secondary hover:border-brand-teal/40'
+                              }`}
+                            >
+                              L{lvl.level}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[10px] font-bold text-ink-tertiary uppercase block mb-1">
+                          Scoring Weight (%)
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="5"
+                            max="100"
+                            step="5"
+                            value={newCapWeight}
+                            onChange={(e) => setNewCapWeight(Math.max(5, Math.min(100, Number(e.target.value))))}
+                            className="w-20 px-2.5 py-1 rounded bg-surface-card border border-surface-border font-mono text-xs font-bold text-ink-primary text-center focus:border-brand-teal focus:outline-none"
+                          />
+                          <span className="text-xs text-ink-secondary font-bold">%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Multi-Role Attachment Checklist */}
+                  <div className="space-y-2 pt-1 border-t border-surface-border/60">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <label className="text-xs font-bold text-ink-primary flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5 text-brand-teal" />
+                          <span>Also assign this capability to other roles?</span>
+                        </label>
+                        <p className="text-[11px] text-ink-secondary">
+                          Attach with shared master code ({newCapCode || 'CAP-NEW'}) across multiple operational positions.
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold text-brand-teal">
+                        {Object.values(multiRoleAttachments).filter((v) => v.selected).length} Additional Role(s)
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-48 overflow-y-auto pr-1 border border-surface-border rounded-xl p-2 bg-surface-ground/40">
+                      {OPERATIONAL_ROLES.filter((r) => r.name !== selectedRoleName).map((role) => {
+                        const isChecked = multiRoleAttachments[role.name]?.selected ?? false;
+                        const assignedLevel = multiRoleAttachments[role.name]?.level ?? (role.tierNumber >= 3 ? 3 : 2);
+
+                        return (
+                          <div
+                            key={role.name}
+                            className={`p-2 rounded-lg border transition-all flex items-center justify-between gap-2 ${
+                              isChecked
+                                ? 'bg-brand-teal/10 border-brand-teal/50'
+                                : 'bg-surface-card border-surface-border hover:border-surface-border/80'
+                            }`}
+                          >
+                            <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={() => handleToggleMultiRole(role.name)}
+                                className="w-3.5 h-3.5 rounded border-surface-border text-brand-teal accent-brand-teal cursor-pointer flex-shrink-0"
+                              />
+                              <div className="truncate">
+                                <span className="text-xs font-semibold text-ink-primary truncate block">
+                                  {role.name}
+                                </span>
+                                <span className="text-[9px] text-ink-tertiary block">
+                                  {role.tierName.split('•')[0]}
+                                </span>
+                              </div>
+                            </label>
+
+                            {isChecked && (
+                              <div className="flex items-center gap-1 flex-shrink-0">
+                                <span className="text-[9px] font-bold text-ink-tertiary">Req:</span>
+                                <select
+                                  value={assignedLevel}
+                                  onChange={(e) => handleUpdateMultiRoleLevel(role.name, Number(e.target.value))}
+                                  className="px-1.5 py-0.5 rounded bg-surface-ground border border-surface-border text-[10px] font-bold text-ink-primary focus:border-brand-teal focus:outline-none cursor-pointer"
+                                >
+                                  <option value={1}>L1</option>
+                                  <option value={2}>L2</option>
+                                  <option value={3}>L3</option>
+                                  <option value={4}>L4</option>
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Modal Footer Actions for New */}
+                  <div className="pt-3 border-t border-surface-border flex items-center justify-end gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddModalOpen(false)}
+                      className="px-4 py-2 rounded-xl bg-surface-ground text-xs font-semibold text-ink-secondary hover:text-ink-primary transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isCreatingCap || !newCapName.trim()}
+                      className="px-4 py-2 rounded-xl bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all shadow-md flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                    >
+                      <Save className="w-3.5 h-3.5" />
+                      <span>{isCreatingCap ? 'Creating & Publishing...' : 'Create & Publish to Database'}</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           </div>
         </div>
       )}
