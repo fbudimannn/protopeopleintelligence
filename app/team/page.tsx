@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useFilters } from "@/lib/context/FilterContext";
+import { useFilters, matchLocationHierarchy, formatPeriodLabel } from "@/lib/context/FilterContext";
 import DataProvenanceBadge from "@/components/DataProvenanceBadge";
 import {
   getRetentionCohorts,
@@ -83,9 +83,22 @@ function TeamContent() {
   const [tenureBands, setTenureBands] = useState<TenureBand[]>([]);
   const [voiceThemes, setVoiceThemes] = useState<VoiceTheme[]>([]);
 
-  // Local page filters
-  const { locationFilter, roleFilter, period: selectedPeriod } = useFilters();
+  // Global & Local page filters
+  const {
+    clusterFilter,
+    provinceFilter,
+    cityFilter,
+    locationFilter,
+    roleFilter,
+    period: selectedPeriod,
+  } = useFilters();
   const selectedLocation = locationFilter === "ALL" ? "All Locations" : locationFilter;
+  const locationDisplay = useMemo(() => {
+    if (cityFilter !== "ALL") return `${cityFilter}`;
+    if (provinceFilter !== "ALL") return `${provinceFilter}`;
+    if (clusterFilter !== "ALL") return `${clusterFilter}`;
+    return "All Locations";
+  }, [clusterFilter, provinceFilter, cityFilter]);
   const selectedRole = roleFilter === "ALL" ? "All Roles" : roleFilter;
   const [riskFilter, setRiskFilter] = useState<"ALL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
   const [readinessFilter, setReadinessFilter] = useState<"ALL" | "Ready" | "Near Ready" | "Development Needed">("ALL");
@@ -199,23 +212,9 @@ function TeamContent() {
     loadData();
   }, []);
 
-  // Location & Role filter helpers for clusters and job families
-  const matchesLocation = (itemLoc: string, filterLoc: string) => {
-    if (filterLoc === "All Locations" || filterLoc === "ALL") return true;
-    if (!itemLoc) return false;
-    if (itemLoc === filterLoc) return true;
-    const lowerItem = itemLoc.toLowerCase();
-    const lowerFilter = filterLoc.toLowerCase();
-    if (filterLoc === "Jabodetabek") {
-      return lowerItem === "jabodetabek" || ["jakarta", "tangerang", "bekasi", "depok", "bogor", "cileungsi"].some((c) => lowerItem.includes(c));
-    }
-    if (filterLoc === "Jawa & Bali") {
-      return lowerItem === "jawa & bali" || ["bali", "surabaya", "bandung", "semarang", "yogyakarta", "surakarta", "malang", "sidoarjo", "gresik", "cirebon", "karawang", "cilegon"].some((c) => lowerItem.includes(c));
-    }
-    if (filterLoc === "Outside Java") {
-      return lowerItem === "outside java" || ["balikpapan", "batam", "makassar", "palembang", "samarinda"].some((c) => lowerItem.includes(c));
-    }
-    return lowerItem.includes(lowerFilter);
+  // Location & Role filter helpers for cascading hierarchy and job families
+  const matchesLocation = (itemLoc: string) => {
+    return matchLocationHierarchy(itemLoc, clusterFilter, provinceFilter, cityFilter);
   };
 
   const matchesRole = (itemRole: string, filterRole: string) => {
@@ -244,7 +243,7 @@ function TeamContent() {
   // Filtered Cohorts
   const filteredCohorts = useMemo(() => {
     return cohorts.filter((c) => {
-      if (!matchesLocation(c.location_name, selectedLocation)) {
+      if (!matchesLocation(c.location_name)) {
         return false;
       }
       if (!matchesRole(c.role_name, selectedRole)) {
@@ -263,7 +262,7 @@ function TeamContent() {
       }
       return true;
     });
-  }, [cohorts, selectedLocation, selectedRole, riskFilter, searchQuery]);
+  }, [cohorts, clusterFilter, provinceFilter, cityFilter, selectedRole, riskFilter, searchQuery]);
 
   // Dynamic Team KPIs based on active location & role filters
   const teamKpis = useMemo(() => {
@@ -908,11 +907,11 @@ function TeamContent() {
         {/* Active Context Chip */}
         <div className="hidden lg:flex items-center gap-2 text-xs text-ink-secondary bg-surface-card px-3 py-1.5 rounded-full border border-surface-border">
           <Filter className="w-3.5 h-3.5 text-brand-teal" />
-          <span className="font-medium text-ink-primary">{selectedLocation}</span>
+          <span className="font-medium text-ink-primary">{locationDisplay}</span>
           <span>|</span>
           <span className="font-medium text-ink-primary">{selectedRole}</span>
           <span>|</span>
-          <span className="text-ink-tertiary">{selectedPeriod}</span>
+          <span className="text-ink-tertiary">{formatPeriodLabel(selectedPeriod)}</span>
         </div>
       </div>
 

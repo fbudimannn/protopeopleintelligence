@@ -56,6 +56,77 @@ export const LOCATION_HIERARCHY: LocationNode[] = [
   { cluster: "Outside Java", province: "Sulawesi Selatan", city: "Makassar" },
 ];
 
+// ─── Filter Utilities ───────────────────────────────────────────────────────
+export function formatPeriodLabel(period: PeriodOption): string {
+  if (period === "ALL_TIME") return "All Time";
+  if (period === "2024" || period === "2025") return `FY ${period}`;
+  if (period.startsWith("Q")) {
+    const [q, yr] = period.split("_");
+    return `${q} ${yr}`;
+  }
+  if (period.includes("-")) {
+    const [yr, m] = period.split("-");
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthIdx = parseInt(m, 10) - 1;
+    return `${monthNames[monthIdx] || m} ${yr}`;
+  }
+  return period;
+}
+
+export function matchLocationHierarchy(
+  itemLoc: string | undefined | null,
+  cluster: string,
+  province: string,
+  city: string
+): boolean {
+  if (!itemLoc) return false;
+  const isClusterAll = !cluster || cluster === "ALL" || cluster === "All Clusters";
+  const isProvinceAll = !province || province === "ALL" || province === "All Provinces";
+  const isCityAll = !city || city === "ALL" || city === "All Cities";
+
+  if (isClusterAll && isProvinceAll && isCityAll) {
+    return true;
+  }
+
+  const lowerItem = itemLoc.toLowerCase().trim();
+
+  // 1. Most specific: City is chosen
+  if (!isCityAll) {
+    const lowerCity = city.toLowerCase().trim();
+    if (lowerItem === lowerCity || lowerItem.includes(lowerCity)) return true;
+    if (lowerCity === "bali" && (lowerItem.includes("denpasar") || lowerItem.includes("badung"))) return true;
+    return false;
+  }
+
+  // 2. Province is chosen
+  if (!isProvinceAll) {
+    const matchedCities = LOCATION_HIERARCHY.filter(
+      (node) =>
+        node.province.toLowerCase() === province.toLowerCase() &&
+        (isClusterAll || node.cluster.toLowerCase() === cluster.toLowerCase())
+    ).map((node) => node.city.toLowerCase());
+
+    return (
+      lowerItem === province.toLowerCase() ||
+      matchedCities.some((c) => lowerItem === c || lowerItem.includes(c))
+    );
+  }
+
+  // 3. Cluster is chosen
+  if (!isClusterAll) {
+    const matchedCities = LOCATION_HIERARCHY.filter(
+      (node) => node.cluster.toLowerCase() === cluster.toLowerCase()
+    ).map((node) => node.city.toLowerCase());
+
+    return (
+      lowerItem === cluster.toLowerCase() ||
+      matchedCities.some((c) => lowerItem === c || lowerItem.includes(c))
+    );
+  }
+
+  return true;
+}
+
 // ─── Context Interface ──────────────────────────────────────────────────────
 export interface FilterContextType {
   // Date

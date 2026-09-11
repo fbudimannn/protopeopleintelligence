@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useFilters } from "@/lib/context/FilterContext";
+import { useFilters, matchLocationHierarchy, formatPeriodLabel } from "@/lib/context/FilterContext";
 import DataProvenanceBadge from "@/components/DataProvenanceBadge";
 import {
   getVacancyKPIs,
@@ -61,9 +61,22 @@ function VacancyContent() {
   const [talentPool, setTalentPool] = useState<TalentPoolCandidate[]>([]);
   const [hiringOutcomes, setHiringOutcomes] = useState<HiringOutcomeMetric[]>([]);
 
-  // Local page filters
-  const { locationFilter, roleFilter, period: selectedPeriod } = useFilters();
+  // Global & Local page filters
+  const {
+    clusterFilter,
+    provinceFilter,
+    cityFilter,
+    locationFilter,
+    roleFilter,
+    period: selectedPeriod,
+  } = useFilters();
   const selectedLocation = locationFilter === "ALL" ? "All Locations" : locationFilter;
+  const locationDisplay = useMemo(() => {
+    if (cityFilter !== "ALL") return `${cityFilter}`;
+    if (provinceFilter !== "ALL") return `${provinceFilter}`;
+    if (clusterFilter !== "ALL") return `${clusterFilter}`;
+    return "All Locations";
+  }, [clusterFilter, provinceFilter, cityFilter]);
   const selectedRole = roleFilter === "ALL" ? "All Roles" : roleFilter;
   const [hiringTypeFilter, setHiringTypeFilter] = useState<"ALL" | "Replacement" | "Expansion">("ALL");
   const [slaFilter, setSlaFilter] = useState<"ALL" | "WITHIN_SLA" | "AT_RISK" | "BREACHED">("ALL");
@@ -122,31 +135,9 @@ function VacancyContent() {
     loadData();
   }, []);
 
-  // Helper for matching location with synonyms & clusters
-  const matchesLocationFilter = (itemLoc: string, filterLoc: string) => {
-    if (filterLoc === "All Locations" || filterLoc === "ALL") return true;
-    if (!itemLoc) return false;
-    const lowerItem = itemLoc.toLowerCase();
-    const lowerFilter = filterLoc.toLowerCase();
-    if (lowerItem === lowerFilter) return true;
-
-    // Region Cluster Matching
-    if (filterLoc === "Jabodetabek") {
-      return ["jakarta", "tangerang", "bekasi", "depok", "bogor"].some((c) => lowerItem.includes(c));
-    }
-    if (filterLoc === "Jawa & Bali") {
-      return [
-        "bali", "surabaya", "bandung", "semarang", "yogyakarta", "surakarta", 
-        "malang", "sidoarjo", "gresik", "cirebon", "karawang", "cilegon", "cileungsi"
-      ].some((c) => lowerItem.includes(c));
-    }
-    if (filterLoc === "Outside Java") {
-      return ["medan", "palembang", "batam", "balikpapan", "samarinda", "makassar"].some((c) => lowerItem.includes(c));
-    }
-    if (lowerFilter === "bali") {
-      return lowerItem.includes("bali") || lowerItem === "badung" || lowerItem === "denpasar";
-    }
-    return lowerItem.includes(lowerFilter);
+  // Helper for matching location with cascading hierarchy (Cluster -> Province -> City)
+  const matchesLocationFilter = (itemLoc: string) => {
+    return matchLocationHierarchy(itemLoc, clusterFilter, provinceFilter, cityFilter);
   };
 
   // Helper for matching role with synonyms & 5 job families
@@ -194,7 +185,7 @@ function VacancyContent() {
       const slaStat = item.sla_status || (daysOpen > slaTarget ? "BREACHED" : daysOpen > slaTarget - 5 ? "AT_RISK" : "WITHIN_SLA");
 
       // Global Location filter
-      if (!matchesLocationFilter(loc, selectedLocation)) {
+      if (!matchesLocationFilter(loc)) {
         return false;
       }
       // Global Role filter
@@ -221,7 +212,7 @@ function VacancyContent() {
       }
       return true;
     });
-  }, [requisitions, selectedLocation, selectedRole, hiringTypeFilter, slaFilter, searchQuery]);
+  }, [requisitions, clusterFilter, provinceFilter, cityFilter, selectedRole, hiringTypeFilter, slaFilter, searchQuery]);
 
   // Aggregate KPI Calculations based on active filters
   const metrics = useMemo(() => {
@@ -570,11 +561,11 @@ function VacancyContent() {
         {/* Active Context Chip */}
         <div className="hidden lg:flex items-center gap-2 text-xs text-ink-secondary bg-surface-card px-3 py-1.5 rounded-full border border-surface-border">
           <Filter className="w-3.5 h-3.5 text-brand-teal" />
-          <span className="font-medium text-ink-primary">{selectedLocation}</span>
+          <span className="font-medium text-ink-primary">{locationDisplay}</span>
           <span>|</span>
           <span className="font-medium text-ink-primary">{selectedRole}</span>
           <span>|</span>
-          <span className="text-ink-tertiary">{selectedPeriod}</span>
+          <span className="text-ink-tertiary">{formatPeriodLabel(selectedPeriod)}</span>
         </div>
       </div>
 
