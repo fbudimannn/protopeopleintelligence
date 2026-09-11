@@ -98,7 +98,7 @@ function TeamContent() {
 
   // Dynamic Mobility Engine State
   const [selectedRequisitionCode, setSelectedRequisitionCode] = useState<string>("REQ-BLI-0104");
-  const [selectedBenchmarkRoleId, setSelectedBenchmarkRoleId] = useState<string>("role-opspec");
+  const [selectedBenchmarkRoleId, setSelectedBenchmarkRoleId] = useState<string>("role-cs");
   const [targetLocation, setTargetLocation] = useState<string>("Bali");
   const [selectedRegion, setSelectedRegion] = useState<string>("Jawa & Bali");
   const [selectedProvince, setSelectedProvince] = useState<string>("Bali");
@@ -1050,7 +1050,7 @@ function TeamContent() {
                       Solving #1 Exit Driver: Career Development
                     </h4>
                     <p className="text-[11px] text-ink-secondary">
-                      Operation Specialists and Personal Trainers cite lack of visible career tracks as their primary departure driver. Match top talent directly to open vacancies.
+                      Customer Service and Personal Trainers cite lack of visible career tracks as their primary departure driver. Match top talent directly to open vacancies.
                     </p>
                   </div>
                 </div>
@@ -1083,7 +1083,7 @@ function TeamContent() {
                     Frontline 90-Day Ramp-Up Cliff
                   </h4>
                   <p className="text-xs text-ink-secondary leading-relaxed mb-3">
-                    57.4% of all departures occur before month 12. Operation Specialists in Bali reach 68.4% early attrition, driven by intense shift rosters and lack of floor mentoring.
+                    57.4% of all departures occur before month 12. Customer Service in Bali reaches 68.4% early attrition, driven by intense shift rosters and lack of floor mentoring.
                   </p>
                   <div className="p-2.5 rounded-lg bg-surface-ground border border-surface-border mb-3 text-[11px]">
                     <span className="font-semibold text-ink-primary block mb-0.5">

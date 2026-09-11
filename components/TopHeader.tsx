@@ -142,15 +142,25 @@ export default function TopHeader() {
                 <select
                   value={locationFilter}
                   onChange={(e) => setLocationFilter(e.target.value)}
-                  className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer max-w-[180px] truncate"
+                  className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer max-w-[200px] truncate"
                 >
-                  <option value="ALL">All Locations (National)</option>
-                  <option value="Bali">Bali</option>
-                  <option value="Surabaya">Surabaya</option>
-                  <option value="Jakarta Barat">Jakarta Barat</option>
-                  <option value="Jakarta Selatan">Jakarta Selatan</option>
-                  <option value="Tangerang">Tangerang</option>
-                  <option value="Bandung">Bandung</option>
+                  <option value="ALL">All Locations (National Total)</option>
+                  <optgroup label="Regional Clusters">
+                    <option value="Jabodetabek">Jabodetabek</option>
+                    <option value="Jawa & Bali">Jawa & Bali</option>
+                    <option value="Outside Java">Outside Java</option>
+                  </optgroup>
+                  <optgroup label="Key Metro Hubs">
+                    <option value="Bali">Bali</option>
+                    <option value="Surabaya">Surabaya</option>
+                    <option value="Bandung">Bandung</option>
+                    <option value="Jakarta Selatan">Jakarta Selatan</option>
+                    <option value="Jakarta Barat">Jakarta Barat</option>
+                    <option value="Tangerang">Tangerang</option>
+                    <option value="Semarang">Semarang</option>
+                    <option value="Medan">Medan</option>
+                    <option value="Makassar">Makassar</option>
+                  </optgroup>
                 </select>
                 <MapPin className="w-3.5 h-3.5 text-ink-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
@@ -160,13 +170,23 @@ export default function TopHeader() {
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
-                  className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer"
+                  className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer max-w-[190px] truncate"
                 >
                   <option value="ALL">All Roles</option>
-                  <option value="Operation Specialist">Operation Specialist</option>
-                  <option value="Personal Trainer">Personal Trainer</option>
-                  <option value="Fitness Consultant">Fitness Consultant</option>
-                  <option value="Club Manager">Club Manager</option>
+                  <optgroup label="5 Job Families">
+                    <option value="Fitness / Coaching">Fitness / Coaching</option>
+                    <option value="Sales / Membership">Sales / Membership</option>
+                    <option value="Customer Service">Customer Service (Family)</option>
+                    <option value="Operations Support">Operations Support</option>
+                    <option value="Club Management">Club Management</option>
+                  </optgroup>
+                  <optgroup label="Frontline & Key Roles">
+                    <option value="Customer Service">Customer Service</option>
+                    <option value="Personal Trainer">Personal Trainer</option>
+                    <option value="Fitness Consultant">Fitness Consultant</option>
+                    <option value="Housekeeping">Housekeeping</option>
+                    <option value="Club Manager">Club Manager</option>
+                  </optgroup>
                 </select>
                 <Briefcase className="w-3.5 h-3.5 text-ink-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>

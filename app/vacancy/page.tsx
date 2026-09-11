@@ -122,26 +122,64 @@ function VacancyContent() {
     loadData();
   }, []);
 
-  // Helper for matching location with synonyms
+  // Helper for matching location with synonyms & clusters
   const matchesLocationFilter = (itemLoc: string, filterLoc: string) => {
     if (filterLoc === "All Locations" || filterLoc === "ALL") return true;
     if (!itemLoc) return false;
-    if (itemLoc.toLowerCase() === filterLoc.toLowerCase()) return true;
-    if (filterLoc.toLowerCase() === "bali") {
-      return itemLoc.toLowerCase().includes("bali") || itemLoc.toLowerCase() === "badung" || itemLoc.toLowerCase() === "denpasar";
+    const lowerItem = itemLoc.toLowerCase();
+    const lowerFilter = filterLoc.toLowerCase();
+    if (lowerItem === lowerFilter) return true;
+
+    // Region Cluster Matching
+    if (filterLoc === "Jabodetabek") {
+      return ["jakarta", "tangerang", "bekasi", "depok", "bogor"].some((c) => lowerItem.includes(c));
     }
-    return false;
+    if (filterLoc === "Jawa & Bali") {
+      return [
+        "bali", "surabaya", "bandung", "semarang", "yogyakarta", "surakarta", 
+        "malang", "sidoarjo", "gresik", "cirebon", "karawang", "cilegon", "cileungsi"
+      ].some((c) => lowerItem.includes(c));
+    }
+    if (filterLoc === "Outside Java") {
+      return ["medan", "palembang", "batam", "balikpapan", "samarinda", "makassar"].some((c) => lowerItem.includes(c));
+    }
+    if (lowerFilter === "bali") {
+      return lowerItem.includes("bali") || lowerItem === "badung" || lowerItem === "denpasar";
+    }
+    return lowerItem.includes(lowerFilter);
   };
 
-  // Helper for matching role with synonyms
+  // Helper for matching role with synonyms & 5 job families
   const matchesRoleFilter = (itemRole: string, filterRole: string) => {
     if (filterRole === "All Roles" || filterRole === "ALL") return true;
     if (!itemRole) return false;
-    if (itemRole.toLowerCase() === filterRole.toLowerCase()) return true;
-    if (filterRole === "Operation Specialist" && (itemRole === "Front Desk Officer" || itemRole === "Operation Specialist")) return true;
-    if ((filterRole === "Fitness Consultant" || filterRole === "Membership Consultant") && (itemRole === "Fitness Consultant" || itemRole === "Membership Consultant" || itemRole === "FC")) return true;
-    if (filterRole === "Personal Trainer" && (itemRole === "Personal Trainer" || itemRole === "PT")) return true;
-    if (filterRole === "Club Manager" && (itemRole.includes("Manager") || itemRole.includes("Leader") || itemRole === "Club General Manager")) return true;
+    const lowerItem = itemRole.toLowerCase();
+    const lowerFilter = filterRole.toLowerCase();
+    if (lowerItem === lowerFilter) return true;
+
+    // 5 Job Families Matching
+    if (filterRole === "Fitness / Coaching") {
+      return lowerItem.includes("trainer") || lowerItem.includes("fitness lead") || lowerItem === "pt";
+    }
+    if (filterRole === "Sales / Membership") {
+      return lowerItem.includes("consultant") || lowerItem.includes("sales") || lowerItem === "fc";
+    }
+    if (filterRole === "Customer Service" || filterRole === "Customer Service (Family)") {
+      return lowerItem.includes("customer service") || lowerItem.includes("front desk") || lowerItem === "cs";
+    }
+    if (filterRole === "Operations Support") {
+      return lowerItem.includes("housekeeping");
+    }
+    if (filterRole === "Club Management") {
+      return lowerItem.includes("manager") || lowerItem.includes("management");
+    }
+
+    // Frontline Role Matching
+    if (filterRole === "Customer Service" && (lowerItem.includes("customer service") || lowerItem.includes("front desk") || lowerItem === "cs")) return true;
+    if (filterRole === "Fitness Consultant" && (lowerItem.includes("fitness consultant") || lowerItem.includes("membership consultant") || lowerItem === "fc")) return true;
+    if (filterRole === "Personal Trainer" && (lowerItem.includes("personal trainer") || lowerItem === "pt")) return true;
+    if (filterRole === "Housekeeping" && lowerItem.includes("housekeeping")) return true;
+    if (filterRole === "Club Manager" && (lowerItem.includes("club manager") || lowerItem.includes("assistant club manager"))) return true;
     return false;
   };
 
@@ -901,7 +939,7 @@ function VacancyContent() {
                   </div>
                 </div>
 
-                {/* Priority Signal Card 2: Operation Specialist Shift Churn */}
+                {/* Priority Signal Card 2: Customer Service Shift Churn */}
                 <div className="p-4 rounded-xl bg-status-attention/5 border border-status-attention/20 hover:border-status-attention/40 transition-all">
                   <div className="flex items-center justify-between mb-2">
                     <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-status-attention/20 text-status-attention">
@@ -910,7 +948,7 @@ function VacancyContent() {
                     <span className="text-[11px] text-ink-tertiary">National Frontline</span>
                   </div>
                   <h4 className="text-sm font-bold text-ink-primary mb-1">
-                    Operation Specialist 90-Day Cliff
+                    Customer Service 90-Day Cliff
                   </h4>
                   <p className="text-xs text-ink-secondary leading-relaxed mb-3">
                     68.4% of voluntary departures occur before month 12. Candidate pipeline slows at HR Screening due to shift flexibility mismatches.
@@ -1077,7 +1115,7 @@ function VacancyContent() {
                 <span>Executive Diagnostic & Recommendation 1 Alignment</span>
               </h4>
               <p className="text-xs text-ink-secondary leading-relaxed">
-                Hiring pressure is not distributed evenly. Bali experiences a dual crunch across both Operation Specialists (85.7% replacement, 34d TTF) and Personal Trainers (77.8% replacement, 31.5d TTF). Instead of launching generic national job portal ads, TA must concentrate talent pipelines and local sourcing bonuses directly in Bali and Surabaya.
+                Hiring pressure is not distributed evenly. Bali experiences a dual crunch across both Customer Service (85.7% replacement, 34d TTF) and Personal Trainers (77.8% replacement, 31.5d TTF). Instead of launching generic national job portal ads, TA must concentrate talent pipelines and local sourcing bonuses directly in Bali and Surabaya.
               </p>
             </div>
           </div>
@@ -1558,7 +1596,7 @@ function VacancyContent() {
                 <div className="p-3 rounded-lg bg-surface-card border border-surface-border">
                   <span className="font-bold text-brand-teal block mb-1">1. 90-Day Ramp-Up Speed</span>
                   <p className="text-ink-secondary text-[11px]">
-                    Time for a new Operation Specialist or PT to reach standard floor autonomy and revenue quota without supervision. Currently at 82.5%.
+                    Time for a new Customer Service officer or PT to reach standard floor autonomy and revenue quota without supervision. Currently at 82.5%.
                   </p>
                 </div>
                 <div className="p-3 rounded-lg bg-surface-card border border-surface-border">

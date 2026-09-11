@@ -146,6 +146,180 @@ export default async function HomePage() {
         </div>
       </SectionCard>
 
+      {/* Role-Level Experience & Retention Benchmark (Section 3.3 & 4.2 Ground Truth) */}
+      <SectionCard
+        title="Role-Level Experience & Retention Dynamics (Section 3.3 Ground Truth)"
+        description="Employee advocacy and operational stability vary significantly across frontline roles. Customer Service experiences the lowest organizational eNPS (+49.0), while Housekeeping records the highest (+73.6)."
+        note="Live data from Supabase mart_engagement_summary (1,636 survey respondents). Highlights the need for role-targeted experience interventions rather than one-size-fits-all HR policies."
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
+          {/* Card 1: Customer Service */}
+          <div className="p-4 rounded-xl bg-status-danger/5 border border-status-danger/20 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-ink-primary">Customer Service</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-status-danger/20 text-status-danger">
+                  Lowest eNPS
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1 my-2">
+                <span className="text-2xl font-spartan font-black text-status-danger">+49.0</span>
+                <span className="text-[11px] text-ink-muted">eNPS</span>
+              </div>
+              <div className="space-y-1 text-[11px] text-ink-secondary border-t border-border-default/40 pt-2">
+                <div className="flex justify-between">
+                  <span>Fair Performance:</span>
+                  <strong className="text-ink-primary">5.08 / 6.0</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Comp &amp; Benefit:</span>
+                  <strong className="text-ink-primary">4.88 / 6.0</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Career Growth:</span>
+                  <strong className="text-ink-primary">5.02 / 6.0</strong>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-[10px] text-ink-muted">
+              56.8% Promoters &bull; 7.8% Detractors
+            </div>
+          </div>
+
+          {/* Card 2: Fitness Consultant */}
+          <div className="p-4 rounded-xl bg-surface-soft border border-border-default flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-ink-primary">Fitness Consultant</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-brand-yellow/20 text-ink-primary">
+                  Commercial
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1 my-2">
+                <span className="text-2xl font-spartan font-black text-ink-primary">+52.9</span>
+                <span className="text-[11px] text-ink-muted">eNPS</span>
+              </div>
+              <div className="space-y-1 text-[11px] text-ink-secondary border-t border-border-default/40 pt-2">
+                <div className="flex justify-between">
+                  <span>Avg Dimension:</span>
+                  <strong className="text-ink-primary">5.17 / 6.0</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Comp &amp; Benefit:</span>
+                  <strong className="text-ink-primary">4.86 / 6.0</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Career Growth:</span>
+                  <strong className="text-ink-primary">5.34 / 6.0</strong>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-[10px] text-ink-muted">
+              59.3% Promoters &bull; 6.4% Detractors
+            </div>
+          </div>
+
+          {/* Card 3: Personal Trainer */}
+          <div className="p-4 rounded-xl bg-surface-soft border border-border-default flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-ink-primary">Personal Trainer</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-brand-teal/20 text-brand-teal">
+                  Coaching
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1 my-2">
+                <span className="text-2xl font-spartan font-black text-brand-teal">+54.5</span>
+                <span className="text-[11px] text-ink-muted">eNPS</span>
+              </div>
+              <div className="space-y-1 text-[11px] text-ink-secondary border-t border-border-default/40 pt-2">
+                <div className="flex justify-between">
+                  <span>Avg Dimension:</span>
+                  <strong className="text-ink-primary">5.15 / 6.0</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Comp &amp; Benefit:</span>
+                  <strong className="text-ink-primary">4.81 / 6.0</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Career Growth:</span>
+                  <strong className="text-ink-primary">5.41 / 6.0</strong>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-[10px] text-ink-muted">
+              61.9% Promoters &bull; 7.4% Detractors
+            </div>
+          </div>
+
+          {/* Card 4: Housekeeping */}
+          <div className="p-4 rounded-xl bg-status-healthy/5 border border-status-healthy/20 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-ink-primary">Housekeeping</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-status-healthy/20 text-status-healthy">
+                  Highest eNPS
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1 my-2">
+                <span className="text-2xl font-spartan font-black text-status-healthy">+73.6</span>
+                <span className="text-[11px] text-ink-muted">eNPS</span>
+              </div>
+              <div className="space-y-1 text-[11px] text-ink-secondary border-t border-border-default/40 pt-2">
+                <div className="flex justify-between">
+                  <span>Avg Dimension:</span>
+                  <strong className="text-ink-primary">5.37 / 6.0</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Comp &amp; Benefit:</span>
+                  <strong className="text-ink-primary">5.28 / 6.0</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Career Growth:</span>
+                  <strong className="text-ink-primary">5.57 / 6.0</strong>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-[10px] text-ink-muted">
+              75.6% Promoters &bull; 2.0% Detractors
+            </div>
+          </div>
+
+          {/* Card 5: Manajerial Club */}
+          <div className="p-4 rounded-xl bg-surface-soft border border-border-default flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-ink-primary">Manajerial Club</span>
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-ink-primary/10 text-ink-primary">
+                  Leadership
+                </span>
+              </div>
+              <div className="flex items-baseline gap-1 my-2">
+                <span className="text-2xl font-spartan font-black text-ink-primary">+56.7</span>
+                <span className="text-[11px] text-ink-muted">eNPS</span>
+              </div>
+              <div className="space-y-1 text-[11px] text-ink-secondary border-t border-border-default/40 pt-2">
+                <div className="flex justify-between">
+                  <span>Avg Dimension:</span>
+                  <strong className="text-ink-primary">5.07 / 6.0</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Comp &amp; Benefit:</span>
+                  <strong className="text-ink-primary">5.05 / 6.0</strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Career Growth:</span>
+                  <strong className="text-ink-primary">5.18 / 6.0</strong>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 text-[10px] text-ink-muted">
+              59.6% Promoters &bull; 2.9% Detractors
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
       {/* Dual Primary Entry Cards */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Vacancy Card */}

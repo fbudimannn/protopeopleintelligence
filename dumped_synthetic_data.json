@@ -12715,7 +12715,7 @@
   "fallbackRequisitions": [
     {
       "req_code": "REQ-BLI-0104",
-      "role_name": "Operation Specialist",
+      "role_name": "Customer Service",
       "location_name": "Bali",
       "hiring_type": "Replacement",
       "openings": 4,
@@ -12766,7 +12766,7 @@
     },
     {
       "req_code": "REQ-SBY-0202",
-      "role_name": "Operation Specialist",
+      "role_name": "Customer Service",
       "location_name": "Surabaya",
       "hiring_type": "Replacement",
       "openings": 5,
@@ -12799,7 +12799,7 @@
     },
     {
       "req_code": "REQ-JKB-0301",
-      "role_name": "Operation Specialist",
+      "role_name": "Customer Service",
       "location_name": "Jakarta Barat",
       "hiring_type": "Replacement",
       "openings": 6,
@@ -12850,7 +12850,7 @@
     },
     {
       "req_code": "REQ-TNG-0502",
-      "role_name": "Operation Specialist",
+      "role_name": "Customer Service",
       "location_name": "Tangerang",
       "hiring_type": "Replacement",
       "openings": 4,
@@ -12867,7 +12867,7 @@
     },
     {
       "req_code": "REQ-BDG-0601",
-      "role_name": "Operation Specialist",
+      "role_name": "Customer Service",
       "location_name": "Bandung",
       "hiring_type": "Expansion",
       "openings": 2,
@@ -13034,7 +13034,7 @@
     {
       "candidate_id": "CAN-BLI-041",
       "display_name": "Made Dananjaya",
-      "role_target": "Operation Specialist",
+      "role_target": "Customer Service",
       "location_preference": "Bali",
       "readiness_status": "Interview Ready",
       "source_channel": "Ex-Finalist Pool",
@@ -13088,7 +13088,7 @@
     {
       "candidate_id": "CAN-SBY-078",
       "display_name": "Rizky Bayu Prasetyo",
-      "role_target": "Operation Specialist",
+      "role_target": "Customer Service",
       "location_preference": "Surabaya",
       "readiness_status": "Interview Ready",
       "source_channel": "Ex-Finalist Pool",
@@ -13124,7 +13124,7 @@
     {
       "candidate_id": "CAN-JKB-102",
       "display_name": "Anisa Rahmawati",
-      "role_target": "Operation Specialist",
+      "role_target": "Customer Service",
       "location_preference": "Jakarta Barat",
       "readiness_status": "Interview Ready",
       "source_channel": "Referral Pipeline",
@@ -13142,7 +13142,7 @@
     {
       "candidate_id": "CAN-TNG-115",
       "display_name": "Bagas Wicaksono",
-      "role_target": "Operation Specialist",
+      "role_target": "Customer Service",
       "location_preference": "Tangerang",
       "readiness_status": "Previous Finalist",
       "source_channel": "Ex-Finalist Pool",
@@ -13160,7 +13160,7 @@
     {
       "candidate_id": "CAN-BDG-128",
       "display_name": "Deri Kurniawan",
-      "role_target": "Operation Specialist",
+      "role_target": "Customer Service",
       "location_preference": "Bandung",
       "readiness_status": "Pre-qualified",
       "source_channel": "Direct Career Site",
@@ -13233,8 +13233,8 @@
       "score": 5.22,
       "national_benchmark": 5.4,
       "sentiment": "CONCERN",
-      "verbatim_sample": "I have been an Operation Specialist for over 18 months with top ratings, but when Assistant Club Manager opened, headquarters hired externally instead of promoting from within.",
-      "segment_concentration": "Operation Specialists with 12 to 24 months tenure",
+      "verbatim_sample": "I have been an Customer Service for over 18 months with top ratings, but when Assistant Club Manager opened, headquarters hired externally instead of promoting from within.",
+      "segment_concentration": "Customer Services with 12 to 24 months tenure",
       "strategic_action": "Operationalize internal mobility matching engine with transparent qualification gates"
     },
     {
@@ -13312,7 +13312,7 @@
     {
       "exit_code": "EXT-BLI-0089",
       "employee_code": "FH-EMP-0988",
-      "role_name": "Operation Specialist",
+      "role_name": "Customer Service",
       "location_name": "Bali",
       "exit_date": "2024-07-02",
       "tenure_months": 5,
@@ -13357,7 +13357,7 @@
     {
       "exit_code": "EXT-SBY-0144",
       "employee_code": "FH-EMP-0792",
-      "role_name": "Operation Specialist",
+      "role_name": "Customer Service",
       "location_name": "Surabaya",
       "exit_date": "2024-07-20",
       "tenure_months": 8,
@@ -13372,7 +13372,7 @@
     {
       "exit_code": "EXT-JKB-0231",
       "employee_code": "FH-EMP-0610",
-      "role_name": "Operation Specialist",
+      "role_name": "Customer Service",
       "location_name": "Jakarta Barat",
       "exit_date": "2024-07-28",
       "tenure_months": 11,
@@ -13417,7 +13417,7 @@
     {
       "exit_code": "EXT-TNG-0112",
       "employee_code": "FH-EMP-0412",
-      "role_name": "Operation Specialist",
+      "role_name": "Customer Service",
       "location_name": "Tangerang",
       "exit_date": "2024-08-09",
       "tenure_months": 6,
