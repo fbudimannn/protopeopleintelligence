@@ -7,7 +7,9 @@ import DataProvenanceBadge, { ProvenanceType } from "./DataProvenanceBadge";
 import {
   Menu,
   Calendar,
+  Globe,
   MapPin,
+  Building2,
   Briefcase,
   HelpCircle,
   X,
@@ -23,8 +25,14 @@ export default function TopHeader() {
     setPeriod,
     roleFilter,
     setRoleFilter,
-    locationFilter,
-    setLocationFilter,
+    clusterFilter,
+    setClusterFilter,
+    provinceFilter,
+    setProvinceFilter,
+    cityFilter,
+    setCityFilter,
+    availableProvinces,
+    availableCities,
     setMobileMenuOpen,
   } = useFilters();
 
@@ -91,6 +99,9 @@ export default function TopHeader() {
   const meta = getPageMeta();
   const isHomePage = pathname === "/";
 
+  const selectClass = "appearance-none pl-7 pr-7 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer truncate";
+  const iconClass = "w-3.5 h-3.5 text-ink-muted absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none";
+
   return (
     <>
       <header className="sticky top-0 z-30 h-16 bg-surface-white/95 backdrop-blur-md border-b border-border-default px-4 sm:px-6 flex items-center justify-between gap-4 shadow-subtle">
@@ -117,74 +128,99 @@ export default function TopHeader() {
         </div>
 
         {/* Right: Operational Global Filters & Badges */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          {/* Filters appear on functional pages and compact on home */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Filters appear on functional pages */}
           {!isHomePage && (
-            <div className="hidden md:flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-1.5">
               {/* Period Selector */}
               <div className="relative">
                 <select
                   value={period}
                   onChange={(e) => setPeriod(e.target.value as PeriodOption)}
-                  className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer max-w-[160px] truncate"
+                  className={`${selectClass} max-w-[155px]`}
                 >
-                  <option value="FY2024">FY 2024 (Full Year)</option>
-                  <option value="Q1_2024">Q1 2024</option>
-                  <option value="Q2_2024">Q2 2024</option>
-                  <option value="Q3_2024">Q3 2024</option>
-                  <option value="Q4_2024">Q4 2024</option>
+                  <option value="ALL_TIME">All Time</option>
+                  <optgroup label="By Year">
+                    <option value="2024">2024</option>
+                    <option value="2025">2025</option>
+                  </optgroup>
+                  <optgroup label="By Quarter">
+                    <option value="Q3_2024">Q3 2024 (Jul–Sep)</option>
+                    <option value="Q4_2024">Q4 2024 (Oct–Dec)</option>
+                    <option value="Q1_2025">Q1 2025 (Jan–Mar)</option>
+                    <option value="Q2_2025">Q2 2025 (Apr–Jun)</option>
+                    <option value="Q3_2025">Q3 2025 (Jul–Sep)</option>
+                    <option value="Q4_2025">Q4 2025 (Oct–Dec)</option>
+                  </optgroup>
+                  <optgroup label="By Month — 2024">
+                    <option value="2024-07">Jul 2024</option>
+                    <option value="2024-08">Aug 2024</option>
+                    <option value="2024-09">Sep 2024</option>
+                    <option value="2024-10">Oct 2024</option>
+                    <option value="2024-11">Nov 2024</option>
+                    <option value="2024-12">Dec 2024</option>
+                  </optgroup>
+                  <optgroup label="By Month — 2025">
+                    <option value="2025-01">Jan 2025</option>
+                    <option value="2025-02">Feb 2025</option>
+                    <option value="2025-03">Mar 2025</option>
+                    <option value="2025-04">Apr 2025</option>
+                    <option value="2025-05">May 2025</option>
+                    <option value="2025-06">Jun 2025</option>
+                    <option value="2025-07">Jul 2025</option>
+                    <option value="2025-08">Aug 2025</option>
+                    <option value="2025-09">Sep 2025</option>
+                    <option value="2025-10">Oct 2025</option>
+                    <option value="2025-11">Nov 2025</option>
+                    <option value="2025-12">Dec 2025</option>
+                  </optgroup>
                 </select>
-                <Calendar className="w-3.5 h-3.5 text-ink-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Calendar className={iconClass} />
               </div>
 
-              {/* Location Cluster Selector */}
+              {/* Cluster Selector */}
               <div className="relative">
                 <select
-                  value={locationFilter}
-                  onChange={(e) => setLocationFilter(e.target.value)}
-                  className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer max-w-[200px] truncate"
+                  value={clusterFilter}
+                  onChange={(e) => setClusterFilter(e.target.value)}
+                  className={`${selectClass} max-w-[140px]`}
                 >
-                  <option value="ALL">All Locations (National Total)</option>
-                  <optgroup label="Regional Clusters (Aggregated)">
-                    <option value="Jabodetabek">Jabodetabek (Cluster)</option>
-                    <option value="Jawa & Bali">Jawa & Bali (Cluster)</option>
-                    <option value="Outside Java">Outside Java (Cluster)</option>
-                  </optgroup>
-                  <optgroup label="Jabodetabek (10 Cities)">
-                    <option value="Jakarta Pusat">Jakarta Pusat</option>
-                    <option value="Jakarta Barat">Jakarta Barat</option>
-                    <option value="Jakarta Selatan">Jakarta Selatan</option>
-                    <option value="Jakarta Timur">Jakarta Timur</option>
-                    <option value="Jakarta Utara">Jakarta Utara</option>
-                    <option value="Bogor">Bogor</option>
-                    <option value="Depok">Depok</option>
-                    <option value="Tangerang">Tangerang</option>
-                    <option value="Bekasi">Bekasi</option>
-                    <option value="Cileungsi">Cileungsi</option>
-                  </optgroup>
-                  <optgroup label="Jawa & Bali (12 Cities)">
-                    <option value="Bali">Bali</option>
-                    <option value="Bandung">Bandung</option>
-                    <option value="Cilegon">Cilegon</option>
-                    <option value="Cirebon">Cirebon</option>
-                    <option value="Gresik">Gresik</option>
-                    <option value="Karawang">Karawang</option>
-                    <option value="Malang">Malang</option>
-                    <option value="Semarang">Semarang</option>
-                    <option value="Sidoarjo">Sidoarjo</option>
-                    <option value="Surabaya">Surabaya</option>
-                    <option value="Surakarta">Surakarta</option>
-                    <option value="Yogyakarta">Yogyakarta</option>
-                  </optgroup>
-                  <optgroup label="Outside Java (5 Cities)">
-                    <option value="Balikpapan">Balikpapan</option>
-                    <option value="Batam">Batam</option>
-                    <option value="Makassar">Makassar</option>
-                    <option value="Palembang">Palembang</option>
-                    <option value="Samarinda">Samarinda</option>
-                  </optgroup>
+                  <option value="ALL">All Clusters</option>
+                  <option value="Jabodetabek">Jabodetabek</option>
+                  <option value="Jawa & Bali">Jawa & Bali</option>
+                  <option value="Outside Java">Outside Java</option>
                 </select>
-                <MapPin className="w-3.5 h-3.5 text-ink-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Globe className={iconClass} />
+              </div>
+
+              {/* Province Selector */}
+              <div className="relative">
+                <select
+                  value={provinceFilter}
+                  onChange={(e) => setProvinceFilter(e.target.value)}
+                  className={`${selectClass} max-w-[145px]`}
+                >
+                  <option value="ALL">All Provinces</option>
+                  {availableProvinces.map((p) => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+                <MapPin className={iconClass} />
+              </div>
+
+              {/* City Selector */}
+              <div className="relative">
+                <select
+                  value={cityFilter}
+                  onChange={(e) => setCityFilter(e.target.value)}
+                  className={`${selectClass} max-w-[145px]`}
+                >
+                  <option value="ALL">All Cities</option>
+                  {availableCities.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <Building2 className={iconClass} />
               </div>
 
               {/* Role Segment Selector */}
@@ -192,7 +228,7 @@ export default function TopHeader() {
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
-                  className="appearance-none pl-7 pr-8 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer max-w-[190px] truncate"
+                  className={`${selectClass} max-w-[160px]`}
                 >
                   <option value="ALL">All Roles</option>
                   <optgroup label="5 Job Families">
@@ -203,14 +239,13 @@ export default function TopHeader() {
                     <option value="Club Management">Club Management</option>
                   </optgroup>
                   <optgroup label="Frontline & Key Roles">
-                    <option value="Customer Service">Customer Service</option>
                     <option value="Personal Trainer">Personal Trainer</option>
                     <option value="Fitness Consultant">Fitness Consultant</option>
                     <option value="Housekeeping">Housekeeping</option>
-                    <option value="Club Manager">Club Manager</option>
+                    <option value="Manajerial Club">Manajerial Club</option>
                   </optgroup>
                 </select>
-                <Briefcase className="w-3.5 h-3.5 text-ink-muted absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <Briefcase className={iconClass} />
               </div>
             </div>
           )}
