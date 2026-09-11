@@ -38,6 +38,7 @@ export default function TopHeader() {
     availableProvinces,
     availableCities,
     setMobileMenuOpen,
+    hideGlobalFilters,
   } = useFilters();
 
   const [showAboutModal, setShowAboutModal] = useState(false);
@@ -102,6 +103,7 @@ export default function TopHeader() {
 
   const meta = getPageMeta();
   const isHomePage = pathname === "/";
+  const shouldHideFilters = isHomePage || hideGlobalFilters;
 
   const selectClass = "appearance-none pl-7 pr-7 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer truncate";
   const iconClass = "w-3.5 h-3.5 text-ink-muted absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none";
@@ -133,8 +135,8 @@ export default function TopHeader() {
 
         {/* Right: Operational Global Filters & Badges */}
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Filters appear on functional pages */}
-          {!isHomePage && (
+          {/* Filters appear on functional pages (hidden on Overview, Mobility Engine, and custom builder pages) */}
+          {!shouldHideFilters && (
             <div className="hidden md:flex items-center gap-1.5">
               {/* Period Selector */}
               <div className="relative">

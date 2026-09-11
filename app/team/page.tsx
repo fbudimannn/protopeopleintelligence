@@ -100,6 +100,7 @@ function TeamContent() {
     jobFamilyFilter,
     roleFilter,
     period: selectedPeriod,
+    setHideGlobalFilters,
   } = useFilters();
   const selectedLocation = locationFilter === "ALL" ? "All Locations" : locationFilter;
   const locationDisplay = useMemo(() => {
@@ -140,7 +141,7 @@ function TeamContent() {
   const [hasRunEngine, setHasRunEngine] = useState<boolean>(false);
   const [minPerformance, setMinPerformance] = useState<number>(4.0);
   const [minTenureMonths, setMinTenureMonths] = useState<number>(12);
-  const [feederOnly, setFeederOnly] = useState<boolean>(true);
+  const feederOnly = true; // Natural career feeder pathways and Anti-Lompat governance always enforced
   const [capabilityWeight, setCapabilityWeight] = useState<number>(45);
   const [performanceWeight, setPerformanceWeight] = useState<number>(25);
   const [psychometricWeight, setPsychometricWeight] = useState<number>(20);
@@ -160,8 +161,16 @@ function TeamContent() {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    setHideGlobalFilters(activeTab === "mobility");
+    return () => {
+      setHideGlobalFilters(false);
+    };
+  }, [activeTab, setHideGlobalFilters]);
+
   const handleTabChange = (tab: TeamTab) => {
     setActiveTab(tab);
+    setHideGlobalFilters(tab === "mobility");
     if (typeof window !== "undefined") {
       const url = new URL(window.location.href);
       url.searchParams.set("tab", tab);
@@ -2048,17 +2057,12 @@ function TeamContent() {
                     </span>
                   </div>
 
-                  <label className="flex items-center gap-2 cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={feederOnly}
-                      onChange={(e) => setFeederOnly(e.target.checked)}
-                      className="w-4 h-4 rounded border-surface-border text-brand-teal accent-brand-teal cursor-pointer"
-                    />
-                    <span className="text-xs font-medium text-ink-primary">
-                      Natural feeder pathways only ({activeBenchmark.natural_feeder_roles.join(", ")})
+                  <div className="flex items-center gap-2 text-xs text-ink-secondary">
+                    <span className="w-1.5 h-1.5 rounded-full bg-brand-teal shrink-0"></span>
+                    <span>
+                      Natural Feeder Roles: <strong className="text-ink-primary font-semibold">{activeBenchmark.natural_feeder_roles.join(", ")}</strong>
                     </span>
-                  </label>
+                  </div>
                 </div>
               </div>
 
@@ -2436,7 +2440,7 @@ ORDER BY match_rate_pct DESC;`}
                 {dynamicMatchedCandidates.length === 0 ? (
                   <div className="p-10 text-center text-xs text-ink-secondary border border-dashed border-surface-border rounded-xl space-y-3 bg-surface-card/40">
                     <p className="font-semibold text-ink-primary">
-                      No candidates match the active filter criteria ({dynamicFilterTier !== "ALL" ? `Tier: ${dynamicFilterTier}` : "All Tiers"}, Min Rating &ge; {minPerformance.toFixed(1)}, Min Tenure &ge; {minTenureMonths}m{feederOnly ? ", Natural Feeders Only" : ""}).
+                      No candidates match the active filter criteria ({dynamicFilterTier !== "ALL" ? `Tier: ${dynamicFilterTier}` : "All Tiers"}, Min Rating &ge; {minPerformance.toFixed(1)}, Min Tenure &ge; {minTenureMonths}m, Natural Feeders).
                     </p>
                     <p className="text-[11px] text-ink-tertiary">
                       There are {rawDynamicMatches.length} total candidates matched before applying the &quot;{dynamicFilterTier}&quot; tier or strict threshold filters.
@@ -2454,7 +2458,6 @@ ORDER BY match_rate_pct DESC;`}
                         onClick={() => {
                           setMinPerformance(4.0);
                           setMinTenureMonths(12);
-                          setFeederOnly(false);
                           setDynamicFilterTier("ALL");
                         }}
                         className="px-3.5 py-1.5 rounded-lg bg-surface-card border border-surface-border text-xs font-semibold text-ink-primary hover:border-brand-teal/40 transition-all cursor-pointer"

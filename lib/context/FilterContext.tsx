@@ -281,6 +281,8 @@ export interface FilterContextType {
   setMobileMenuOpen: (open: boolean) => void;
   isSupabaseLive: boolean;
   setIsSupabaseLive: (live: boolean) => void;
+  hideGlobalFilters: boolean;
+  setHideGlobalFilters: (hide: boolean) => void;
 }
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
@@ -295,6 +297,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
   const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [isSupabaseLive, setIsSupabaseLive] = useState<boolean>(true);
+  const [hideGlobalFilters, setHideGlobalFilters] = useState<boolean>(false);
 
   // Cascade: when job family changes, reset specific role
   const setJobFamilyFilter = (family: string) => {
@@ -427,6 +430,8 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         setMobileMenuOpen,
         isSupabaseLive,
         setIsSupabaseLive,
+        hideGlobalFilters,
+        setHideGlobalFilters,
       }}
     >
       {children}
