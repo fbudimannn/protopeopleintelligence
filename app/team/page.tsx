@@ -498,6 +498,67 @@ function TeamContent() {
     }
   };
 
+  // Two-way sync: When location changes, update Target Location and check for matching Requisitions
+  const handleLocationChange = (newCity: string, newRegion?: string, newProvince?: string) => {
+    setTargetLocation(newCity);
+    const region = newRegion || getRegionCluster(newCity);
+    const province = newProvince || getProvince(newCity);
+    setSelectedRegion(region);
+    setSelectedProvince(province);
+
+    // Try to find an open lead requisition matching newCity and current benchmark role
+    const currentBenchmarkRole = targetRoleBenchmarks.find((b) => b.role_id === selectedBenchmarkRoleId);
+    const matchingReq = leadOpenRequisitions.find((r) => {
+      const loc = r.location_name || (r as any).location || "";
+      const rName = (r.role_name || (r as any).role || "").toLowerCase();
+      const bName = currentBenchmarkRole?.role_name.toLowerCase() || "";
+      return loc.toLowerCase() === newCity.toLowerCase() && (rName.includes(bName) || bName.includes(rName));
+    });
+
+    if (matchingReq) {
+      setSelectedRequisitionCode(matchingReq.req_code || (matchingReq as any).id);
+    } else {
+      // Check if there's ANY open lead requisition in this city
+      const anyLeadInCity = leadOpenRequisitions.find((r) => {
+        const loc = r.location_name || (r as any).location || "";
+        return loc.toLowerCase() === newCity.toLowerCase();
+      });
+      if (anyLeadInCity) {
+        handleSelectRequisition(anyLeadInCity.req_code || (anyLeadInCity as any).id);
+      } else {
+        setSelectedRequisitionCode("CUSTOM");
+      }
+    }
+  };
+
+  // Two-way sync: When benchmark role changes, find matching requisition in current target location
+  const handleBenchmarkRoleChange = (newRoleId: string) => {
+    setSelectedBenchmarkRoleId(newRoleId);
+    const newRole = targetRoleBenchmarks.find((b) => b.role_id === newRoleId);
+    if (newRole) {
+      const roleEmps = benchmarkEmployeesPool.filter(
+        (emp) => emp.role.toLowerCase() === newRole.role_name.toLowerCase()
+      );
+      if (roleEmps.length > 0) {
+        setSelectedBenchmarkEmpIds(roleEmps.slice(0, 3).map((emp) => emp.employee_id));
+      }
+
+      // Check if there's an open requisition in targetLocation for this new role
+      const matchingReq = leadOpenRequisitions.find((r) => {
+        const loc = r.location_name || (r as any).location || "";
+        const rName = (r.role_name || (r as any).role || "").toLowerCase();
+        const bName = newRole.role_name.toLowerCase();
+        return loc.toLowerCase() === targetLocation.toLowerCase() && (rName.includes(bName) || bName.includes(rName));
+      });
+
+      if (matchingReq) {
+        setSelectedRequisitionCode(matchingReq.req_code || (matchingReq as any).id);
+      } else if (selectedRequisitionCode !== "CUSTOM") {
+        setSelectedRequisitionCode("CUSTOM");
+      }
+    }
+  };
+
   // Benchmark employees filtered by selected target role (with keyword fallback)
   const filteredBenchmarkEmployees = useMemo(() => {
     const roleObj = targetRoleBenchmarks.find((b) => b.role_id === selectedBenchmarkRoleId);
@@ -1738,7 +1799,7 @@ function TeamContent() {
                         {req.req_code || req.id} • {req.role_name || req.role} ({req.location_name || req.location}) — {req.days_open}d
                       </option>
                     ))}
-                    <option value="CUSTOM">Custom / Ad-hoc Vacancy</option>
+                    <option value="CUSTOM">Custom Vacancy ({targetLocation})</option>
                   </select>
                 </div>
 
@@ -1749,19 +1810,7 @@ function TeamContent() {
                   </label>
                   <select
                     value={selectedBenchmarkRoleId}
-                    onChange={(e) => {
-                      const newRoleId = e.target.value;
-                      setSelectedBenchmarkRoleId(newRoleId);
-                      const newRole = targetRoleBenchmarks.find((b) => b.role_id === newRoleId);
-                      if (newRole) {
-                        const roleEmps = benchmarkEmployeesPool.filter(
-                          (emp) => emp.role.toLowerCase() === newRole.role_name.toLowerCase()
-                        );
-                        if (roleEmps.length > 0) {
-                          setSelectedBenchmarkEmpIds(roleEmps.slice(0, 3).map((emp) => emp.employee_id));
-                        }
-                      }
-                    }}
+                    onChange={(e) => handleBenchmarkRoleChange(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
                   >
                     {targetRoleBenchmarks.map((b) => (
@@ -1780,17 +1829,27 @@ function TeamContent() {
                         Linked Requisition SLA
                       </span>
                       <span className="font-mono font-bold text-brand-teal">
-                        {activeRequisition ? `${activeRequisition.req_code} (${activeRequisition.days_open}d Open)` : selectedRequisitionCode}
+                        {selectedRequisitionCode === "CUSTOM"
+                          ? `Custom Target (${targetLocation})`
+                          : activeRequisition
+                          ? `${activeRequisition.req_code} (${activeRequisition.days_open}d Open)`
+                          : selectedRequisitionCode}
                       </span>
                     </div>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                      activeRequisition?.sla_status === "BREACHED"
+                      selectedRequisitionCode === "CUSTOM"
+                        ? "bg-brand-teal/15 text-brand-teal"
+                        : activeRequisition?.sla_status === "BREACHED"
                         ? "bg-status-critical/15 text-status-critical"
                         : activeRequisition?.sla_status === "AT_RISK"
                         ? "bg-brand-yellow/15 text-brand-yellow"
                         : "bg-status-healthy/15 text-status-healthy"
                     }`}>
-                      SLA: {activeRequisition ? `${activeRequisition.days_open}d vs ${activeRequisition.sla_target_days}d` : "—"}
+                      {selectedRequisitionCode === "CUSTOM"
+                        ? "Simulated Target"
+                        : activeRequisition
+                        ? `SLA: ${activeRequisition.days_open}d vs ${activeRequisition.sla_target_days}d`
+                        : "—"}
                     </span>
                   </div>
                 </div>
@@ -1810,13 +1869,11 @@ function TeamContent() {
                       value={selectedRegion}
                       onChange={(e) => {
                         const newRegion = e.target.value;
-                        setSelectedRegion(newRegion);
                         const provs = getProvincesForRegion(newRegion);
-                        if (provs.length > 0) {
-                          setSelectedProvince(provs[0]);
-                          const cities = getCitiesForProvince(newRegion, provs[0]);
-                          if (cities.length > 0) setTargetLocation(cities[0]);
-                        }
+                        const newProv = provs[0] || "";
+                        const cities = getCitiesForProvince(newRegion, newProv);
+                        const newCity = cities[0] || targetLocation;
+                        handleLocationChange(newCity, newRegion, newProv);
                       }}
                       className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
                     >
@@ -1833,9 +1890,9 @@ function TeamContent() {
                       value={selectedProvince}
                       onChange={(e) => {
                         const newProv = e.target.value;
-                        setSelectedProvince(newProv);
                         const cities = getCitiesForProvince(selectedRegion, newProv);
-                        if (cities.length > 0) setTargetLocation(cities[0]);
+                        const newCity = cities[0] || targetLocation;
+                        handleLocationChange(newCity, selectedRegion, newProv);
                       }}
                       className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
                     >
@@ -1850,7 +1907,7 @@ function TeamContent() {
                     <span className="text-[10px] text-ink-tertiary font-semibold uppercase block mb-0.5">City / Location</span>
                     <select
                       value={targetLocation}
-                      onChange={(e) => setTargetLocation(e.target.value)}
+                      onChange={(e) => handleLocationChange(e.target.value, selectedRegion, selectedProvince)}
                       className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
                     >
                       {getCitiesForProvince(selectedRegion, selectedProvince).map((city) => (
