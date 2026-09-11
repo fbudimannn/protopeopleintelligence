@@ -983,7 +983,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-BLI-0120",
-    role_name: "Assistant Club Manager",
+    role_name: "Customer Service Leader",
     location_name: "Bali",
     hiring_type: "Replacement",
     openings: 1,
@@ -995,8 +995,8 @@ export const fallbackRequisitions: RequisitionItem[] = [
     health: "Critical",
     hiring_manager: "Tri Purnomo (Regional VP)",
     linked_exit_code: "EXT-BLI-0077",
-    urgency_reason: "Club leadership gap in Canggu branch, strong candidate for internal mobility fast-track",
-    data_provenance: "SYNTHETIC_ENABLER",
+    urgency_reason: "Front desk shift supervision and CS team coaching in Canggu hub",
+    data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
     req_code: "REQ-SBY-0224",
@@ -1017,7 +1017,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-BTM-0701",
-    role_name: "Assistant Club Manager",
+    role_name: "Operation Manager",
     location_name: "Batam",
     hiring_type: "Replacement",
     openings: 1,
@@ -1028,12 +1028,12 @@ export const fallbackRequisitions: RequisitionItem[] = [
     bottleneck_stage: "Manager Interview",
     health: "At Risk",
     hiring_manager: "Hendra Wijaya (Club GM)",
-    urgency_reason: "Branch floor operations leadership backfill in Batam Hub",
-    data_provenance: "SYNTHETIC_ENABLER",
+    urgency_reason: "Branch floor operations and facility leadership backfill in Batam Hub",
+    data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
     req_code: "REQ-SBY-0210",
-    role_name: "Assistant Club Manager",
+    role_name: "Customer Service Leader",
     location_name: "Surabaya",
     hiring_type: "Replacement",
     openings: 1,
@@ -1044,8 +1044,8 @@ export const fallbackRequisitions: RequisitionItem[] = [
     bottleneck_stage: "Executive Panel",
     health: "Healthy",
     hiring_manager: "Arief Hidayat (Regional VP)",
-    urgency_reason: "East Java club leadership succession fast-track",
-    data_provenance: "SYNTHETIC_ENABLER",
+    urgency_reason: "East Java customer service leadership succession",
+    data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
     req_code: "REQ-JKS-0401",
@@ -1174,6 +1174,230 @@ export const fallbackRequisitions: RequisitionItem[] = [
     hiring_manager: "Dewi Anggraini (Commercial Lead)",
     urgency_reason: "Bintaro and BSD membership presale campaign lead",
     data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-PTL-0101",
+    role_name: "PT Team Leader",
+    location_name: "Jakarta Barat",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 28,
+    sla_target_days: 35,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 6,
+    bottleneck_stage: "Technical Audition",
+    health: "Healthy",
+    hiring_manager: "Faris Pratama (Fitness Director)",
+    urgency_reason: "PT floor supervision and session revenue pacing",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-PTL-0102",
+    role_name: "PT Team Leader",
+    location_name: "Jakarta Selatan",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 32,
+    sla_target_days: 35,
+    sla_status: "AT_RISK",
+    pipeline_size: 5,
+    bottleneck_stage: "Technical Audition",
+    health: "At Risk",
+    hiring_manager: "Wayan Surya (Fitness Manager)",
+    urgency_reason: "Senopati trainer biomechanics coaching",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-PTL-0103",
+    role_name: "PT Team Leader",
+    location_name: "Surabaya",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 19,
+    sla_target_days: 35,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 7,
+    bottleneck_stage: "Manager Interview",
+    health: "Healthy",
+    hiring_manager: "Danang Kusuma (Fitness Lead)",
+    urgency_reason: "East Java PT squad leader",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-FCL-0201",
+    role_name: "FC Team Leader",
+    location_name: "Jakarta Barat",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 31,
+    sla_target_days: 35,
+    sla_status: "AT_RISK",
+    pipeline_size: 4,
+    bottleneck_stage: "HR Screening",
+    health: "At Risk",
+    hiring_manager: "Dewi Anggraini (Commercial Lead)",
+    urgency_reason: "West Jakarta membership sales blitz lead",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-FCL-0202",
+    role_name: "FC Team Leader",
+    location_name: "Jakarta Timur",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 26,
+    sla_target_days: 35,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 6,
+    bottleneck_stage: "Manager Interview",
+    health: "Healthy",
+    hiring_manager: "Nita Anggraini (Sales Lead)",
+    urgency_reason: "East Jakarta membership acquisition driver",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-FCL-0203",
+    role_name: "FC Team Leader",
+    location_name: "Semarang",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 36,
+    sla_target_days: 35,
+    sla_status: "BREACHED",
+    pipeline_size: 3,
+    bottleneck_stage: "Final Offer",
+    health: "Critical",
+    hiring_manager: "Ni Made Sari (Commercial Lead)",
+    urgency_reason: "Central Java sales conversion pacing",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-CM-0301",
+    role_name: "Club Manager",
+    location_name: "Jakarta Barat",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 38,
+    sla_target_days: 42,
+    sla_status: "AT_RISK",
+    pipeline_size: 5,
+    bottleneck_stage: "Executive Panel",
+    health: "At Risk",
+    hiring_manager: "Tri Purnomo (Regional VP)",
+    urgency_reason: "Puri Indah flagship club general management",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-CM-0302",
+    role_name: "Club Manager",
+    location_name: "Bandung",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 31,
+    sla_target_days: 42,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 6,
+    bottleneck_stage: "Executive Panel",
+    health: "Healthy",
+    hiring_manager: "Tri Purnomo (Regional VP)",
+    urgency_reason: "Dago Bandung club general management and EBITDA delivery",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-SLL-0401",
+    role_name: "Sales Lead",
+    location_name: "Jakarta Barat",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 22,
+    sla_target_days: 35,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 8,
+    bottleneck_stage: "Final Interview",
+    health: "Healthy",
+    hiring_manager: "Dewi Anggraini (Commercial Lead)",
+    urgency_reason: "Presale quarterly campaign lead",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-SLL-0402",
+    role_name: "Sales Lead",
+    location_name: "Bali",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 39,
+    sla_target_days: 35,
+    sla_status: "BREACHED",
+    pipeline_size: 4,
+    bottleneck_stage: "Manager Interview",
+    health: "Critical",
+    hiring_manager: "Bambang Wijaya (Club GM)",
+    urgency_reason: "Bali regional membership drive",
+    data_provenance: "SYNTHETIC_ENABLER",
+  },
+  {
+    req_code: "REQ-PTL-0104",
+    role_name: "Personal Trainer Leader",
+    location_name: "Bali",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 28,
+    sla_target_days: 35,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 5,
+    bottleneck_stage: "Technical Audition",
+    health: "Healthy",
+    hiring_manager: "Wayan Surya (Fitness Manager)",
+    urgency_reason: "Sunset Road PT floor supervision and coach retention driver",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-FCL-0204",
+    role_name: "Fitness Consultant Leader",
+    location_name: "Bali",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 31,
+    sla_target_days: 35,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 4,
+    bottleneck_stage: "Manager Interview",
+    health: "Healthy",
+    hiring_manager: "Ni Made Sari (Sales Manager)",
+    urgency_reason: "Canggu commercial membership sales blitz leader",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-CM-0303",
+    role_name: "Club Manager",
+    location_name: "Bali",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 39,
+    sla_target_days: 42,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 5,
+    bottleneck_stage: "Executive Panel",
+    health: "Healthy",
+    hiring_manager: "Tri Purnomo (Area GM)",
+    urgency_reason: "Flagship Canggu gym club full P&L accountability",
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    req_code: "REQ-AGM-0501",
+    role_name: "Area General Manager",
+    location_name: "Bali",
+    hiring_type: "Expansion",
+    openings: 1,
+    days_open: 35,
+    sla_target_days: 45,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 4,
+    bottleneck_stage: "Board Interview",
+    health: "Healthy",
+    hiring_manager: "Board of Directors",
+    urgency_reason: "Regional cluster oversight for Bali and East Java clubs",
+    data_provenance: "OBSERVED_CASE_STUDY",
   },
 ];
 
@@ -1888,5 +2112,183 @@ export const fallbackMetricDefinitions: MetricDefinition[] = [
     business_interpretation: "Measures overall employee loyalty (+56.6). Must be evaluated alongside Survivorship Bias disclosure.",
     data_provenance: "OBSERVED_CASE_STUDY",
   },
+];
+
+export interface CliftonStrength {
+  strength_id?: string;
+  strength_code: string;
+  strength_name: string;
+  domain: "Executing" | "Influencing" | "Relationship Building" | "Strategic Thinking";
+  description: string;
+}
+
+export const fallbackCliftonStrengths: CliftonStrength[] = [
+  { strength_code: "STR-ACH", strength_name: "Achiever", domain: "Executing", description: "Have a great deal of stamina and work hard. Take immense satisfaction in being busy and productive." },
+  { strength_code: "STR-ARR", strength_name: "Arranger", domain: "Executing", description: "Can organize, but also have a flexibility that complements this ability. Determine how all pieces fit." },
+  { strength_code: "STR-BEL", strength_name: "Belief", domain: "Executing", description: "Have certain core values that are unchanging, giving life a defined purpose." },
+  { strength_code: "STR-CON", strength_name: "Consistency", domain: "Executing", description: "Keenly aware of the need to treat people the same. Crave stable routines and clear rules." },
+  { strength_code: "STR-DEL", strength_name: "Deliberative", domain: "Executing", description: "Anticipate obstacles and take serious care when making decisions or choices." },
+  { strength_code: "STR-DIS", strength_name: "Discipline", domain: "Executing", description: "Enjoy routine and structure. Their world is best described by the order they create." },
+  { strength_code: "STR-FOC", strength_name: "Focus", domain: "Executing", description: "Can take a direction, follow through and make corrections to stay on track." },
+  { strength_code: "STR-RES", strength_name: "Responsibility", domain: "Executing", description: "Take psychological ownership of commitments and hold honest, loyal values." },
+  { strength_code: "STR-RST", strength_name: "Restorative", domain: "Executing", description: "Adept at dealing with problems. Good at figuring out what is wrong and resolving it." },
+  { strength_code: "STR-ACT", strength_name: "Activator", domain: "Influencing", description: "Can make things happen by turning thoughts into action. Want to act now." },
+  { strength_code: "STR-CMD", strength_name: "Command", domain: "Influencing", description: "Have presence. Can take control of a situation and make decisions with conviction." },
+  { strength_code: "STR-COM", strength_name: "Communication", domain: "Influencing", description: "Find it easy to put thoughts into words. Good conversationalists and presenters." },
+  { strength_code: "STR-CMP", strength_name: "Competition", domain: "Influencing", description: "Measure progress against the performance of others. Strive to win first place." },
+  { strength_code: "STR-MAX", strength_name: "Maximizer", domain: "Influencing", description: "Focus on strengths as a way to stimulate personal and group excellence." },
+  { strength_code: "STR-SAS", strength_name: "Self-Assurance", domain: "Influencing", description: "Feel confident in ability to manage own lives. Possess an inner compass." },
+  { strength_code: "STR-SIG", strength_name: "Significance", domain: "Influencing", description: "Want to be very important in others eyes. Long to make meaningful impact." },
+  { strength_code: "STR-WOO", strength_name: "Woo", domain: "Influencing", description: "Love the challenge of meeting new people and winning them over." },
+  { strength_code: "STR-ADP", strength_name: "Adaptability", domain: "Relationship Building", description: "Prefer to go with the flow. Now people who discover the future one day at a time." },
+  { strength_code: "STR-CND", strength_name: "Connectedness", domain: "Relationship Building", description: "Have faith in the links among all things. Believe almost every event has meaning." },
+  { strength_code: "STR-DEV", strength_name: "Developer", domain: "Relationship Building", description: "Recognize and cultivate potential in others. Spot signs of small improvement." },
+  { strength_code: "STR-EMP", strength_name: "Empathy", domain: "Relationship Building", description: "Can sense other peoples feelings by imagining themselves in others situations." },
+  { strength_code: "STR-HAR", strength_name: "Harmony", domain: "Relationship Building", description: "Look for consensus. Dont enjoy conflict; rather, seek areas of agreement." },
+  { strength_code: "STR-INC", strength_name: "Includer", domain: "Relationship Building", description: "Accept others. Show awareness of those who feel left out and include them." },
+  { strength_code: "STR-IND", strength_name: "Individualization", domain: "Relationship Building", description: "Intrigued with the unique qualities of each person and how they work together." },
+  { strength_code: "STR-POS", strength_name: "Positivity", domain: "Relationship Building", description: "Have an enthusiasm that is contagious. Upbeat and get others excited." },
+  { strength_code: "STR-REL", strength_name: "Relator", domain: "Relationship Building", description: "Enjoy close relationships with others. Find deep satisfaction in working together." },
+  { strength_code: "STR-ANA", strength_name: "Analytical", domain: "Strategic Thinking", description: "Search for reasons and causes. Think about factors affecting a situation." },
+  { strength_code: "STR-CTX", strength_name: "Context", domain: "Strategic Thinking", description: "Enjoy thinking about the past to understand the present by researching history." },
+  { strength_code: "STR-FUT", strength_name: "Futuristic", domain: "Strategic Thinking", description: "Inspired by the future and what could be. Energize others with visions." },
+  { strength_code: "STR-IDE", strength_name: "Ideation", domain: "Strategic Thinking", description: "Fascinated by ideas. Able to find connections between disparate phenomena." },
+  { strength_code: "STR-INP", strength_name: "Input", domain: "Strategic Thinking", description: "Have a need to collect and archive information, ideas, and knowledge." },
+  { strength_code: "STR-INT", strength_name: "Intellection", domain: "Strategic Thinking", description: "Characterized by intellectual activity. Appreciate introspective discussions." },
+  { strength_code: "STR-LRN", strength_name: "Learner", domain: "Strategic Thinking", description: "Have a great desire to learn and want to continuously improve." },
+  { strength_code: "STR-STG", strength_name: "Strategic", domain: "Strategic Thinking", description: "Create alternative ways to proceed. Spot relevant patterns and issues quickly." },
+];
+
+export interface CapabilityItem {
+  capability_id?: string;
+  capability_code: string;
+  capability_name: string;
+  domain: string;
+  description: string;
+}
+
+export const fallbackCapabilities: CapabilityItem[] = [
+  {
+    capability_code: "CAP-LEAD-01",
+    capability_name: "Shift Supervision & Operational Leadership",
+    domain: "Leadership",
+    description: "Managing daily club shifts, coaching frontline staff, and driving club revenue targets.",
+  },
+  {
+    capability_code: "CAP-OPS-02",
+    capability_name: "POS & Front-Desk Service Excellence",
+    domain: "Operational",
+    description: "Mastery of club point-of-sale systems, check-in flow, and member inquiry resolution.",
+  },
+  {
+    capability_code: "CAP-OPS-01",
+    capability_name: "Gym Floor Maintenance & Safety",
+    domain: "Operational",
+    description: "Ensuring gym equipment uptime, hygiene compliance, safety protocols, and SOP adherence.",
+  },
+  {
+    capability_code: "CAP-RET-01",
+    capability_name: "Member Retention & Onboarding Care",
+    domain: "Retention",
+    description: "Proactive engagement with at-risk gym members to maximize attendance and contract renewals.",
+  },
+  {
+    capability_code: "CAP-COMM-01",
+    capability_name: "Member Acquisition & Conversion",
+    domain: "Commercial",
+    description: "Ability to present club value propositions, handle sales objections, and close gym memberships.",
+  },
+  {
+    capability_code: "CAP-FIT-01",
+    capability_name: "Biomechanics & PT Session Programming",
+    domain: "Fitness",
+    description: "Designing safe, goal-oriented progressive resistance and cardiovascular workout programs.",
+  },
+];
+
+export interface RoleCapabilityRequirement {
+  requirement_id?: string;
+  role_name: string;
+  capability_id?: string;
+  capability_code: string;
+  capability_name: string;
+  required_level: number; // 1 to 4
+  weight: number; // percentage
+  criticality_rank?: number;
+  active_flag?: boolean;
+}
+
+export const fallbackRoleCapabilityRequirements: RoleCapabilityRequirement[] = [
+  // Club Manager
+  { role_name: "Club Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 4, weight: 30 },
+  { role_name: "Club Manager", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 4, weight: 30 },
+  { role_name: "Club Manager", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 3, weight: 20 },
+  { role_name: "Club Manager", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 3, weight: 20 },
+
+  // Area General Manager
+  { role_name: "Area General Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 4, weight: 30 },
+  { role_name: "Area General Manager", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 4, weight: 30 },
+  { role_name: "Area General Manager", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 4, weight: 20 },
+  { role_name: "Area General Manager", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 3, weight: 20 },
+
+  // Operation Manager
+  { role_name: "Operation Manager", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 4, weight: 30 },
+  { role_name: "Operation Manager", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 4, weight: 30 },
+  { role_name: "Operation Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 3, weight: 20 },
+  { role_name: "Operation Manager", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 20 },
+
+  // Customer Service Leader
+  { role_name: "Customer Service Leader", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 4, weight: 35 },
+  { role_name: "Customer Service Leader", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 4, weight: 30 },
+  { role_name: "Customer Service Leader", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 3, weight: 20 },
+  { role_name: "Customer Service Leader", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 2, weight: 15 },
+
+  // Customer Service
+  { role_name: "Customer Service", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 3, weight: 35 },
+  { role_name: "Customer Service", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 30 },
+  { role_name: "Customer Service", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 2, weight: 20 },
+  { role_name: "Customer Service", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 2, weight: 15 },
+
+  // Personal Trainer Leader
+  { role_name: "Personal Trainer Leader", capability_code: "CAP-FIT-01", capability_name: "Biomechanics & PT Session Programming", required_level: 4, weight: 35 },
+  { role_name: "Personal Trainer Leader", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 3, weight: 30 },
+  { role_name: "Personal Trainer Leader", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 3, weight: 20 },
+  { role_name: "Personal Trainer Leader", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 15 },
+
+  // Personal Trainer Master
+  { role_name: "Personal Trainer Master", capability_code: "CAP-FIT-01", capability_name: "Biomechanics & PT Session Programming", required_level: 4, weight: 40 },
+  { role_name: "Personal Trainer Master", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 4, weight: 30 },
+  { role_name: "Personal Trainer Master", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 3, weight: 20 },
+  { role_name: "Personal Trainer Master", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 2, weight: 10 },
+
+  // Personal Trainer
+  { role_name: "Personal Trainer", capability_code: "CAP-FIT-01", capability_name: "Biomechanics & PT Session Programming", required_level: 3, weight: 35 },
+  { role_name: "Personal Trainer", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 30 },
+  { role_name: "Personal Trainer", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 2, weight: 20 },
+  { role_name: "Personal Trainer", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 2, weight: 15 },
+
+  // Fitness Consultant Leader
+  { role_name: "Fitness Consultant Leader", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 4, weight: 40 },
+  { role_name: "Fitness Consultant Leader", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 3, weight: 25 },
+  { role_name: "Fitness Consultant Leader", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 20 },
+  { role_name: "Fitness Consultant Leader", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 2, weight: 15 },
+
+  // Fitness Consultant
+  { role_name: "Fitness Consultant", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 3, weight: 40 },
+  { role_name: "Fitness Consultant", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 25 },
+  { role_name: "Fitness Consultant", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 2, weight: 20 },
+  { role_name: "Fitness Consultant", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 1, weight: 15 },
+
+  // Fitness Manager
+  { role_name: "Fitness Manager", capability_code: "CAP-FIT-01", capability_name: "Biomechanics & PT Session Programming", required_level: 4, weight: 35 },
+  { role_name: "Fitness Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 4, weight: 35 },
+  { role_name: "Fitness Manager", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 15 },
+  { role_name: "Fitness Manager", capability_code: "CAP-OPS-01", capability_name: "Gym Floor Maintenance & Safety", required_level: 3, weight: 15 },
+
+  // Sales Manager
+  { role_name: "Sales Manager", capability_code: "CAP-COMM-01", capability_name: "Member Acquisition & Conversion", required_level: 4, weight: 40 },
+  { role_name: "Sales Manager", capability_code: "CAP-LEAD-01", capability_name: "Shift Supervision & Operational Leadership", required_level: 4, weight: 30 },
+  { role_name: "Sales Manager", capability_code: "CAP-RET-01", capability_name: "Member Retention & Onboarding Care", required_level: 3, weight: 20 },
+  { role_name: "Sales Manager", capability_code: "CAP-OPS-02", capability_name: "POS & Front-Desk Service Excellence", required_level: 3, weight: 10 },
 ];
 

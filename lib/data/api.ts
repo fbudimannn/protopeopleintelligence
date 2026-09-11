@@ -16,6 +16,12 @@ import {
   PipelineLayer,
   RoadmapHorizon,
   MetricDefinition,
+  CliftonStrength,
+  fallbackCliftonStrengths,
+  CapabilityItem,
+  fallbackCapabilities,
+  RoleCapabilityRequirement,
+  fallbackRoleCapabilityRequirements,
   fallbackVacancyKPIs,
   fallbackRetentionCohorts,
   fallbackEngagementSummaries,
@@ -285,4 +291,174 @@ export async function getRoadmapHorizons(): Promise<{ data: RoadmapHorizon[]; is
 export async function getMetricDefinitions(): Promise<{ data: MetricDefinition[]; isLive: boolean }> {
   return { data: fallbackMetricDefinitions, isLive: false };
 }
+
+// ═══════════════════════════════════════════════════════════════
+// Live Database CRUD: CliftonStrengths & Frontline Capability Framework
+// ═══════════════════════════════════════════════════════════════
+
+export async function getCliftonStrengths(): Promise<{ data: CliftonStrength[]; isLive: boolean }> {
+  if (!supabase) {
+    return { data: fallbackCliftonStrengths, isLive: false };
+  }
+  try {
+    const { data, error } = await supabase
+      .from("dim_clifton_strength")
+      .select("*")
+      .order("domain", { ascending: true })
+      .order("strength_name", { ascending: true });
+    if (error || !data || data.length === 0) {
+      return { data: fallbackCliftonStrengths, isLive: false };
+    }
+    return { data: data as CliftonStrength[], isLive: true };
+  } catch {
+    return { data: fallbackCliftonStrengths, isLive: false };
+  }
+}
+
+export async function getCapabilities(): Promise<{ data: CapabilityItem[]; isLive: boolean }> {
+  if (!supabase) {
+    return { data: fallbackCapabilities, isLive: false };
+  }
+  try {
+    const { data, error } = await supabase
+      .from("dim_capability")
+      .select("*")
+      .order("capability_code", { ascending: true });
+    if (error || !data || data.length === 0) {
+      return { data: fallbackCapabilities, isLive: false };
+    }
+    return { data: data as CapabilityItem[], isLive: true };
+  } catch {
+    return { data: fallbackCapabilities, isLive: false };
+  }
+}
+
+export async function getRoleCapabilityRequirements(roleName?: string): Promise<{ data: RoleCapabilityRequirement[]; isLive: boolean }> {
+  if (!supabase) {
+    const filtered = roleName
+      ? fallbackRoleCapabilityRequirements.filter((r) => r.role_name.toLowerCase() === roleName.toLowerCase())
+      : fallbackRoleCapabilityRequirements;
+    return { data: filtered, isLive: false };
+  }
+  try {
+    let query = supabase.from("role_capability_requirement").select("*").eq("active_flag", true);
+    if (roleName) {
+      query = query.eq("role_name", roleName);
+    }
+    const { data, error } = await query.order("role_name", { ascending: true }).order("criticality_rank", { ascending: true });
+    if (error || !data || data.length === 0) {
+      const filtered = roleName
+        ? fallbackRoleCapabilityRequirements.filter((r) => r.role_name.toLowerCase() === roleName.toLowerCase())
+        : fallbackRoleCapabilityRequirements;
+      return { data: filtered, isLive: false };
+    }
+    return { data: data as RoleCapabilityRequirement[], isLive: true };
+  } catch {
+    const filtered = roleName
+      ? fallbackRoleCapabilityRequirements.filter((r) => r.role_name.toLowerCase() === roleName.toLowerCase())
+      : fallbackRoleCapabilityRequirements;
+    return { data: filtered, isLive: false };
+  }
+}
+
+export async function createCapability(payload: {
+  capability_code: string;
+  capability_name: string;
+  domain: string;
+  description: string;
+}): Promise<{ success: boolean; data?: CapabilityItem; error?: string }> {
+  if (!supabase) {
+    return { success: false, error: "Database client unavailable" };
+  }
+  try {
+    const { data, error } = await supabase
+      .from("dim_capability")
+      .insert([payload])
+      .select()
+      .single();
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true, data: data as CapabilityItem };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to create capability" };
+  }
+}
+
+export async function updateCapability(
+  capabilityId: string,
+  payload: Partial<CapabilityItem>
+): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) {
+    return { success: false, error: "Database client unavailable" };
+  }
+  try {
+    const { error } = await supabase
+      .from("dim_capability")
+      .update(payload)
+      .eq("capability_id", capabilityId);
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to update capability" };
+  }
+}
+
+export async function deleteCapability(capabilityId: string): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) {
+    return { success: false, error: "Database client unavailable" };
+  }
+  try {
+    const { error } = await supabase
+      .from("dim_capability")
+      .delete()
+      .eq("capability_id", capabilityId);
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to delete capability" };
+  }
+}
+
+export async function saveRoleCapabilityRequirements(
+  requirements: Array<{
+    role_name: string;
+    capability_code: string;
+    capability_name: string;
+    required_level: number;
+    weight: number;
+  }>
+): Promise<{ success: boolean; count?: number; error?: string }> {
+  if (!supabase) {
+    return { success: false, error: "Database client unavailable" };
+  }
+  try {
+    const { data, error } = await supabase
+      .from("role_capability_requirement")
+      .upsert(
+        requirements.map((r) => ({
+          role_name: r.role_name,
+          capability_code: r.capability_code,
+          capability_name: r.capability_name,
+          required_level: r.required_level,
+          weight: r.weight,
+          active_flag: true,
+          updated_at: new Date().toISOString(),
+        })),
+        { onConflict: "role_name,capability_code" }
+      )
+      .select();
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true, count: data?.length || requirements.length };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to save requirements" };
+  }
+}
+
 

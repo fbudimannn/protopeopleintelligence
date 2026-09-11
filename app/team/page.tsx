@@ -13,6 +13,7 @@ import {
   getTenureBands,
   getVoiceThemes,
   getMartRequisitions,
+  getRoleCapabilityRequirements,
 } from "@/lib/data/api";
 import {
   RetentionCohort,
@@ -23,6 +24,8 @@ import {
   VoiceTheme,
   fallbackRequisitions,
   fallbackEngagementSummaries,
+  RoleCapabilityRequirement,
+  fallbackRoleCapabilityRequirements,
 } from "@/lib/data/fixtures";
 import { KpiCard, SectionCard, LifecycleStrip, Chip } from "@/components/primitives";
 import { SimpleBar, ColoredBar, SimpleLine, StackedBarShare } from "@/components/charts";
@@ -39,6 +42,9 @@ import {
   getCitiesForProvince,
   getRegionCluster,
   getProvince,
+  CLIFTON_DOMAIN_MAP,
+  CLIFTON_DOMAIN_STYLES,
+  getRoleTier,
 } from "@/lib/data/mobilityEngine";
 import {
   Users,
@@ -83,6 +89,7 @@ function TeamContent() {
   const [exitEvents, setExitEvents] = useState<ExitEvent[]>([]);
   const [tenureBands, setTenureBands] = useState<TenureBand[]>([]);
   const [voiceThemes, setVoiceThemes] = useState<VoiceTheme[]>([]);
+  const [liveRoleRequirements, setLiveRoleRequirements] = useState<RoleCapabilityRequirement[]>(fallbackRoleCapabilityRequirements);
 
   // Global & Local page filters
   const {
@@ -174,7 +181,7 @@ function TeamContent() {
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const [cohortRes, engRes, mobRes, exitRes, bandRes, voiceRes, reqRes] = await Promise.all([
+      const [cohortRes, engRes, mobRes, exitRes, bandRes, voiceRes, reqRes, roleReqsRes] = await Promise.all([
         getRetentionCohorts(),
         getEngagementSummaries(),
         getInternalMobilityMatches(),
@@ -182,6 +189,7 @@ function TeamContent() {
         getTenureBands(),
         getVoiceThemes(),
         getMartRequisitions(),
+        getRoleCapabilityRequirements(),
       ]);
 
       setCohorts(cohortRes.data);
@@ -191,6 +199,7 @@ function TeamContent() {
       setTenureBands(bandRes.data);
       setVoiceThemes(voiceRes.data);
       setOpenRequisitions(reqRes.data);
+      setLiveRoleRequirements(roleReqsRes.data || fallbackRoleCapabilityRequirements);
       setLoading(false);
     }
 
@@ -461,18 +470,30 @@ function TeamContent() {
         (b) => b.role_name.toLowerCase() === rName
       );
       if (!matchedBenchmark) {
-        if (rName.includes("assistant") || rName.includes("acm")) {
-          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-acm");
-        } else if (rName.includes("pt") && rName.includes("leader")) {
-          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-pt-lead");
-        } else if (rName.includes("fc") && rName.includes("leader")) {
-          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-fc-lead");
-        } else if (rName.includes("fitness") && rName.includes("lead")) {
-          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-fit-lead");
-        } else if (rName.includes("sales") && rName.includes("lead")) {
-          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-sales-lead");
+        if (rName.includes("area") || rName.includes("agm")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-agm");
         } else if (rName.includes("club manager") || rName.includes("gm")) {
           matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-club-gm");
+        } else if (rName.includes("operation manager") || rName.includes("ops")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-ops-mgr");
+        } else if (rName.includes("cs leader") || rName.includes("customer service leader") || rName.includes("acm") || rName.includes("assistant")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-cs-lead");
+        } else if (rName.includes("pt master") || rName.includes("trainer master")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-pt-master");
+        } else if (rName.includes("pt leader") || (rName.includes("personal trainer") && rName.includes("lead"))) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-pt-lead");
+        } else if (rName.includes("fc leader") || (rName.includes("fitness consultant") && rName.includes("lead"))) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-fc-lead");
+        } else if (rName.includes("fitness manager") || (rName.includes("fitness") && rName.includes("lead"))) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-fit-mgr");
+        } else if (rName.includes("sales manager") || (rName.includes("sales") && rName.includes("lead"))) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-sales-mgr");
+        } else if (rName.includes("customer service")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-cs");
+        } else if (rName.includes("personal trainer")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-pt");
+        } else if (rName.includes("fitness consultant")) {
+          matchedBenchmark = targetRoleBenchmarks.find((b) => b.role_id === "role-fc");
         }
       }
 
@@ -603,6 +624,19 @@ function TeamContent() {
     });
   };
 
+  // Active capabilities list resolved live from Supabase or benchmark fallback
+  const activeCapabilitiesList = useMemo(() => {
+    const fromDb = liveRoleRequirements
+      .filter((r) => r.role_name.toLowerCase() === activeBenchmark.role_name.toLowerCase() && r.active_flag !== false)
+      .map((r) => ({
+        name: r.capability_name,
+        required_level: r.required_level,
+        weight: r.weight,
+        description: `Required Level ${r.required_level} mastery (${r.weight}%)`,
+      }));
+    return fromDb.length > 0 ? fromDb : activeBenchmark.required_capabilities;
+  }, [liveRoleRequirements, activeBenchmark]);
+
   // Raw Dynamic Matching Output from Frontline Matching Algorithm
   const dynamicMatchData = useMemo(() => {
     if (!hasRunEngine) {
@@ -632,6 +666,7 @@ function TeamContent() {
         psychometric: psychometricWeight,
         tenure: tenureWeight,
       },
+      dynamicCapabilities: activeCapabilitiesList,
     });
   }, [
     hasRunEngine,
@@ -646,6 +681,7 @@ function TeamContent() {
     psychometricWeight,
     tenureWeight,
     activeBenchmark,
+    activeCapabilitiesList,
   ]);
 
   const rawDynamicMatches = dynamicMatchData.results;
@@ -1794,11 +1830,30 @@ function TeamContent() {
                     onChange={(e) => handleSelectRequisition(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
                   >
-                    {leadOpenRequisitions.map((req) => (
-                      <option key={req.req_code || req.id} value={req.req_code || req.id}>
-                        {req.req_code || req.id} • {req.role_name || req.role} ({req.location_name || req.location}) — {req.days_open}d
-                      </option>
-                    ))}
+                    <optgroup label={`Local Leadership Requisitions (${targetLocation})`}>
+                      {leadOpenRequisitions
+                        .filter((r) => {
+                          const loc = r.location_name || (r as any).location || "";
+                          return loc.toLowerCase() === targetLocation.toLowerCase();
+                        })
+                        .map((req) => (
+                          <option key={req.req_code || req.id} value={req.req_code || req.id}>
+                            {req.req_code || req.id} • {req.role_name || req.role} ({req.location_name || req.location}) — {req.days_open}d
+                          </option>
+                        ))}
+                    </optgroup>
+                    <optgroup label="All National Leadership Requisitions">
+                      {leadOpenRequisitions
+                        .filter((r) => {
+                          const loc = r.location_name || (r as any).location || "";
+                          return loc.toLowerCase() !== targetLocation.toLowerCase();
+                        })
+                        .map((req) => (
+                          <option key={req.req_code || req.id} value={req.req_code || req.id}>
+                            {req.req_code || req.id} • {req.role_name || req.role} ({req.location_name || req.location}) — {req.days_open}d
+                          </option>
+                        ))}
+                    </optgroup>
                     <option value="CUSTOM">Custom Vacancy ({targetLocation})</option>
                   </select>
                 </div>
@@ -1813,11 +1868,26 @@ function TeamContent() {
                     onChange={(e) => handleBenchmarkRoleChange(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
                   >
-                    {targetRoleBenchmarks.map((b) => (
-                      <option key={b.role_id} value={b.role_id}>
-                        {b.role_name} ({b.job_family})
-                      </option>
-                    ))}
+                    <optgroup label="Tier 4 • Multi-Unit Executive">
+                      {targetRoleBenchmarks.filter((b) => getRoleTier(b.role_name) === 4).map((b) => (
+                        <option key={b.role_id} value={b.role_id}>{b.role_name} ({b.job_family})</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tier 3 • Club Management">
+                      {targetRoleBenchmarks.filter((b) => getRoleTier(b.role_name) === 3).map((b) => (
+                        <option key={b.role_id} value={b.role_id}>{b.role_name} ({b.job_family})</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tier 2 • Team Leaders & Specialists">
+                      {targetRoleBenchmarks.filter((b) => getRoleTier(b.role_name) === 2).map((b) => (
+                        <option key={b.role_id} value={b.role_id}>{b.role_name} ({b.job_family})</option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="Tier 1 • Frontline Staff">
+                      {targetRoleBenchmarks.filter((b) => getRoleTier(b.role_name) === 1).map((b) => (
+                        <option key={b.role_id} value={b.role_id}>{b.role_name} ({b.job_family})</option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
 
@@ -2202,16 +2272,24 @@ function TeamContent() {
                     {/* Role Required Competencies */}
                     <div className="lg:w-2/3 space-y-2">
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-ink-primary uppercase tracking-wider">
-                          Required Role Competencies (Derived vs Framework Target)
-                        </span>
-                        <span className="text-[11px] text-ink-tertiary">
-                          4 Core Pillars Evaluated
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-ink-primary uppercase tracking-wider">
+                            Required Role Competencies (Live Supabase Framework)
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-teal/15 text-brand-teal border border-brand-teal/30">
+                            {activeCapabilitiesList.length} Core Pillars
+                          </span>
+                        </div>
+                        <Link
+                          href="/team/capability/framework"
+                          className="text-[11px] text-brand-teal hover:underline font-semibold flex items-center gap-1"
+                        >
+                          <span>Edit Matrix & Levels →</span>
+                        </Link>
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                        {activeBenchmark.required_capabilities.map((cap) => (
+                        {activeCapabilitiesList.map((cap) => (
                           <div
                             key={cap.name}
                             className="p-3 rounded-lg bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all"
@@ -2227,8 +2305,11 @@ function TeamContent() {
                             <p className="text-[11px] text-ink-secondary leading-normal mb-1.5">
                               {cap.description}
                             </p>
-                            <div className="text-[10px] font-semibold text-ink-tertiary">
-                              Weight: {cap.weight}%
+                            <div className="flex items-center justify-between text-[10px] font-semibold text-ink-tertiary">
+                              <span>Weight: {cap.weight}%</span>
+                              <span className="text-brand-teal">
+                                Baseline Median: L{derivedBaseline?.capabilities?.[cap.name] || cap.required_level}
+                              </span>
                             </div>
                           </div>
                         ))}
@@ -2532,6 +2613,47 @@ ORDER BY match_rate_pct DESC;`}
                               </p>
                             </div>
 
+                            {/* Anti-Lompat / Governance Warning if candidate jumped tiers */}
+                            {c.career_tier_warning && (
+                              <div className="mt-2.5 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300 font-medium flex items-start gap-1.5">
+                                <AlertTriangle className="w-3.5 h-3.5 text-amber-400 flex-shrink-0 mt-0.5" />
+                                <span>{c.career_tier_warning}</span>
+                              </div>
+                            )}
+
+                            {/* Gallup CliftonStrengths Top 5 Profile */}
+                            <div className="mt-2.5">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="text-[10px] font-semibold text-ink-tertiary block">
+                                  Gallup CliftonStrengths:
+                                </span>
+                                <span className="text-[9px] font-bold text-brand-teal">
+                                  {c.matching_strengths?.length ?? 0}/5 Overlap with Benchmark
+                                </span>
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {(c.strengths || []).map((st) => {
+                                  const isMatch = c.matching_strengths?.includes(st);
+                                  const domain = CLIFTON_DOMAIN_MAP[st] || "Executing";
+                                  const style = CLIFTON_DOMAIN_STYLES[domain];
+                                  return (
+                                    <span
+                                      key={st}
+                                      className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border flex items-center gap-1 ${
+                                        isMatch
+                                          ? `${style.bg} ${style.text} ${style.border} ring-1 ring-brand-teal shadow-xs font-bold`
+                                          : `bg-surface-ground text-ink-secondary border-surface-border`
+                                      }`}
+                                      title={`${st} (${domain}) ${isMatch ? "• Matches Top Performer Baseline" : ""}`}
+                                    >
+                                      {isMatch && <Sparkles className="w-2.5 h-2.5 text-brand-teal flex-shrink-0" />}
+                                      <span>{st}</span>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
                             {/* Critical Gap Notice */}
                             <div className="mt-2">
                               <span className="text-[10px] font-semibold text-ink-tertiary block mb-0.5">
@@ -2806,7 +2928,7 @@ ORDER BY match_rate_pct DESC;`}
                 </div>
 
                 <div className="space-y-2">
-                  {activeBenchmark.required_capabilities.map((cap) => {
+                  {activeCapabilitiesList.map((cap) => {
                     const gap = selectedDynamicCandidate.critical_gaps.find(
                       (g) => g.capability === cap.name
                     );
@@ -2868,19 +2990,56 @@ ORDER BY match_rate_pct DESC;`}
                 </div>
               </div>
 
+              {/* Anti-Lompat Warning in Modal if applicable */}
+              {selectedDynamicCandidate.career_tier_warning && (
+                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 font-medium flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block mb-0.5">HR Governance Block (Anti-Lompat Policy):</span>
+                    <span>{selectedDynamicCandidate.career_tier_warning}</span>
+                  </div>
+                </div>
+              )}
+
               {/* Strengths & Transition Plan */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border">
-                  <span className="font-bold text-ink-primary block mb-1">
-                    Demonstrated Frontline Strength
+                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border space-y-2">
+                  <span className="font-bold text-ink-primary block text-xs">
+                    Demonstrated Frontline Strength & CliftonStrengths
                   </span>
                   <p className="text-xs text-ink-secondary leading-relaxed">
                     {selectedDynamicCandidate.top_strength}
                   </p>
+
+                  <div className="pt-2 border-t border-surface-border/60">
+                    <span className="text-[10px] font-bold text-ink-tertiary uppercase block mb-1">
+                      Gallup CliftonStrengths Profile:
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {(selectedDynamicCandidate.strengths || []).map((st) => {
+                        const isMatch = selectedDynamicCandidate.matching_strengths?.includes(st);
+                        const domain = CLIFTON_DOMAIN_MAP[st] || "Executing";
+                        const style = CLIFTON_DOMAIN_STYLES[domain];
+                        return (
+                          <span
+                            key={st}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-semibold border flex items-center gap-1 ${
+                              isMatch
+                                ? `${style.bg} ${style.text} ${style.border} ring-1 ring-brand-teal shadow-xs font-bold`
+                                : `bg-surface-card text-ink-secondary border-surface-border`
+                            }`}
+                          >
+                            {isMatch && <Sparkles className="w-2.5 h-2.5 text-brand-teal flex-shrink-0" />}
+                            <span>{st}</span>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="p-3 rounded-xl bg-surface-ground border border-surface-border">
-                  <span className="font-bold text-ink-primary block mb-1">
+                  <span className="font-bold text-ink-primary block mb-1 text-xs">
                     10-Day Handover & Transition Protocol
                   </span>
                   <p className="text-xs text-ink-secondary leading-relaxed">
