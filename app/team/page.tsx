@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useFilters, matchLocationHierarchy, formatPeriodLabel } from "@/lib/context/FilterContext";
+import { useFilters, matchLocationHierarchy, matchRoleHierarchy, matchPeriod, formatPeriodLabel } from "@/lib/context/FilterContext";
 import DataProvenanceBadge from "@/components/DataProvenanceBadge";
 import {
   getRetentionCohorts,
@@ -22,6 +22,7 @@ import {
   TenureBand,
   VoiceTheme,
   fallbackRequisitions,
+  fallbackEngagementSummaries,
 } from "@/lib/data/fixtures";
 import { KpiCard, SectionCard, LifecycleStrip, Chip } from "@/components/primitives";
 import { SimpleBar, ColoredBar, SimpleLine, StackedBarShare } from "@/components/charts";
@@ -89,6 +90,7 @@ function TeamContent() {
     provinceFilter,
     cityFilter,
     locationFilter,
+    jobFamilyFilter,
     roleFilter,
     period: selectedPeriod,
   } = useFilters();
@@ -99,6 +101,14 @@ function TeamContent() {
     if (clusterFilter !== "ALL") return `${clusterFilter}`;
     return "All Locations";
   }, [clusterFilter, provinceFilter, cityFilter]);
+
+  const roleDisplay = useMemo(() => {
+    if (roleFilter !== "ALL" && jobFamilyFilter !== "ALL") return `${roleFilter} (${jobFamilyFilter})`;
+    if (roleFilter !== "ALL") return roleFilter;
+    if (jobFamilyFilter !== "ALL") return jobFamilyFilter;
+    return "All Roles";
+  }, [jobFamilyFilter, roleFilter]);
+
   const selectedRole = roleFilter === "ALL" ? "All Roles" : roleFilter;
   const [riskFilter, setRiskFilter] = useState<"ALL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
   const [readinessFilter, setReadinessFilter] = useState<"ALL" | "Ready" | "Near Ready" | "Development Needed">("ALL");
@@ -160,31 +170,6 @@ function TeamContent() {
     return "onboarding";
   }, [activeTab]);
 
-  // Dynamic Tenure Band Metrics for Callouts
-  const earlyCliffBands = useMemo(() => {
-    return tenureBands.filter((b) => b.band_label.includes("0 to 3") || b.band_label.includes("4 to 6"));
-  }, [tenureBands]);
-
-  const earlyCliffPct = useMemo(() => {
-    if (earlyCliffBands.length > 0) {
-      return earlyCliffBands.reduce((acc, b) => acc + (b.pct_of_exits || 0), 0);
-    }
-    return 42.7;
-  }, [earlyCliffBands]);
-
-  const earlyCliffCount = useMemo(() => {
-    if (earlyCliffBands.length > 0) {
-      return earlyCliffBands.reduce((acc, b) => acc + (b.exit_count || 0), 0);
-    }
-    return 380;
-  }, [earlyCliffBands]);
-
-  const midTenureBand = useMemo(() => {
-    return tenureBands.find((b) => b.band_label.includes("13 to 18")) || tenureBands[3];
-  }, [tenureBands]);
-
-  const midTenurePct = midTenureBand?.pct_of_exits || 21.9;
-  const midTenureCount = midTenureBand?.exit_count || 195;
 
   useEffect(() => {
     async function loadData() {
@@ -217,27 +202,8 @@ function TeamContent() {
     return matchLocationHierarchy(itemLoc, clusterFilter, provinceFilter, cityFilter);
   };
 
-  const matchesRole = (itemRole: string, filterRole: string) => {
-    if (filterRole === "All Roles" || filterRole === "ALL") return true;
-    if (!itemRole) return false;
-    if (itemRole === filterRole) return true;
-    const lowerItem = itemRole.toLowerCase();
-    if (filterRole === "Fitness / Coaching") {
-      return lowerItem.includes("trainer") || lowerItem.includes("fitness");
-    }
-    if (filterRole === "Sales / Membership") {
-      return lowerItem.includes("consultant") || lowerItem.includes("sales");
-    }
-    if (filterRole === "Customer Service") {
-      return lowerItem.includes("customer service") || lowerItem.includes("front desk");
-    }
-    if (filterRole === "Operations Support") {
-      return lowerItem.includes("housekeeping");
-    }
-    if (filterRole === "Club Management") {
-      return lowerItem.includes("manager") || lowerItem.includes("manajerial");
-    }
-    return lowerItem.includes(filterRole.toLowerCase());
+  const matchesRole = (itemRole: string) => {
+    return matchRoleHierarchy(itemRole, jobFamilyFilter, roleFilter);
   };
 
   // Filtered Cohorts
@@ -246,7 +212,10 @@ function TeamContent() {
       if (!matchesLocation(c.location_name)) {
         return false;
       }
-      if (!matchesRole(c.role_name, selectedRole)) {
+      if (!matchesRole(c.role_name)) {
+        return false;
+      }
+      if (!matchPeriod((c as any).period_year || (c as any).join_date, selectedPeriod, c.cohort_id)) {
         return false;
       }
       if (riskFilter !== "ALL" && c.risk_level !== riskFilter) {
@@ -262,11 +231,80 @@ function TeamContent() {
       }
       return true;
     });
-  }, [cohorts, clusterFilter, provinceFilter, cityFilter, selectedRole, riskFilter, searchQuery]);
+  }, [cohorts, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter, selectedPeriod, riskFilter, searchQuery]);
+
+  // Filtered Exit Events based on active Location, Role, and Date
+  const filteredExitEvents = useMemo(() => {
+    return exitEvents.filter((evt) => {
+      const locMatch = matchLocationHierarchy(evt.location_name, clusterFilter, provinceFilter, cityFilter);
+      const roleMatch = matchRoleHierarchy(evt.role_name, jobFamilyFilter, roleFilter);
+      const periodMatch = matchPeriod(evt.exit_date, selectedPeriod, evt.exit_code);
+      return locMatch && roleMatch && periodMatch;
+    });
+  }, [exitEvents, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter, selectedPeriod]);
+
+  // Dynamic Tenure Bands computed directly from filtered exit events
+  const dynamicTenureBands = useMemo(() => {
+    if (filteredExitEvents.length === 0) return tenureBands;
+
+    const b1 = filteredExitEvents.filter((e) => e.tenure_months <= 3).length;
+    const b2 = filteredExitEvents.filter((e) => e.tenure_months > 3 && e.tenure_months <= 6).length;
+    const b3 = filteredExitEvents.filter((e) => e.tenure_months > 6 && e.tenure_months <= 12).length;
+    const b4 = filteredExitEvents.filter((e) => e.tenure_months > 12 && e.tenure_months <= 18).length;
+    const b5 = filteredExitEvents.filter((e) => e.tenure_months > 18).length;
+    const total = filteredExitEvents.length;
+
+    const counts = [b1, b2, b3, b4, b5];
+    let cumulative = 0;
+    return tenureBands.map((band, idx) => {
+      const count = counts[idx] ?? band.exit_count;
+      const pct = total > 0 ? Math.round((count / total) * 1000) / 10 : band.pct_of_exits;
+      cumulative += pct;
+      return {
+        ...band,
+        exit_count: count,
+        pct_of_exits: pct,
+        cumulative_pct: Math.min(100, Math.round(cumulative * 10) / 10),
+      };
+    });
+  }, [tenureBands, filteredExitEvents]);
+
+  // Dynamic Tenure Band Metrics for Callouts
+  const earlyCliffBands = useMemo(() => {
+    return dynamicTenureBands.filter((b) => b.band_label.includes("0 to 3") || b.band_label.includes("4 to 6"));
+  }, [dynamicTenureBands]);
+
+  const earlyCliffPct = useMemo(() => {
+    if (earlyCliffBands.length > 0) {
+      return Math.round(earlyCliffBands.reduce((acc, b) => acc + (b.pct_of_exits || 0), 0) * 10) / 10;
+    }
+    return 42.7;
+  }, [earlyCliffBands]);
+
+  const earlyCliffCount = useMemo(() => {
+    if (earlyCliffBands.length > 0) {
+      return earlyCliffBands.reduce((acc, b) => acc + (b.exit_count || 0), 0);
+    }
+    return 380;
+  }, [earlyCliffBands]);
+
+  const midTenureBand = useMemo(() => {
+    return dynamicTenureBands.find((b) => b.band_label.includes("13 to 18")) || dynamicTenureBands[3];
+  }, [dynamicTenureBands]);
+
+  const midTenurePct = midTenureBand?.pct_of_exits || 21.9;
+  const midTenureCount = midTenureBand?.exit_count || 195;
 
   // Dynamic Team KPIs based on active location & role filters
   const teamKpis = useMemo(() => {
-    const isFiltered = selectedLocation !== "All Locations";
+    const isFiltered =
+      clusterFilter !== "ALL" ||
+      provinceFilter !== "ALL" ||
+      cityFilter !== "ALL" ||
+      jobFamilyFilter !== "ALL" ||
+      roleFilter !== "ALL" ||
+      selectedPeriod !== "ALL_TIME";
+
     const headcount = isFiltered
       ? Math.max(14, Math.round(filteredCohorts.reduce((acc, c) => acc + c.headcount, 0) * 0.8))
       : 408;
@@ -285,7 +323,63 @@ function TeamContent() {
       earlyAttrition: Math.round(earlyAttrition * 10) / 10,
       isFiltered,
     };
-  }, [filteredCohorts, selectedLocation]);
+  }, [filteredCohorts, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter, selectedPeriod]);
+
+  // Dynamic Engagement based on active location & role filters
+  const dynamicEngagement = useMemo(() => {
+    // 1. Try exact or hierarchy match on location and role
+    const matched = engagements.find((e) => {
+      const locMatch = matchLocationHierarchy(e.location_name, clusterFilter, provinceFilter, cityFilter);
+      const roleMatch = matchRoleHierarchy(e.role_name, jobFamilyFilter, roleFilter);
+      return locMatch && roleMatch;
+    });
+
+    // 2. Fallback to location-only match
+    const locOnly = matched || engagements.find((e) => {
+      return matchLocationHierarchy(e.location_name, clusterFilter, provinceFilter, cityFilter);
+    });
+
+    // 3. Fallback to role-only match
+    const roleOnly = locOnly || engagements.find((e) => {
+      return matchRoleHierarchy(e.role_name, jobFamilyFilter, roleFilter);
+    });
+
+    const active = roleOnly || engagements[0] || fallbackEngagementSummaries[0];
+
+    const isFiltered =
+      clusterFilter !== "ALL" ||
+      provinceFilter !== "ALL" ||
+      cityFilter !== "ALL" ||
+      jobFamilyFilter !== "ALL" ||
+      roleFilter !== "ALL";
+
+    const totalRespondents = isFiltered
+      ? Math.max(28, Math.round(active.promoter_pct * 1.8 + active.passive_pct * 1.4 + active.detractor_pct * 1.2))
+      : 1234;
+
+    const promoterCount = Math.round((active.promoter_pct / 100) * totalRespondents);
+    const detractorCount = Math.round((active.detractor_pct / 100) * totalRespondents);
+    const passiveCount = totalRespondents - promoterCount - detractorCount;
+
+    return {
+      active,
+      enps: active.enps_score,
+      totalRespondents,
+      segments: [
+        { label: "Promoters (Score 9-10)", value: promoterCount, pct: active.promoter_pct, color: "#2E8B57" },
+        { label: "Passives (Score 7-8)", value: passiveCount, pct: active.passive_pct, color: "#C99400" },
+        { label: "Detractors (Score 0-6)", value: detractorCount, pct: active.detractor_pct, color: "#C65353" },
+      ],
+      dimensionScores: [
+        { label: "Organisation Alignment", value: active.organisation_alignment_score, color: "#2E8B57" },
+        { label: "Supportive Workplace", value: active.supportive_workplace_score, color: active.supportive_workplace_score < 5.0 ? "#C65353" : "#23C9D3" },
+        { label: "Work Clarity", value: active.work_clarity_score, color: "#23C9D3" },
+        { label: "Fair Performance", value: active.fair_performance_score, color: active.fair_performance_score < 5.0 ? "#C65353" : "#23C9D3" },
+        { label: "Career Growth", value: active.career_growth_score, color: active.career_growth_score < 5.1 ? "#C65353" : "#23C9D3" },
+        { label: "Compensation & Benefit", value: active.compensation_benefit_score, color: "#C65353" },
+      ],
+    };
+  }, [engagements, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter]);
 
   // Active Target Benchmark for Dynamic Mobility Engine
   const activeBenchmark = useMemo(() => {
@@ -316,8 +410,15 @@ function TeamContent() {
         allLeads.push(fb);
       }
     });
-    return allLeads;
-  }, [openRequisitions]);
+
+    const matchedLeads = allLeads.filter((r) => {
+      const loc = r.location_name || (r as any).location || "";
+      const locMatch = matchLocationHierarchy(loc, clusterFilter, provinceFilter, cityFilter);
+      return locMatch;
+    });
+
+    return matchedLeads.length > 0 ? matchedLeads : allLeads;
+  }, [openRequisitions, clusterFilter, provinceFilter, cityFilter]);
 
   // Sync initial lead requisition if current is not lead
   useEffect(() => {
@@ -909,7 +1010,7 @@ function TeamContent() {
           <Filter className="w-3.5 h-3.5 text-brand-teal" />
           <span className="font-medium text-ink-primary">{locationDisplay}</span>
           <span>|</span>
-          <span className="font-medium text-ink-primary">{selectedRole}</span>
+          <span className="font-medium text-ink-primary">{roleDisplay}</span>
           <span>|</span>
           <span className="text-ink-tertiary">{formatPeriodLabel(selectedPeriod)}</span>
         </div>
@@ -1318,7 +1419,7 @@ function TeamContent() {
 
             {/* Stepped Tenure Band Cards */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3 my-6">
-              {tenureBands.map((band, idx) => (
+              {dynamicTenureBands.map((band, idx) => (
                 <div
                   key={band.band_label}
                   className={`p-4 rounded-xl border relative transition-all ${
@@ -1361,7 +1462,7 @@ function TeamContent() {
             <div className="my-6 p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
               <span className="label-xs text-ink-secondary block mb-3">Tenure Interval Distribution (% of Exits)</span>
               <ColoredBar
-                data={tenureBands.map((band, idx) => ({
+                data={dynamicTenureBands.map((band, idx) => ({
                   label: band.band_label,
                   value: band.pct_of_exits,
                   color: idx <= 1 ? "#C65353" : idx === 3 ? "#C99400" : "#23C9D3",
@@ -1430,7 +1531,7 @@ function TeamContent() {
                   <span>Voice of Employee Sentiment & eNPS Explorer</span>
                 </h2>
                 <p className="text-xs text-ink-secondary mt-0.5">
-                  1,234 respondents across 13 gym clubs evaluated FIT HUB across 6 operational dimensions.
+                  {dynamicEngagement.totalRespondents} respondents across {locationDisplay} evaluated FIT HUB across 6 operational dimensions.
                 </p>
               </div>
 
@@ -1447,12 +1548,14 @@ function TeamContent() {
                 <div className="flex items-center gap-4 p-3 rounded-xl bg-surface-ground border border-surface-border">
                   <div className="text-right">
                     <span className="text-[11px] text-ink-tertiary block">Net eNPS Score</span>
-                    <span className="text-2xl font-display font-black text-status-healthy">+56.6</span>
+                    <span className={`text-2xl font-display font-black ${dynamicEngagement.enps >= 50 ? "text-status-healthy" : dynamicEngagement.enps >= 30 ? "text-brand-teal" : "text-status-attention"}`}>
+                      {dynamicEngagement.enps >= 0 ? `+${dynamicEngagement.enps.toFixed(1)}` : dynamicEngagement.enps.toFixed(1)}
+                    </span>
                   </div>
                   <div className="text-xs text-ink-secondary border-l border-surface-border pl-3">
-                    <div>Promoters: <strong className="text-status-healthy">68.0%</strong></div>
-                    <div>Passives: <strong>20.6%</strong></div>
-                    <div>Detractors: <strong className="text-status-danger">11.4%</strong></div>
+                    <div>Promoters: <strong className="text-status-healthy">{dynamicEngagement.active.promoter_pct.toFixed(1)}%</strong></div>
+                    <div>Passives: <strong>{dynamicEngagement.active.passive_pct.toFixed(1)}%</strong></div>
+                    <div>Detractors: <strong className="text-status-danger">{dynamicEngagement.active.detractor_pct.toFixed(1)}%</strong></div>
                   </div>
                 </div>
               </div>
@@ -1465,32 +1568,26 @@ function TeamContent() {
                 <strong className="text-ink-primary block mb-0.5">
                   Analytical Governance Disclosure: Survivorship Bias in eNPS
                 </strong>
-                While a +56.6 net eNPS reflects high brand pride and camaraderie, the survey was administered only to active employees. Dissatisfied frontline staff departed prior to survey rollout (57.4% exiting in Year 1). True organizational sentiment must be interpreted in conjunction with turnover data.
+                While a {dynamicEngagement.enps >= 0 ? `+${dynamicEngagement.enps.toFixed(1)}` : dynamicEngagement.enps.toFixed(1)} net eNPS reflects high brand pride and camaraderie, the survey was administered only to active employees. Dissatisfied frontline staff departed prior to survey rollout (57.4% exiting in Year 1). True organizational sentiment must be interpreted in conjunction with turnover data.
               </div>
             </div>
 
             {/* Visual Recharts eNPS Share & Dimensions Chart */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
               <div className="p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
-                <span className="label-xs text-ink-secondary block mb-3">eNPS Voter Distribution (Net +56.6)</span>
+                <span className="label-xs text-ink-secondary block mb-3">
+                  eNPS Voter Distribution (Net {dynamicEngagement.enps >= 0 ? `+${dynamicEngagement.enps.toFixed(1)}` : dynamicEngagement.enps.toFixed(1)})
+                </span>
                 <StackedBarShare
-                  segments={[
-                    { label: "Promoters (Score 9-10)", value: 839, pct: 68.0, color: "#2E8B57" },
-                    { label: "Passives (Score 7-8)", value: 254, pct: 20.6, color: "#C99400" },
-                    { label: "Detractors (Score 0-6)", value: 141, pct: 11.4, color: "#C65353" },
-                  ]}
-                  totalLabel="1,234 Active Survey Respondents"
+                  segments={dynamicEngagement.segments}
+                  totalLabel={`${dynamicEngagement.totalRespondents} Active Survey Respondents (${locationDisplay} • ${roleDisplay})`}
                 />
               </div>
 
               <div className="p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
                 <span className="label-xs text-ink-secondary block mb-3">Dimension Scores (Out of 6.00 Scale)</span>
                 <ColoredBar
-                  data={voiceThemes.map((v) => ({
-                    label: v.dimension_name,
-                    value: v.score,
-                    color: v.sentiment === "CONCERN" ? "#C65353" : v.sentiment === "POSITIVE" ? "#2E8B57" : "#23C9D3",
-                  }))}
+                  data={dynamicEngagement.dimensionScores}
                   dataKey="value"
                   categoryKey="label"
                   horizontal={true}
@@ -1505,11 +1602,17 @@ function TeamContent() {
               6 Core Workplace Dimensions (Out of 6.00 Scale)
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 mb-6">
-              {voiceThemes.map((v) => (
+              {voiceThemes.map((v) => {
+                const dimScore = dynamicEngagement.dimensionScores.find((d) =>
+                  d.label.toLowerCase().includes(v.dimension_name.toLowerCase().slice(0, 5))
+                )?.value ?? v.score;
+                const isConcern = dimScore < 5.0 || v.sentiment === "CONCERN";
+
+                return (
                 <div
                   key={v.dimension_name}
                   className={`p-4 rounded-xl border transition-all flex flex-col justify-between ${
-                    v.sentiment === "CONCERN"
+                    isConcern
                       ? "bg-status-danger/5 border-status-danger/30 shadow-subtle"
                       : "bg-surface-ground border-surface-border"
                   }`}
@@ -1520,13 +1623,13 @@ function TeamContent() {
                         {v.dimension_name}
                       </span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        v.sentiment === "CONCERN"
+                        isConcern
                           ? "bg-status-danger/20 text-status-danger"
-                          : v.sentiment === "POSITIVE"
+                          : dimScore >= 5.5
                           ? "bg-status-healthy/20 text-status-healthy"
                           : "bg-status-attention/20 text-status-attention"
                       }`}>
-                        {v.score} / 6.00
+                        {dimScore.toFixed(2)} / 6.00
                       </span>
                     </div>
 
@@ -1544,8 +1647,9 @@ function TeamContent() {
                     {v.strategic_action}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </div>
           </div>
         </div>
       )}
@@ -2479,7 +2583,14 @@ ORDER BY match_rate_pct DESC;`}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-border">
-                  {exitEvents.map((evt) => (
+                  {filteredExitEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-ink-tertiary">
+                        No exit interview records match the active location ({locationDisplay}), role ({roleDisplay}), and period ({formatPeriodLabel(selectedPeriod)}) filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredExitEvents.map((evt) => (
                     <tr key={evt.exit_code} className="hover:bg-surface-elevated/70 transition-colors">
                       <td className="py-3 px-4 font-mono font-bold text-status-danger">
                         {evt.exit_code}
@@ -2532,7 +2643,7 @@ ORDER BY match_rate_pct DESC;`}
                         </Link>
                       </td>
                     </tr>
-                  ))}
+                  )))}
                 </tbody>
               </table>
             </div>

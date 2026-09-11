@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { usePathname } from "next/navigation";
-import { useFilters, PeriodOption } from "@/lib/context/FilterContext";
+import { useFilters, PeriodOption, JOB_FAMILIES } from "@/lib/context/FilterContext";
 import DataProvenanceBadge, { ProvenanceType } from "./DataProvenanceBadge";
 import {
   Menu,
@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   Database,
   Code2,
+  UserCheck,
 } from "lucide-react";
 
 export default function TopHeader() {
@@ -23,8 +24,11 @@ export default function TopHeader() {
   const {
     period,
     setPeriod,
+    jobFamilyFilter,
+    setJobFamilyFilter,
     roleFilter,
     setRoleFilter,
+    availableRoles,
     clusterFilter,
     setClusterFilter,
     provinceFilter,
@@ -223,29 +227,34 @@ export default function TopHeader() {
                 <Building2 className={iconClass} />
               </div>
 
-              {/* Role Segment Selector */}
+              {/* Job Family Selector */}
+              <div className="relative">
+                <select
+                  value={jobFamilyFilter}
+                  onChange={(e) => setJobFamilyFilter(e.target.value)}
+                  className={`${selectClass} max-w-[150px]`}
+                >
+                  <option value="ALL">All Families</option>
+                  {JOB_FAMILIES.map((fam) => (
+                    <option key={fam} value={fam}>{fam}</option>
+                  ))}
+                </select>
+                <Briefcase className={iconClass} />
+              </div>
+
+              {/* Specific Role Selector */}
               <div className="relative">
                 <select
                   value={roleFilter}
                   onChange={(e) => setRoleFilter(e.target.value)}
-                  className={`${selectClass} max-w-[160px]`}
+                  className={`${selectClass} max-w-[155px]`}
                 >
                   <option value="ALL">All Roles</option>
-                  <optgroup label="5 Job Families">
-                    <option value="Fitness / Coaching">Fitness / Coaching</option>
-                    <option value="Sales / Membership">Sales / Membership</option>
-                    <option value="Customer Service">Customer Service (Family)</option>
-                    <option value="Operations Support">Operations Support</option>
-                    <option value="Club Management">Club Management</option>
-                  </optgroup>
-                  <optgroup label="Frontline & Key Roles">
-                    <option value="Personal Trainer">Personal Trainer</option>
-                    <option value="Fitness Consultant">Fitness Consultant</option>
-                    <option value="Housekeeping">Housekeeping</option>
-                    <option value="Manajerial Club">Manajerial Club</option>
-                  </optgroup>
+                  {availableRoles.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
                 </select>
-                <Briefcase className={iconClass} />
+                <UserCheck className={iconClass} />
               </div>
             </div>
           )}

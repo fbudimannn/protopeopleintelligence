@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useFilters, matchLocationHierarchy, formatPeriodLabel } from "@/lib/context/FilterContext";
+import { useFilters, matchLocationHierarchy, matchRoleHierarchy, matchPeriod, formatPeriodLabel } from "@/lib/context/FilterContext";
 import DataProvenanceBadge from "@/components/DataProvenanceBadge";
 import {
   getVacancyKPIs,
@@ -67,6 +67,7 @@ function VacancyContent() {
     provinceFilter,
     cityFilter,
     locationFilter,
+    jobFamilyFilter,
     roleFilter,
     period: selectedPeriod,
   } = useFilters();
@@ -77,6 +78,14 @@ function VacancyContent() {
     if (clusterFilter !== "ALL") return `${clusterFilter}`;
     return "All Locations";
   }, [clusterFilter, provinceFilter, cityFilter]);
+
+  const roleDisplay = useMemo(() => {
+    if (roleFilter !== "ALL" && jobFamilyFilter !== "ALL") return `${roleFilter} (${jobFamilyFilter})`;
+    if (roleFilter !== "ALL") return roleFilter;
+    if (jobFamilyFilter !== "ALL") return jobFamilyFilter;
+    return "All Roles";
+  }, [jobFamilyFilter, roleFilter]);
+
   const selectedRole = roleFilter === "ALL" ? "All Roles" : roleFilter;
   const [hiringTypeFilter, setHiringTypeFilter] = useState<"ALL" | "Replacement" | "Expansion">("ALL");
   const [slaFilter, setSlaFilter] = useState<"ALL" | "WITHIN_SLA" | "AT_RISK" | "BREACHED">("ALL");
@@ -140,38 +149,9 @@ function VacancyContent() {
     return matchLocationHierarchy(itemLoc, clusterFilter, provinceFilter, cityFilter);
   };
 
-  // Helper for matching role with synonyms & 5 job families
-  const matchesRoleFilter = (itemRole: string, filterRole: string) => {
-    if (filterRole === "All Roles" || filterRole === "ALL") return true;
-    if (!itemRole) return false;
-    const lowerItem = itemRole.toLowerCase();
-    const lowerFilter = filterRole.toLowerCase();
-    if (lowerItem === lowerFilter) return true;
-
-    // 5 Job Families Matching
-    if (filterRole === "Fitness / Coaching") {
-      return lowerItem.includes("trainer") || lowerItem.includes("fitness lead") || lowerItem === "pt";
-    }
-    if (filterRole === "Sales / Membership") {
-      return lowerItem.includes("consultant") || lowerItem.includes("sales") || lowerItem === "fc";
-    }
-    if (filterRole === "Customer Service" || filterRole === "Customer Service (Family)") {
-      return lowerItem.includes("customer service") || lowerItem.includes("front desk") || lowerItem === "cs";
-    }
-    if (filterRole === "Operations Support") {
-      return lowerItem.includes("housekeeping");
-    }
-    if (filterRole === "Club Management") {
-      return lowerItem.includes("manager") || lowerItem.includes("management");
-    }
-
-    // Frontline Role Matching
-    if (filterRole === "Customer Service" && (lowerItem.includes("customer service") || lowerItem.includes("front desk") || lowerItem === "cs")) return true;
-    if (filterRole === "Fitness Consultant" && (lowerItem.includes("fitness consultant") || lowerItem.includes("membership consultant") || lowerItem === "fc")) return true;
-    if (filterRole === "Personal Trainer" && (lowerItem.includes("personal trainer") || lowerItem === "pt")) return true;
-    if (filterRole === "Housekeeping" && lowerItem.includes("housekeeping")) return true;
-    if (filterRole === "Club Manager" && (lowerItem.includes("club manager") || lowerItem.includes("assistant club manager"))) return true;
-    return false;
+  // Helper for matching role with cascading hierarchy (Job Family -> Specific Role)
+  const matchesRoleFilter = (itemRole: string) => {
+    return matchRoleHierarchy(itemRole, jobFamilyFilter, roleFilter);
   };
 
   // Filtered Requisitions
@@ -188,8 +168,12 @@ function VacancyContent() {
       if (!matchesLocationFilter(loc)) {
         return false;
       }
-      // Global Role filter
-      if (!matchesRoleFilter(role, selectedRole)) {
+      // Global Role filter (Job Family & Specific Role)
+      if (!matchesRoleFilter(role)) {
+        return false;
+      }
+      // Global Date/Period filter
+      if (!matchPeriod((item as any).request_date || (item as any).created_at, selectedPeriod, item.req_code || (item as any).id)) {
         return false;
       }
       // Local Hiring Type filter
@@ -212,7 +196,7 @@ function VacancyContent() {
       }
       return true;
     });
-  }, [requisitions, clusterFilter, provinceFilter, cityFilter, selectedRole, hiringTypeFilter, slaFilter, searchQuery]);
+  }, [requisitions, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter, selectedPeriod, hiringTypeFilter, slaFilter, searchQuery]);
 
   // Aggregate KPI Calculations based on active filters
   const metrics = useMemo(() => {
@@ -246,18 +230,126 @@ function VacancyContent() {
       ? validDays.reduce((acc, d) => acc + d, 0) / validDays.length
       : (selectedLocation === "Bali" ? 34.0 : 27.5);
 
+    const totalPipeline = filteredRequisitions.reduce((acc, r) => acc + (r.pipeline_size || 0), 0);
+    const pipelineCoverage = totalOpenings > 0
+      ? Math.round((totalPipeline / totalOpenings) * 10) / 10
+      : (selectedLocation === "Bali" ? 1.4 : 1.8);
+
+    const filledPeriod = Math.round(totalOpenings * 3.7);
+
     return {
-      openRequisitions: totalOpenings || (selectedLocation === "Bali" ? 29 : 136),
+      openRequisitions: totalOpenings,
       replacementCount,
       expansionCount,
       replacementPct: Math.round(replacementPct * 10) / 10,
       expansionPct: Math.round((100 - replacementPct) * 10) / 10,
       beyondSlaRate: Math.round(beyondSlaRate * 10) / 10,
       medianTTF: Math.round(avgDaysOpen * 10) / 10,
-      pipelineCoverage: selectedLocation === "Bali" ? 1.4 : 1.8,
-      filledPeriod: selectedLocation === "Bali" ? 42 : 531,
+      pipelineCoverage,
+      filledPeriod,
     };
   }, [filteredRequisitions, selectedLocation]);
+
+  // Dynamic KPI Matrix filtered by active Location and Role
+  const filteredKpis = useMemo(() => {
+    return kpis.filter((kpi) => {
+      const locMatch = matchLocationHierarchy(kpi.location_name, clusterFilter, provinceFilter, cityFilter);
+      const roleMatch = matchRoleHierarchy(kpi.role_name, jobFamilyFilter, roleFilter);
+      return locMatch && roleMatch;
+    });
+  }, [kpis, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter]);
+
+  // Dynamic Funnel Stages scaled by active filtered requisitions
+  const dynamicFunnelStages = useMemo(() => {
+    const baseReqCount = 141;
+    const currentReqCount = filteredRequisitions.length;
+    const scale = currentReqCount > 0 ? Math.max(0.08, currentReqCount / baseReqCount) : 0.15;
+
+    return funnelStages.map((s) => ({
+      ...s,
+      candidate_count: Math.max(1, Math.round(s.candidate_count * scale)),
+    }));
+  }, [funnelStages, filteredRequisitions]);
+
+  // Dynamic Sourcing Channels scaled by active filtered requisitions
+  const dynamicSourcingChannels = useMemo(() => {
+    const baseReqCount = 141;
+    const currentReqCount = filteredRequisitions.length;
+    const scale = currentReqCount > 0 ? Math.max(0.08, currentReqCount / baseReqCount) : 0.15;
+
+    return sourcingChannels.map((c) => ({
+      ...c,
+      applicants: Math.max(1, Math.round(c.applicants * scale)),
+      hires: Math.max(1, Math.round(c.hires * scale)),
+    }));
+  }, [sourcingChannels, filteredRequisitions]);
+
+  // Dynamic Talent Pool filtered by active Location and Role
+  const filteredTalentPool = useMemo(() => {
+    return talentPool.filter((c) => {
+      const locMatch = matchLocationHierarchy(c.location_preference, clusterFilter, provinceFilter, cityFilter);
+      const roleMatch = matchRoleHierarchy(c.role_target, jobFamilyFilter, roleFilter);
+      return locMatch && roleMatch;
+    });
+  }, [talentPool, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter]);
+
+  // Dynamic Location Beyond-SLA Friction Heat computed from active requisitions
+  const dynamicLocationSlaFriction = useMemo(() => {
+    const locMap = new Map<string, { total: number; breached: number }>();
+    requisitions.forEach((r) => {
+      const loc = r.location_name || (r as any).location;
+      if (!loc) return;
+      const roleMatch = matchRoleHierarchy(r.role_name || (r as any).role, jobFamilyFilter, roleFilter);
+      const periodMatch = matchPeriod((r as any).request_date, selectedPeriod, r.req_code);
+      if (!roleMatch || !periodMatch) return;
+
+      if (!locMap.has(loc)) locMap.set(loc, { total: 0, breached: 0 });
+      const entry = locMap.get(loc)!;
+      entry.total += 1;
+      const days = r.days_open ?? (r as any).current_days_open ?? 0;
+      const target = r.sla_target_days ?? (r as any).sla_days ?? 28;
+      if (days > target || r.sla_status === "BREACHED") {
+        entry.breached += 1;
+      }
+    });
+
+    const result = Array.from(locMap.entries())
+      .map(([loc, stats]) => {
+        const rate = stats.total > 0 ? Math.round((stats.breached / stats.total) * 1000) / 10 : 0;
+        return {
+          label: loc,
+          value: rate,
+          color: rate > 35 ? "#C65353" : rate > 20 ? "#C99400" : "#23C9D3",
+        };
+      })
+      .filter((item) => {
+        return matchLocationHierarchy(item.label, clusterFilter, provinceFilter, cityFilter);
+      })
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
+
+    return result.length > 0
+      ? result
+      : [
+          { label: "Bali", value: metrics.beyondSlaRate, color: "#C65353" },
+          { label: "Surabaya", value: 28.0, color: "#C99400" },
+          { label: "Bandung", value: 20.5, color: "#23C9D3" },
+        ];
+  }, [requisitions, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter, selectedPeriod, metrics.beyondSlaRate]);
+
+  // Dynamic Hiring Outcomes adjusting current period to reflect active filters
+  const dynamicHiringOutcomes = useMemo(() => {
+    return hiringOutcomes.map((q, idx) => {
+      if (idx === hiringOutcomes.length - 1 && filteredRequisitions.length > 0) {
+        return {
+          ...q,
+          median_ttf_days: metrics.medianTTF,
+          beyond_sla_pct: Math.round(metrics.beyondSlaRate * 10) / 10,
+        };
+      }
+      return q;
+    });
+  }, [hiringOutcomes, filteredRequisitions, metrics.medianTTF, metrics.beyondSlaRate]);
 
   // Handle Talent Pool fast track simulation
   const handleFastTrack = (candidateName: string) => {
@@ -563,7 +655,7 @@ function VacancyContent() {
           <Filter className="w-3.5 h-3.5 text-brand-teal" />
           <span className="font-medium text-ink-primary">{locationDisplay}</span>
           <span>|</span>
-          <span className="font-medium text-ink-primary">{selectedRole}</span>
+          <span className="font-medium text-ink-primary">{roleDisplay}</span>
           <span>|</span>
           <span className="text-ink-tertiary">{formatPeriodLabel(selectedPeriod)}</span>
         </div>
@@ -1029,7 +1121,14 @@ function VacancyContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-border">
-                  {kpis.map((kpi) => (
+                  {filteredKpis.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center text-ink-tertiary">
+                        No demand matrix records match the active location ({locationDisplay}) and role ({roleDisplay}) filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredKpis.map((kpi) => (
                     <tr
                       key={kpi.kpi_id}
                       className={`hover:bg-surface-elevated/70 transition-colors ${
@@ -1094,7 +1193,7 @@ function VacancyContent() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  )))}
                 </tbody>
               </table>
             </div>
@@ -1142,7 +1241,7 @@ function VacancyContent() {
             <div className="mb-6 p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
               <span className="label-xs text-ink-secondary block mb-2">Funnel Stage Progression & Conversion</span>
               <FunnelWaterfall
-                stages={funnelStages.map((s) => ({
+                stages={dynamicFunnelStages.map((s) => ({
                   stage: s.stage_name,
                   count: s.candidate_count,
                   ratePct: s.conversion_from_top_pct,
@@ -1152,7 +1251,7 @@ function VacancyContent() {
 
             {/* Visual Funnel Bars */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3 my-6">
-              {funnelStages.map((stage, idx) => (
+              {dynamicFunnelStages.map((stage, idx) => (
                 <div
                   key={stage.stage_name}
                   className={`p-4 rounded-xl border relative transition-all ${
@@ -1223,7 +1322,7 @@ function VacancyContent() {
             <div className="mb-6 p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
               <span className="label-xs text-ink-secondary block mb-3">Hire Volume Contribution by Channel</span>
               <ColoredBar
-                data={sourcingChannels.map((c) => ({
+                data={dynamicSourcingChannels.map((c) => ({
                   label: c.channel_name,
                   value: c.hires,
                   color: c.channel_name === "Employee Referral" ? "#23C9D3" : "#1D3557",
@@ -1253,7 +1352,7 @@ function VacancyContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-border">
-                  {sourcingChannels.map((channel) => {
+                  {dynamicSourcingChannels.map((channel) => {
                     const delayedCount = Math.round(channel.hires * (channel.beyond_sla_rate_pct / 100));
                     return (
                       <tr
@@ -1363,7 +1462,12 @@ function VacancyContent() {
 
             {/* Talent Pool Candidates Grid / Table */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 my-4">
-              {talentPool.map((c) => (
+              {filteredTalentPool.length === 0 ? (
+                <div className="col-span-full p-8 text-center text-ink-tertiary bg-surface-ground rounded-xl border border-surface-border">
+                  No pre-screened talent pool candidates match the selected location ({locationDisplay}) and role ({roleDisplay}) filters.
+                </div>
+              ) : (
+                filteredTalentPool.map((c) => (
                 <div
                   key={c.candidate_id}
                   className="p-4 rounded-xl bg-surface-ground border border-surface-border hover:border-brand-teal/40 transition-all shadow-subtle flex flex-col justify-between"
@@ -1438,7 +1542,7 @@ function VacancyContent() {
                     </button>
                   </div>
                 </div>
-              ))}
+              )))}
             </div>
 
             {/* Talent Pool Business Value Box */}
@@ -1491,7 +1595,7 @@ function VacancyContent() {
               <div className="p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
                 <span className="label-xs text-ink-secondary block mb-2">Time-to-Fill (TTF) Trajectory (Days)</span>
                 <SimpleLine
-                  data={hiringOutcomes.map((q) => ({
+                  data={dynamicHiringOutcomes.map((q) => ({
                     label: q.period_label,
                     value: q.median_ttf_days,
                   }))}
@@ -1504,13 +1608,7 @@ function VacancyContent() {
               <div className="p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
                 <span className="label-xs text-ink-secondary block mb-2">Location Beyond-SLA Friction Heat</span>
                 <ColoredBar
-                  data={[
-                    { label: "Batam", value: 44.7, color: "#C65353" },
-                    { label: "Bali", value: 42.9, color: "#C65353" },
-                    { label: "Surabaya", value: 31.2, color: "#C99400" },
-                    { label: "Bandung", value: 22.0, color: "#23C9D3" },
-                    { label: "Jabodetabek", value: 18.5, color: "#2E8B57" },
-                  ]}
+                  data={dynamicLocationSlaFriction}
                   dataKey="value"
                   categoryKey="label"
                   unit="%"
@@ -1521,7 +1619,7 @@ function VacancyContent() {
 
             {/* Quarterly Trend Cards */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 my-6">
-              {hiringOutcomes.map((q, idx) => (
+              {dynamicHiringOutcomes.map((q, idx) => (
                 <div
                   key={q.period_label}
                   className={`p-4 rounded-xl border transition-all ${
