@@ -71,6 +71,7 @@ import {
   Plus,
   Code,
   Terminal,
+  GraduationCap,
 } from "lucide-react";
 
 type TeamTab = "overview" | "cliff" | "engagement" | "mobility" | "exits";
@@ -3142,6 +3143,30 @@ ORDER BY match_rate_pct DESC;`}
                 <span className="font-bold text-ink-primary block mb-1">Onboarding & Transition Plan:</span>
                 <p className="text-ink-secondary p-3 rounded-lg bg-surface-ground border border-surface-border">
                   {selectedCandidate.priority_development_action}
+                </p>
+              </div>
+
+              {/* Critical Gap Mitigation Alert */}
+              {((selectedCandidate as any).critical_gap_count ?? 0) > 0 && (
+                <div className="p-3 rounded-xl bg-status-danger/10 border border-status-danger/25 text-status-danger text-xs flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-bold block">Critical Competency Gap Alert ({(selectedCandidate as any).critical_gap_count} level gap)</span>
+                    <span className="text-[11px] opacity-90">
+                      Requires completion of 30-Day L&D Fast-Track Curriculum before sole floor sign-off.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* FIT HUB Academy L&D IDP Recommendation */}
+              <div className="p-3 rounded-xl bg-purple-500/5 border border-purple-500/20 space-y-1.5">
+                <div className="flex items-center gap-1.5 text-purple-400 font-bold text-xs">
+                  <GraduationCap className="w-4 h-4" />
+                  <span>FIT HUB Academy L&D IDP Recommendation</span>
+                </div>
+                <p className="text-[11px] text-ink-secondary leading-relaxed">
+                  Recommended Curriculum: <strong>FIT HUB Foundation (3-Week Induction)</strong>, <strong>PT Lifetime Training / Sales Coaching</strong>, &amp; <strong>CPR-AED Certification</strong> aligned with target role {selectedCandidate.target_role_name}.
                 </p>
               </div>
             </div>

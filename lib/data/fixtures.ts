@@ -1,3 +1,4 @@
+import roadmapsJson from './roadmaps_seed.json';
 // FIT HUB People Intelligence
 // Local Typed Data Fixtures & Fallback Repository
 // ponytail: Offline-resilient data layer. Ensures executive presentations never fail even without internet connectivity.
@@ -749,6 +750,9 @@ export const dataProvenanceRegistry: ProvenanceRecord[] = [
 export interface RequisitionItem {
   req_code: string;
   role_name: string;
+  job_family?: 'Club Operations' | 'Fitness & Coaching' | 'Commercial & Sales' | string;
+  tier_number?: 1 | 2 | 3 | 4 | number;
+  recommended_fulfillment?: 'TALENT_POOL' | 'INTERNAL_MOBILITY' | 'CONVENTIONAL_ATS' | string;
   location_name: string;
   hiring_type: "Replacement" | "Expansion";
   openings: number;
@@ -816,6 +820,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-BLI-0104",
     role_name: "Customer Service",
+    job_family: "Club Operations",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
     location_name: "Bali",
     hiring_type: "Replacement",
     openings: 4,
@@ -833,6 +840,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-BLI-0109",
     role_name: "Personal Trainer",
+    job_family: "Fitness & Coaching",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
     location_name: "Bali",
     hiring_type: "Replacement",
     openings: 3,
@@ -850,6 +860,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-BLI-0115",
     role_name: "Fitness Consultant",
+    job_family: "Commercial & Sales",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
     location_name: "Bali",
     hiring_type: "Replacement",
     openings: 2,
@@ -867,6 +880,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-SBY-0202",
     role_name: "Customer Service",
+    job_family: "Club Operations",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
     location_name: "Surabaya",
     hiring_type: "Replacement",
     openings: 5,
@@ -884,6 +900,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-SBY-0218",
     role_name: "Personal Trainer",
+    job_family: "Fitness & Coaching",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
     location_name: "Surabaya",
     hiring_type: "Expansion",
     openings: 3,
@@ -900,6 +919,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-JKB-0301",
     role_name: "Customer Service",
+    job_family: "Club Operations",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
     location_name: "Jakarta Barat",
     hiring_type: "Replacement",
     openings: 6,
@@ -917,6 +939,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-JKB-0312",
     role_name: "Fitness Consultant",
+    job_family: "Commercial & Sales",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
     location_name: "Jakarta Barat",
     hiring_type: "Replacement",
     openings: 4,
@@ -934,6 +959,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-JKS-0405",
     role_name: "Personal Trainer",
+    job_family: "Fitness & Coaching",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
     location_name: "Jakarta Selatan",
     hiring_type: "Replacement",
     openings: 4,
@@ -951,6 +979,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-TNG-0502",
     role_name: "Customer Service",
+    job_family: "Club Operations",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
     location_name: "Tangerang",
     hiring_type: "Replacement",
     openings: 4,
@@ -968,6 +999,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-BDG-0601",
     role_name: "Customer Service",
+    job_family: "Club Operations",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
     location_name: "Bandung",
     hiring_type: "Expansion",
     openings: 2,
@@ -984,6 +1018,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-BLI-0120",
     role_name: "Customer Service Leader",
+    job_family: "Club Operations",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Bali",
     hiring_type: "Replacement",
     openings: 1,
@@ -1001,6 +1038,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-SBY-0224",
     role_name: "Fitness Consultant",
+    job_family: "Commercial & Sales",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
     location_name: "Surabaya",
     hiring_type: "Replacement",
     openings: 3,
@@ -1018,6 +1058,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-BTM-0701",
     role_name: "Operation Manager",
+    job_family: "Club Operations",
+    tier_number: 3,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Batam",
     hiring_type: "Replacement",
     openings: 1,
@@ -1034,6 +1077,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-SBY-0210",
     role_name: "Customer Service Leader",
+    job_family: "Club Operations",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Surabaya",
     hiring_type: "Replacement",
     openings: 1,
@@ -1050,6 +1096,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-JKS-0401",
     role_name: "Fitness Lead",
+    job_family: "Fitness & Coaching",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Jakarta Selatan",
     hiring_type: "Replacement",
     openings: 1,
@@ -1066,6 +1115,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-JKB-0305",
     role_name: "Sales Lead",
+    job_family: "Commercial & Sales",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Jakarta Barat",
     hiring_type: "Replacement",
     openings: 1,
@@ -1082,6 +1134,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-5005",
     role_name: "PT Team Leader",
+    job_family: "Fitness & Coaching",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Jakarta Selatan",
     hiring_type: "Replacement",
     openings: 1,
@@ -1098,6 +1153,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-5035",
     role_name: "PT Team Leader",
+    job_family: "Fitness & Coaching",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Denpasar",
     hiring_type: "Replacement",
     openings: 1,
@@ -1114,6 +1172,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-5028",
     role_name: "FC Team Leader",
+    job_family: "Commercial & Sales",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Semarang",
     hiring_type: "Replacement",
     openings: 1,
@@ -1130,6 +1191,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-5060",
     role_name: "FC Team Leader",
+    job_family: "Commercial & Sales",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Palembang",
     hiring_type: "Replacement",
     openings: 1,
@@ -1146,6 +1210,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-BDG-0610",
     role_name: "Club Manager",
+    job_family: "Club Operations",
+    tier_number: 3,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Bandung",
     hiring_type: "Replacement",
     openings: 1,
@@ -1162,6 +1229,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-TNG-0504",
     role_name: "Sales Lead",
+    job_family: "Commercial & Sales",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Tangerang",
     hiring_type: "Replacement",
     openings: 1,
@@ -1178,6 +1248,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-PTL-0101",
     role_name: "PT Team Leader",
+    job_family: "Fitness & Coaching",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Jakarta Barat",
     hiring_type: "Replacement",
     openings: 1,
@@ -1194,6 +1267,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-PTL-0102",
     role_name: "PT Team Leader",
+    job_family: "Fitness & Coaching",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Jakarta Selatan",
     hiring_type: "Replacement",
     openings: 1,
@@ -1210,6 +1286,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-PTL-0103",
     role_name: "PT Team Leader",
+    job_family: "Fitness & Coaching",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Surabaya",
     hiring_type: "Replacement",
     openings: 1,
@@ -1226,6 +1305,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-FCL-0201",
     role_name: "FC Team Leader",
+    job_family: "Commercial & Sales",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Jakarta Barat",
     hiring_type: "Replacement",
     openings: 1,
@@ -1242,6 +1324,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-FCL-0202",
     role_name: "FC Team Leader",
+    job_family: "Commercial & Sales",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Jakarta Timur",
     hiring_type: "Replacement",
     openings: 1,
@@ -1258,6 +1343,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-FCL-0203",
     role_name: "FC Team Leader",
+    job_family: "Commercial & Sales",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Semarang",
     hiring_type: "Replacement",
     openings: 1,
@@ -1274,6 +1362,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-CM-0301",
     role_name: "Club Manager",
+    job_family: "Club Operations",
+    tier_number: 3,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Jakarta Barat",
     hiring_type: "Replacement",
     openings: 1,
@@ -1290,6 +1381,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-CM-0302",
     role_name: "Club Manager",
+    job_family: "Club Operations",
+    tier_number: 3,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Bandung",
     hiring_type: "Replacement",
     openings: 1,
@@ -1306,6 +1400,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-SLL-0401",
     role_name: "Sales Lead",
+    job_family: "Commercial & Sales",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Jakarta Barat",
     hiring_type: "Replacement",
     openings: 1,
@@ -1322,6 +1419,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-SLL-0402",
     role_name: "Sales Lead",
+    job_family: "Commercial & Sales",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Bali",
     hiring_type: "Replacement",
     openings: 1,
@@ -1338,6 +1438,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-PTL-0104",
     role_name: "Personal Trainer Leader",
+    job_family: "Fitness & Coaching",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Bali",
     hiring_type: "Replacement",
     openings: 1,
@@ -1354,6 +1457,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-FCL-0204",
     role_name: "Fitness Consultant Leader",
+    job_family: "Commercial & Sales",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Bali",
     hiring_type: "Replacement",
     openings: 1,
@@ -1370,6 +1476,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-CM-0303",
     role_name: "Club Manager",
+    job_family: "Club Operations",
+    tier_number: 3,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Bali",
     hiring_type: "Replacement",
     openings: 1,
@@ -1386,6 +1495,9 @@ export const fallbackRequisitions: RequisitionItem[] = [
   {
     req_code: "REQ-AGM-0501",
     role_name: "Area General Manager",
+    job_family: "Club Operations",
+    tier_number: 4,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
     location_name: "Bali",
     hiring_type: "Expansion",
     openings: 1,
@@ -2373,3 +2485,18 @@ export const fallbackRoleCapabilityRequirements: RoleCapabilityRequirement[] = [
   { role_name: "Sales Manager", capability_code: "CAP-LEAD-02", capability_name: "Staff 1-on-1 Coaching & Performance KPI Review", required_level: 4, weight: 15 },
 ];
 
+
+
+export interface CapabilityLevelRoadmap {
+  roadmap_id: string;
+  capability_code: string;
+  level_number: 1 | 2 | 3 | 4;
+  behavioral_anchor: string;
+  prerequisite_course: string;
+  required_certification: string | null;
+  delivery_method: string;
+  verification_criteria: string;
+  created_at?: string;
+}
+
+export const fallbackCapabilityRoadmaps: CapabilityLevelRoadmap[] = roadmapsJson as CapabilityLevelRoadmap[];

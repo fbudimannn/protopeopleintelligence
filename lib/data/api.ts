@@ -20,6 +20,8 @@ import {
   fallbackCliftonStrengths,
   CapabilityItem,
   fallbackCapabilities,
+  CapabilityLevelRoadmap,
+  fallbackCapabilityRoadmaps,
   RoleCapabilityRequirement,
   fallbackRoleCapabilityRequirements,
   fallbackVacancyKPIs,
@@ -460,5 +462,79 @@ export async function saveRoleCapabilityRequirements(
     return { success: false, error: err.message || "Failed to save requirements" };
   }
 }
+
+export async function getCapabilityRoadmaps(
+  capabilityCode?: string
+): Promise<{ data: CapabilityLevelRoadmap[]; isLive: boolean }> {
+  if (!supabase) {
+    const filtered = capabilityCode
+      ? fallbackCapabilityRoadmaps.filter((r) => r.capability_code === capabilityCode)
+      : fallbackCapabilityRoadmaps;
+    return { data: filtered, isLive: false };
+  }
+  try {
+    let query = supabase
+      .from("capability_level_roadmap")
+      .select("*")
+      .order("level_number", { ascending: true });
+    if (capabilityCode) {
+      query = query.eq("capability_code", capabilityCode);
+    }
+    const { data, error } = await query;
+    if (error || !data || data.length === 0) {
+      const filtered = capabilityCode
+        ? fallbackCapabilityRoadmaps.filter((r) => r.capability_code === capabilityCode)
+        : fallbackCapabilityRoadmaps;
+      return { data: filtered, isLive: false };
+    }
+    return { data: data as CapabilityLevelRoadmap[], isLive: true };
+  } catch {
+    const filtered = capabilityCode
+      ? fallbackCapabilityRoadmaps.filter((r) => r.capability_code === capabilityCode)
+      : fallbackCapabilityRoadmaps;
+    return { data: filtered, isLive: false };
+  }
+}
+
+export async function saveCapabilityRoadmaps(
+  roadmaps: Array<{
+    capability_code: string;
+    level_number: number;
+    behavioral_anchor: string;
+    prerequisite_course: string;
+    required_certification?: string | null;
+    delivery_method: string;
+    verification_criteria: string;
+  }>
+): Promise<{ success: boolean; count?: number; error?: string }> {
+  if (!supabase) {
+    return { success: false, error: "Database client unavailable" };
+  }
+  try {
+    const { data, error } = await supabase
+      .from("capability_level_roadmap")
+      .upsert(
+        roadmaps.map((r) => ({
+          capability_code: r.capability_code,
+          level_number: r.level_number,
+          behavioral_anchor: r.behavioral_anchor,
+          prerequisite_course: r.prerequisite_course,
+          required_certification: r.required_certification || null,
+          delivery_method: r.delivery_method,
+          verification_criteria: r.verification_criteria,
+          updated_at: new Date().toISOString(),
+        })),
+        { onConflict: "capability_code,level_number" }
+      )
+      .select();
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true, count: data?.length || roadmaps.length };
+  } catch (err: any) {
+    return { success: false, error: err.message || "Failed to save roadmaps" };
+  }
+}
+
 
 

@@ -26,6 +26,9 @@ import {
   Copy,
   CheckSquare,
   Square,
+  GraduationCap,
+  BookOpen,
+  FileCheck,
 } from 'lucide-react';
 import { SectionCard, KpiCard, Chip } from '@/components/primitives';
 import {
@@ -33,10 +36,13 @@ import {
   getRoleCapabilityRequirements,
   createCapability,
   saveRoleCapabilityRequirements,
+  getCapabilityRoadmaps,
+  saveCapabilityRoadmaps,
 } from '@/lib/data/api';
 import {
   CapabilityItem,
   RoleCapabilityRequirement,
+  CapabilityLevelRoadmap,
   fallbackCapabilities,
   fallbackRoleCapabilityRequirements,
 } from '@/lib/data/fixtures';
@@ -184,6 +190,23 @@ const DOMAIN_STYLES: Record<string, { bg: string; text: string; border: string }
 export default function CapabilityFrameworkPage() {
   // Live Data State
   const [capabilities, setCapabilities] = useState<CapabilityItem[]>(fallbackCapabilities);
+  const [selectedRoadmapCapability, setSelectedRoadmapCapability] = useState<CapabilityItem | null>(null);
+  const [activeRoadmaps, setActiveRoadmaps] = useState<CapabilityLevelRoadmap[]>([]);
+  const [isRoadmapLoading, setIsRoadmapLoading] = useState(false);
+
+  // Load L&D Roadmap ladder for a capability
+  const handleOpenRoadmap = async (cap: CapabilityItem) => {
+    setSelectedRoadmapCapability(cap);
+    setIsRoadmapLoading(true);
+    try {
+      const res = await getCapabilityRoadmaps(cap.capability_code);
+      setActiveRoadmaps(res.data);
+    } catch {
+      setActiveRoadmaps([]);
+    } finally {
+      setIsRoadmapLoading(false);
+    }
+  };
   const [allRequirements, setAllRequirements] = useState<RoleCapabilityRequirement[]>(fallbackRoleCapabilityRequirements);
   const [selectedRoleName, setSelectedRoleName] = useState<string>('Club Manager');
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -209,6 +232,14 @@ export default function CapabilityFrameworkPage() {
   const [newCapName, setNewCapName] = useState<string>('');
   const [newCapDomain, setNewCapDomain] = useState<'Operations' | 'Fitness' | 'Commercial' | 'Leadership' | 'Retention'>('Operations');
   const [newCapDesc, setNewCapDesc] = useState<string>('');
+  const [showLndCurriculum, setShowLndCurriculum] = useState<boolean>(false);
+  const [l1Course, setL1Course] = useState<string>('Frontline Operational Induction & SOP 101');
+  const [l2Course, setL2Course] = useState<string>('Practical Skills & Service Excellence Workshop');
+  const [l2Cert, setL2Cert] = useState<string>('CPR & AED FIT HUB Certified');
+  const [l3Course, setL3Course] = useState<string>('Advanced Floor Leadership & Incident Resolution');
+  const [l3Cert, setL3Cert] = useState<string>('FIT HUB Specialist Credential');
+  const [l4Course, setL4Course] = useState<string>('Club Management Summit (CMS) & Master Coach Mentorship');
+  const [l4Cert, setL4Cert] = useState<string>('Master Trainer / Operational Leader Credential');
   const [newCapLevel, setNewCapLevel] = useState<number>(3);
   const [newCapWeight, setNewCapWeight] = useState<number>(20);
   const [multiRoleAttachments, setMultiRoleAttachments] = useState<
@@ -970,6 +1001,18 @@ export default function CapabilityFrameworkPage() {
                       <span className="font-mono text-[11px] text-ink-tertiary font-bold">
                         {cap.capability_code}
                       </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenRoadmap(cap);
+                        }}
+                        className="ml-auto inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal border border-brand-teal/30 transition-colors cursor-pointer"
+                        title="View FIT HUB Academy L&D Training Ladder"
+                      >
+                        <GraduationCap className="w-3 h-3" />
+                        <span>L&D Ladder</span>
+                      </button>
                     </div>
                     <h4 className="text-sm font-bold text-ink-primary">
                       {cap.capability_name}
@@ -1289,6 +1332,18 @@ export default function CapabilityFrameworkPage() {
                                 <span className="font-mono text-[11px] font-bold text-brand-teal">
                                   {cap.capability_code}
                                 </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenRoadmap(cap);
+                                  }}
+                                  className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal border border-brand-teal/30 transition-colors cursor-pointer"
+                                  title="View FIT HUB Academy L&D Training Ladder"
+                                >
+                                  <GraduationCap className="w-3 h-3" />
+                                  <span>L&D Ladder</span>
+                                </button>
                                 {currentOnThisRole && (
                                   <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-brand-teal/15 text-brand-teal border border-brand-teal/30 flex items-center gap-1">
                                     <Check className="w-2.5 h-2.5" />
@@ -1568,6 +1623,102 @@ export default function CapabilityFrameworkPage() {
                     </div>
                   </div>
 
+                  {/* FIT HUB Academy L&D Curriculum Section */}
+                  <div className="p-3.5 rounded-xl bg-brand-teal/5 border border-brand-teal/20 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="w-4 h-4 text-brand-teal" />
+                        <div>
+                          <h5 className="text-xs font-bold text-ink-primary">
+                            FIT HUB Academy L&D Learning Ladder (Level 1–4)
+                          </h5>
+                          <p className="text-[11px] text-ink-secondary">
+                            Define training courses, certifications, and verification criteria for each proficiency level.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setShowLndCurriculum(!showLndCurriculum)}
+                        className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-surface-card border border-surface-border text-ink-primary hover:border-brand-teal/40 transition-all cursor-pointer"
+                      >
+                        {showLndCurriculum ? 'Collapse L&D' : 'Configure L&D'}
+                      </button>
+                    </div>
+
+                    {showLndCurriculum && (
+                      <div className="space-y-2.5 pt-2 border-t border-brand-teal/20 text-xs animate-fadeIn">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border space-y-1">
+                            <span className="font-bold text-[10px] text-ink-tertiary uppercase">Level 1 • Aware</span>
+                            <input
+                              type="text"
+                              value={l1Course}
+                              onChange={(e) => setL1Course(e.target.value)}
+                              placeholder="L1 Course Name"
+                              className="w-full px-2 py-1 text-xs rounded bg-surface-ground border border-surface-border text-ink-primary focus:border-brand-teal focus:outline-none"
+                            />
+                            <span className="text-[10px] text-ink-tertiary">Method: Digital LMS & Shadowing</span>
+                          </div>
+
+                          <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border space-y-1">
+                            <span className="font-bold text-[10px] text-brand-teal uppercase">Level 2 • Developing</span>
+                            <input
+                              type="text"
+                              value={l2Course}
+                              onChange={(e) => setL2Course(e.target.value)}
+                              placeholder="L2 Course Name"
+                              className="w-full px-2 py-1 text-xs rounded bg-surface-ground border border-surface-border text-ink-primary focus:border-brand-teal focus:outline-none"
+                            />
+                            <input
+                              type="text"
+                              value={l2Cert}
+                              onChange={(e) => setL2Cert(e.target.value)}
+                              placeholder="Required Certification (Optional)"
+                              className="w-full px-2 py-1 text-[11px] rounded bg-surface-ground border border-surface-border text-ink-primary focus:border-brand-teal focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border space-y-1">
+                            <span className="font-bold text-[10px] text-status-healthy uppercase">Level 3 • Independent</span>
+                            <input
+                              type="text"
+                              value={l3Course}
+                              onChange={(e) => setL3Course(e.target.value)}
+                              placeholder="L3 Course Name"
+                              className="w-full px-2 py-1 text-xs rounded bg-surface-ground border border-surface-border text-ink-primary focus:border-brand-teal focus:outline-none"
+                            />
+                            <input
+                              type="text"
+                              value={l3Cert}
+                              onChange={(e) => setL3Cert(e.target.value)}
+                              placeholder="Required Certification (e.g. FIT HUB Sales Certified)"
+                              className="w-full px-2 py-1 text-[11px] rounded bg-surface-ground border border-surface-border text-ink-primary focus:border-brand-teal focus:outline-none"
+                            />
+                          </div>
+
+                          <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border space-y-1">
+                            <span className="font-bold text-[10px] text-purple-400 uppercase">Level 4 • Mastery</span>
+                            <input
+                              type="text"
+                              value={l4Course}
+                              onChange={(e) => setL4Course(e.target.value)}
+                              placeholder="L4 Masterclass / CMS Summit"
+                              className="w-full px-2 py-1 text-xs rounded bg-surface-ground border border-surface-border text-ink-primary focus:border-brand-teal focus:outline-none"
+                            />
+                            <input
+                              type="text"
+                              value={l4Cert}
+                              onChange={(e) => setL4Cert(e.target.value)}
+                              placeholder="Senior Trainer Credential"
+                              className="w-full px-2 py-1 text-[11px] rounded bg-surface-ground border border-surface-border text-ink-primary focus:border-brand-teal focus:outline-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
                   {/* Multi-Role Attachment Checklist */}
                   <div className="space-y-2 pt-1 border-t border-surface-border/60">
                     <div className="flex items-center justify-between">
@@ -1657,6 +1808,199 @@ export default function CapabilityFrameworkPage() {
                   </div>
                 </form>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+      {/* FIT HUB Academy: Capability Learning Ladder Drawer */}
+      {selectedRoadmapCapability && (
+        <div className="fixed inset-0 z-50 overflow-hidden bg-black/60 backdrop-blur-sm flex justify-end animate-fadeIn">
+          <div
+            className="w-full max-w-xl bg-surface-card border-l border-surface-border h-full shadow-2xl flex flex-col animate-slideLeft"
+            role="dialog"
+            aria-modal="true"
+          >
+            {/* Drawer Header */}
+            <div className="p-5 border-b border-surface-border flex items-start justify-between gap-4 bg-surface-ground/30">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-teal/15 border border-brand-teal/30 flex items-center justify-center text-brand-teal flex-shrink-0 mt-0.5">
+                  <GraduationCap className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-teal/15 text-brand-teal border border-brand-teal/30">
+                      {selectedRoadmapCapability.capability_code}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                        DOMAIN_STYLES[selectedRoadmapCapability.domain]?.bg || 'bg-surface-ground'
+                      } ${
+                        DOMAIN_STYLES[selectedRoadmapCapability.domain]?.text || 'text-ink-secondary'
+                      } ${
+                        DOMAIN_STYLES[selectedRoadmapCapability.domain]?.border || 'border-surface-border'
+                      }`}
+                    >
+                      {selectedRoadmapCapability.domain}
+                    </span>
+                  </div>
+                  <h3 className="text-base font-bold text-ink-primary">
+                    {selectedRoadmapCapability.capability_name}
+                  </h3>
+                  <p className="text-xs text-ink-secondary mt-1 line-clamp-2">
+                    {selectedRoadmapCapability.description}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedRoadmapCapability(null)}
+                className="p-1.5 rounded-lg hover:bg-surface-ground text-ink-tertiary hover:text-ink-primary transition-colors cursor-pointer"
+                aria-label="Close drawer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Sub-banner: FIT HUB Academy Banner */}
+            <div className="px-5 py-3 bg-gradient-to-r from-brand-teal/10 via-brand-teal/5 to-transparent border-b border-brand-teal/20 flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 text-ink-primary font-medium">
+                <BookOpen className="w-4 h-4 text-brand-teal" />
+                <span>FIT HUB Academy Learning Ladder (Levels 1 to 4)</span>
+              </div>
+              <span className="text-[11px] text-brand-teal font-semibold">
+                4 Verification Tiers
+              </span>
+            </div>
+
+            {/* Drawer Body: 4 Levels */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              {isRoadmapLoading ? (
+                <div className="py-16 text-center text-ink-secondary space-y-3">
+                  <RefreshCw className="w-6 h-6 animate-spin mx-auto text-brand-teal" />
+                  <p className="text-xs">Loading curriculum roadmap from database...</p>
+                </div>
+              ) : activeRoadmaps.length === 0 ? (
+                <div className="py-12 text-center text-ink-secondary space-y-2">
+                  <Info className="w-8 h-8 mx-auto text-ink-tertiary" />
+                  <p className="text-xs font-semibold">No formal roadmap configured yet.</p>
+                  <p className="text-[11px] text-ink-tertiary">Standard FIT HUB Academy LMS courses apply.</p>
+                </div>
+              ) : (
+                activeRoadmaps
+                  .sort((a, b) => a.level_number - b.level_number)
+                  .map((rm) => {
+                    const levelTheme =
+                      rm.level_number === 1
+                        ? {
+                            badge: 'bg-ink-tertiary/15 text-ink-secondary border-ink-tertiary/30',
+                            cardBorder: 'border-surface-border',
+                            titleColor: 'text-ink-primary',
+                            label: 'Level 1 • Aware',
+                          }
+                        : rm.level_number === 2
+                        ? {
+                            badge: 'bg-brand-teal/15 text-brand-teal border-brand-teal/30',
+                            cardBorder: 'border-brand-teal/30',
+                            titleColor: 'text-brand-teal',
+                            label: 'Level 2 • Developing',
+                          }
+                        : rm.level_number === 3
+                        ? {
+                            badge: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+                            cardBorder: 'border-emerald-500/30',
+                            titleColor: 'text-emerald-400',
+                            label: 'Level 3 • Independent',
+                          }
+                        : {
+                            badge: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
+                            cardBorder: 'border-purple-500/30',
+                            titleColor: 'text-purple-400',
+                            label: 'Level 4 • Mastery',
+                          };
+
+                    return (
+                      <div
+                        key={rm.level_number}
+                        className={`p-4 rounded-xl bg-surface-ground/60 border ${levelTheme.cardBorder} space-y-3 transition-all hover:border-brand-teal/40`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span
+                            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${levelTheme.badge}`}
+                          >
+                            {levelTheme.label}
+                          </span>
+                          <span className="text-[11px] font-semibold text-ink-tertiary">
+                            {rm.level_number === 1 ? 'Aware' : rm.level_number === 2 ? 'Developing' : rm.level_number === 3 ? 'Independent' : 'Mastery'}
+                          </span>
+                        </div>
+
+                        {rm.behavioral_anchor && (
+                          <p className="text-xs text-ink-secondary italic bg-surface-card/40 p-2.5 rounded-lg border border-surface-border/40 leading-relaxed">
+                            &ldquo;{rm.behavioral_anchor}&rdquo;
+                          </p>
+                        )}
+
+                        <div>
+                          <div className="flex items-start gap-2">
+                            <BookOpen className="w-3.5 h-3.5 text-brand-teal flex-shrink-0 mt-0.5" />
+                            <div>
+                              <span className="text-[10px] uppercase font-bold text-ink-tertiary block">
+                                Recommended Course / Academy Module
+                              </span>
+                              <span className="text-xs font-bold text-ink-primary">
+                                {rm.prerequisite_course}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-2 border-t border-surface-border/60">
+                          <div>
+                            <span className="text-[10px] uppercase font-semibold text-ink-tertiary block mb-0.5">
+                              Delivery Format
+                            </span>
+                            <span className="text-[11px] text-ink-secondary bg-surface-card px-2 py-1 rounded border border-surface-border block">
+                              {rm.delivery_method}
+                            </span>
+                          </div>
+
+                          <div>
+                            <span className="text-[10px] uppercase font-semibold text-ink-tertiary block mb-0.5">
+                              Required Certification
+                            </span>
+                            <span className="text-[11px] font-medium text-ink-primary bg-surface-card px-2 py-1 rounded border border-surface-border flex items-center gap-1.5 truncate">
+                              <FileCheck className="w-3 h-3 text-status-healthy flex-shrink-0" />
+                              <span className="truncate">{rm.required_certification || 'Internal Certificate'}</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-surface-border/60">
+                          <span className="text-[10px] uppercase font-semibold text-ink-tertiary block mb-1">
+                            Verification Criteria & Proof of Competence
+                          </span>
+                          <p className="text-[11px] text-ink-secondary leading-relaxed bg-surface-card/60 p-2 rounded-lg border border-surface-border/50">
+                            {rm.verification_criteria}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+
+            {/* Drawer Footer */}
+            <div className="p-4 border-t border-surface-border bg-surface-ground/50 flex items-center justify-between">
+              <span className="text-[11px] text-ink-tertiary">
+                Directly connected to Individual Development Plans (IDP).
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedRoadmapCapability(null)}
+                className="px-4 py-1.5 rounded-xl bg-surface-ground hover:bg-surface-card text-xs font-semibold text-ink-primary border border-surface-border transition-colors cursor-pointer"
+              >
+                Close Ladder
+              </button>
             </div>
           </div>
         </div>
