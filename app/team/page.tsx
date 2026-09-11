@@ -398,7 +398,7 @@ function TeamContent() {
     );
   }, [selectedBenchmarkRoleId]);
 
-  // Filter for Lead-Level Open Requisitions Only (ACM, Club Manager, Fitness Lead, Sales Lead, Team Leaders)
+  // All Open Leadership Requisitions across all clubs
   const leadOpenRequisitions = useMemo(() => {
     const isLeadRole = (role: string) => {
       const r = role.toLowerCase();
@@ -406,8 +406,8 @@ function TeamContent() {
         r.includes("lead") ||
         r.includes("manager") ||
         r.includes("supervisor") ||
-        r.includes("head") ||
-        r.includes("acm")
+        r.includes("master") ||
+        r.includes("head")
       );
     };
     const liveLeads = openRequisitions.filter((req) =>
@@ -420,14 +420,10 @@ function TeamContent() {
       }
     });
 
-    const matchedLeads = allLeads.filter((r) => {
-      const loc = r.location_name || (r as any).location || "";
-      const locMatch = matchLocationHierarchy(loc, clusterFilter, provinceFilter, cityFilter);
-      return locMatch;
-    });
-
-    return matchedLeads.length > 0 ? matchedLeads : allLeads;
-  }, [openRequisitions, clusterFilter, provinceFilter, cityFilter]);
+    // Sort by days_open descending (highest SLA pressure first)
+    allLeads.sort((a, b) => (b.days_open || 0) - (a.days_open || 0));
+    return allLeads;
+  }, [openRequisitions]);
 
   // Sync initial lead requisition if current is not lead
   useEffect(() => {
@@ -1830,30 +1826,11 @@ function TeamContent() {
                     onChange={(e) => handleSelectRequisition(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg bg-surface-card border border-surface-border text-xs text-ink-primary font-semibold focus:outline-none focus:border-brand-teal"
                   >
-                    <optgroup label={`Local Leadership Requisitions (${targetLocation})`}>
-                      {leadOpenRequisitions
-                        .filter((r) => {
-                          const loc = r.location_name || (r as any).location || "";
-                          return loc.toLowerCase() === targetLocation.toLowerCase();
-                        })
-                        .map((req) => (
-                          <option key={req.req_code || req.id} value={req.req_code || req.id}>
-                            {req.req_code || req.id} • {req.role_name || req.role} ({req.location_name || req.location}) — {req.days_open}d
-                          </option>
-                        ))}
-                    </optgroup>
-                    <optgroup label="All National Leadership Requisitions">
-                      {leadOpenRequisitions
-                        .filter((r) => {
-                          const loc = r.location_name || (r as any).location || "";
-                          return loc.toLowerCase() !== targetLocation.toLowerCase();
-                        })
-                        .map((req) => (
-                          <option key={req.req_code || req.id} value={req.req_code || req.id}>
-                            {req.req_code || req.id} • {req.role_name || req.role} ({req.location_name || req.location}) — {req.days_open}d
-                          </option>
-                        ))}
-                    </optgroup>
+                    {leadOpenRequisitions.map((req) => (
+                      <option key={req.req_code || req.id} value={req.req_code || req.id}>
+                        {req.req_code || req.id} • {req.role_name || req.role} ({req.location_name || req.location}) — {req.days_open}d
+                      </option>
+                    ))}
                     <option value="CUSTOM">Custom Vacancy ({targetLocation})</option>
                   </select>
                 </div>
