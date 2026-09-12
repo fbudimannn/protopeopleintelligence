@@ -37,6 +37,13 @@ function SidebarNavItems() {
 
     const [itemPath, itemQuery] = href.split("?");
 
+    if (href === "/vacancy?tab=overview") {
+      if (pathname === "/vacancy/intake") return true;
+      if (pathname === "/vacancy") {
+        return !currentTab || currentTab === "overview";
+      }
+    }
+
     if (pathname !== itemPath) {
       // Sub-routes like /team/capability/framework, /team/engagement/survey, /team/exit-survey
       if (itemPath !== "/vacancy" && itemPath !== "/team") {

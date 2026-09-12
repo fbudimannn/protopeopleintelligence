@@ -793,6 +793,25 @@ export interface RequisitionItem {
   current_stage?: string;
   external_tracker_url?: string;
   stage_history?: { stage: string; timestamp: string; note?: string }[];
+  request_date?: string;
+  created_at?: string;
+}
+
+export interface CreateRequisitionPayload {
+  role_name: string;
+  job_family: string;
+  location_name: string;
+  club_name: string;
+  hiring_type: "Replacement" | "Expansion";
+  urgency_reason?: string;
+  linked_exit_code?: string;
+  priority?: "P1 - Urgent" | "P2 - High" | "P3 - Normal" | string;
+  sla_target_days?: number;
+  workflow_destination: "INTAKE_QUEUE" | "ACTIVE_MONITORING";
+  sourcing_channel?: string;
+  assigned_candidates?: RequisitionCandidateItem[];
+  sourcing_details?: RequisitionSourcingDetail[];
+  external_tracker_url?: string;
 }
 
 export interface SourcingChannelMetric {

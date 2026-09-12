@@ -6,6 +6,7 @@ import {
   InternalMobilityMatch,
   ProvenanceRecord,
   RequisitionItem,
+  CreateRequisitionPayload,
   SourcingChannelMetric,
   FunnelStageMetric,
   TalentPoolCandidate,
@@ -189,6 +190,110 @@ export async function updateRequisitionStage(
     return { success: true, data: data as RequisitionItem };
   } catch (err: any) {
     return { success: false, error: err?.message || 'Failed to advance stage' };
+  }
+}
+
+export async function createRequisition(
+  payload: CreateRequisitionPayload
+): Promise<{ success: boolean; data?: RequisitionItem; error?: string }> {
+  const isFrontline = [
+    "customer service",
+    "personal trainer",
+    "fitness consultant",
+    "housekeeping",
+  ].some((r) => payload.role_name.toLowerCase().includes(r));
+
+  const tierNumber = isFrontline ? 1 : 2;
+  const recommendedFulfillment = isFrontline ? "READY_POOL" : "INTERNAL_MOBILITY";
+  const defaultSla = payload.sla_target_days || (isFrontline ? 14 : 21);
+  const now = new Date();
+  const dateStr = now.toISOString().split("T")[0];
+  const reqCode = `REQ-${now.getFullYear()}-${Math.floor(100 + Math.random() * 900)}`;
+
+  const isFastTrack = payload.workflow_destination === "ACTIVE_MONITORING";
+  const initialStatus = isFastTrack ? "ACTIVE_MONITORING" : "PENDING_SOURCING";
+  const initialStage = isFastTrack
+    ? payload.assigned_candidates && payload.assigned_candidates.length > 0
+      ? payload.assigned_candidates[0].stage || "HR Screening"
+      : "HR Screening"
+    : "Awaiting Sourcing";
+
+  const newRecord: Partial<RequisitionItem> & Record<string, any> = {
+    req_code: reqCode,
+    id: reqCode,
+    role_name: payload.role_name,
+    role: payload.role_name,
+    job_family: payload.job_family || (isFrontline ? "Fitness & Coaching" : "Club Operations"),
+    tier_number: tierNumber,
+    recommended_fulfillment: recommendedFulfillment,
+    requisition_status: initialStatus,
+    location_name: payload.location_name,
+    location: payload.location_name,
+    club_name: payload.club_name,
+    hiring_type: payload.hiring_type,
+    demand_type: payload.hiring_type,
+    openings: 1,
+    days_open: 0,
+    current_days_open: 0,
+    sla_target_days: defaultSla,
+    sla_days: defaultSla,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: payload.assigned_candidates ? payload.assigned_candidates.length : (isFastTrack ? 3 : 0),
+    bottleneck_stage: "None",
+    health: "Healthy",
+    priority: payload.priority || "P2 - High",
+    hiring_manager: "Talent Acquisition Lead",
+    urgency_reason: payload.urgency_reason || `Urgent headcount requirement for ${payload.location_name}`,
+    linked_exit_code: payload.linked_exit_code,
+    data_provenance: "OBSERVED_CASE_STUDY",
+    sourcing_channel: payload.sourcing_channel || (isFrontline ? "⚡ Frontline Ready Pool" : "✨ Internal Mobility"),
+    sourcing_details: payload.sourcing_details || [],
+    assigned_candidates: payload.assigned_candidates || [],
+    current_stage: initialStage,
+    external_tracker_url: payload.external_tracker_url || "",
+    stage_history: [
+      {
+        stage: initialStage,
+        timestamp: now.toISOString(),
+        note: `Requisition created via ${payload.workflow_destination}`,
+      },
+    ],
+    request_date: dateStr,
+    created_at: now.toISOString(),
+  };
+
+  if (!supabase) {
+    if (initialStatus === "PENDING_SOURCING") {
+      fallbackIncomingRequisitions.unshift(newRecord as RequisitionItem);
+    } else {
+      fallbackRequisitions.unshift(newRecord as RequisitionItem);
+    }
+    return { success: true, data: newRecord as RequisitionItem };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("mart_requisitions")
+      .insert([newRecord])
+      .select()
+      .single();
+
+    if (error) {
+      if (initialStatus === "PENDING_SOURCING") {
+        fallbackIncomingRequisitions.unshift(newRecord as RequisitionItem);
+      } else {
+        fallbackRequisitions.unshift(newRecord as RequisitionItem);
+      }
+      return { success: true, data: newRecord as RequisitionItem };
+    }
+    return { success: true, data: data as RequisitionItem };
+  } catch {
+    if (initialStatus === "PENDING_SOURCING") {
+      fallbackIncomingRequisitions.unshift(newRecord as RequisitionItem);
+    } else {
+      fallbackRequisitions.unshift(newRecord as RequisitionItem);
+    }
+    return { success: true, data: newRecord as RequisitionItem };
   }
 }
 
