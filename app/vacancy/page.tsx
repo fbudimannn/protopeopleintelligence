@@ -8,6 +8,7 @@ import DataProvenanceBadge from "@/components/DataProvenanceBadge";
 import {
   getVacancyKPIs,
   getRequisitions,
+  updateRequisitionStage,
   getSourcingChannels,
   getFunnelStages,
   getTalentPoolCandidates,
@@ -48,6 +49,12 @@ import {
   Building2,
   ArrowRight,
   X,
+  Inbox,
+  FileSpreadsheet,
+  UserCheck,
+  RefreshCw,
+  Eye,
+  Globe,
 } from "lucide-react";
 
 type VacancyTab = "overview" | "matrix" | "funnel" | "talent-pool" | "outcomes";
@@ -111,6 +118,32 @@ function VacancyContent() {
       setFulfillmentTab("INTERNAL_MOBILITY");
     } else {
       setFulfillmentTab("TALENT_POOL");
+    }
+  };
+
+  // Detailed Pop-up Modal State
+  const [detailModalReq, setDetailModalReq] = useState<RequisitionItem | null>(null);
+  const [advancingStage, setAdvancingStage] = useState<boolean>(false);
+  const [stageActionMessage, setStageActionMessage] = useState<string | null>(null);
+
+  const handleAdvanceStage = async (reqCode: string, newStage: string, candidateId?: string) => {
+    setAdvancingStage(true);
+    try {
+      const res = await updateRequisitionStage(reqCode, newStage, candidateId, `Stage advanced to ${newStage}`);
+      if (res.success && res.data) {
+        setRequisitions((prev) =>
+          prev.map((r) => (r.req_code === reqCode ? { ...r, ...res.data } : r))
+        );
+        if (detailModalReq && detailModalReq.req_code === reqCode) {
+          setDetailModalReq((prev) => (prev ? { ...prev, ...res.data } : null));
+        }
+        setStageActionMessage(`Tahapan kandidat berhasil di-update ke: ${newStage}`);
+        setTimeout(() => setStageActionMessage(null), 4000);
+      }
+    } catch (err) {
+      console.error("Failed to advance stage:", err);
+    } finally {
+      setAdvancingStage(false);
     }
   };
 
@@ -464,15 +497,32 @@ function VacancyContent() {
           </p>
         </div>
 
-        {/* Action Link to Team */}
-        <div className="flex items-center gap-3">
+        {/* Stage Switcher and Action Link */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5 bg-surface-card p-1 rounded-2xl border border-surface-border shadow-sm">
+            <Link
+              href="/vacancy/intake"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-ink-secondary hover:text-ink-primary hover:bg-surface-ground transition-colors flex items-center gap-1.5"
+            >
+              <Inbox className="w-3.5 h-3.5 text-brand-teal" />
+              <span>1. Intake Assessment</span>
+            </Link>
+            <button
+              type="button"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-brand-teal text-surface-ground flex items-center gap-1.5 shadow-sm cursor-default"
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>2. Active Monitoring ({filteredRequisitions.length})</span>
+            </button>
+          </div>
+
           <Link
             href="/team"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-surface-card border border-surface-border text-xs font-semibold text-ink-primary hover:bg-surface-elevated hover:border-brand-teal/40 transition-all shadow-subtle"
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-surface-card border border-surface-border text-xs font-semibold text-ink-primary hover:bg-surface-elevated hover:border-brand-teal/40 transition-all shadow-subtle"
           >
             <Users className="w-4 h-4 text-brand-teal" />
-            <span>Switch to Team (Post-Hire)</span>
-            <ChevronRight className="w-4 h-4 text-ink-tertiary" />
+            <span>Team (Post-Hire)</span>
+            <ChevronRight className="w-3.5 h-3.5 text-ink-tertiary" />
           </Link>
         </div>
       </div>
@@ -895,26 +945,25 @@ function VacancyContent() {
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[900px] text-left text-xs">
+                  <table className="w-full min-w-[980px] text-left text-xs">
                     <thead>
                       <tr className="bg-surface-ground/70 border-b border-surface-border text-ink-secondary font-semibold">
-                        <th className="py-3 px-4">Req Code</th>
-                        <th className="py-3 px-4">Role & Job Family</th>
-                        <th className="py-3 px-4">Location</th>
-                        <th className="py-3 px-4">Type</th>
-                        <th className="py-3 px-3 text-center">Openings</th>
+                        <th className="py-3 px-3">Req Code</th>
+                        <th className="py-3 px-3">Posisi & Job Family</th>
+                        <th className="py-3 px-3">Lokasi & Cabang</th>
+                        <th className="py-3 px-3">Sourcing Pathway</th>
+                        <th className="py-3 px-3">Kandidat / Assignee</th>
+                        <th className="py-3 px-3">Current Stage</th>
                         <th className="py-3 px-3 text-center">Days Open / SLA</th>
-                        <th className="py-3 px-4">Bottleneck Stage</th>
-                        <th className="py-3 px-3 text-center">SLA Status</th>
                         <th className="py-3 px-3 text-center">Health</th>
-                        <th className="py-3 px-4 text-right">Action</th>
+                        <th className="py-3 px-3 text-right">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-surface-border">
                       {filteredRequisitions.length === 0 ? (
                         <tr>
-                          <td colSpan={10} className="py-8 text-center text-ink-tertiary">
-                            No requisitions match the selected filters.
+                          <td colSpan={9} className="py-8 text-center text-ink-tertiary">
+                            Tidak ada lowongan yang sesuai dengan filter.
                           </td>
                         </tr>
                       ) : (
@@ -922,14 +971,14 @@ function VacancyContent() {
                           const code = req.req_code || (req as any).id || "REQ-0000";
                           const role = req.role_name || (req as any).role || "Frontline Role";
                           const loc = req.location_name || (req as any).location || "National";
-                          const isRep = req.hiring_type === "Replacement" || (((req as any).demand_type || "").toUpperCase().includes("REPLACE"));
-                          const exitCode = req.linked_exit_code || (req as any).replaces_employee_id;
-                          const openings = req.openings || 1;
                           const days = req.days_open ?? (req as any).current_days_open ?? 25;
                           const target = req.sla_target_days ?? (req as any).sla_days ?? 28;
                           const stat = (req.sla_status || (days > target ? "BREACHED" : days > target - 5 ? "AT_RISK" : "WITHIN_SLA")).toUpperCase();
                           const health = req.health || (stat === "BREACHED" ? "Critical" : stat === "AT_RISK" ? "At Risk" : "Healthy");
-                          const stage = req.bottleneck_stage || "HR Screening";
+                          const stage = req.current_stage || req.bottleneck_stage || "HR Screening";
+
+                          const tier = req.tier_number || (["Customer Service", "Personal Trainer", "Fitness Consultant", "Housekeeping"].includes(role) ? 1 : 2);
+                          const isTier1 = tier === 1;
 
                           const jobFamily = req.job_family || (
                             ["Customer Service", "Customer Service Leader", "Club Manager", "Operation Manager", "Area General Manager", "Housekeeping"].includes(role)
@@ -946,59 +995,110 @@ function VacancyContent() {
                               ? "bg-purple-500/10 text-purple-400 border-purple-500/30"
                               : "bg-sky-500/10 text-sky-400 border-sky-500/30";
 
+                          const primarySource = req.sourcing_channel || (
+                            isTier1
+                              ? "⚡ Frontline Ready Pool"
+                              : tier >= 2
+                              ? "✨ Internal Mobility"
+                              : "🌐 Conventional ATS"
+                          );
+
+                          const sourceBadge = primarySource.includes("Pool")
+                            ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                            : primarySource.includes("Mobility")
+                            ? "bg-purple-500/15 text-purple-400 border-purple-500/30"
+                            : "bg-sky-500/15 text-sky-400 border-sky-500/30";
+
+                          const assignedCandidate = req.assigned_candidates && req.assigned_candidates.length > 0
+                            ? req.assigned_candidates[0]
+                            : null;
+
                           return (
                             <tr
                               key={code}
-                              onClick={() => handleOpenFulfillment(req)}
+                              onClick={() => setDetailModalReq(req)}
                               className="hover:bg-surface-elevated/80 transition-colors cursor-pointer group"
                             >
-                              <td className="py-3 px-4 font-mono font-medium text-brand-teal group-hover:underline">
+                              <td className="py-3 px-3 font-mono font-bold text-brand-teal group-hover:underline whitespace-nowrap">
                                 {code}
                               </td>
-                              <td className="py-3 px-4">
-                                <div className="flex flex-col items-start gap-1">
-                                  <span className="font-bold text-ink-primary text-xs">
-                                    {role}
-                                  </span>
-                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${familyBadge}`}>
-                                    {jobFamily}
-                                  </span>
-                                </div>
-                              </td>
-                              <td className="py-3 px-4">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-surface-ground border border-surface-border text-ink-secondary">
-                                  {loc}
+
+                              <td className="py-3 px-3">
+                                <div className="font-bold text-ink-primary text-xs">{role}</div>
+                                <span className={`inline-flex items-center px-1.5 py-0.2 rounded-full text-[9px] font-semibold border mt-0.5 ${familyBadge}`}>
+                                  {jobFamily}
                                 </span>
                               </td>
-                              <td className="py-3 px-4">
-                                {isRep ? (
-                                  <div className="flex flex-col">
-                                    <span className="text-brand-teal font-semibold">Replacement</span>
-                                    {exitCode && (
-                                      <span className="text-[10px] text-ink-tertiary font-mono">
-                                        {exitCode}
-                                      </span>
-                                    )}
+
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                <span className="font-semibold text-ink-primary block">{loc}</span>
+                                <span className="text-[10px] text-ink-tertiary">{req.club_name || "Central"}</span>
+                              </td>
+
+                              <td className="py-3 px-3">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold border ${sourceBadge}`}>
+                                    {primarySource}
+                                  </span>
+                                  {req.external_tracker_url && (
+                                    <a
+                                      href={req.external_tracker_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="p-1 rounded bg-surface-ground hover:bg-surface-border text-brand-teal transition-colors"
+                                      title="Buka Google Sheet Tracker"
+                                    >
+                                      <FileSpreadsheet className="w-3 h-3" />
+                                    </a>
+                                  )}
+                                </div>
+                              </td>
+
+                              <td className="py-3 px-3">
+                                {assignedCandidate ? (
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-brand-teal/20 text-brand-teal font-bold text-[10px] flex items-center justify-center flex-shrink-0">
+                                      {assignedCandidate.name.charAt(0)}
+                                    </div>
+                                    <div className="truncate max-w-[130px]">
+                                      <div className="font-bold text-ink-primary text-xs truncate">
+                                        {assignedCandidate.name}
+                                      </div>
+                                      {assignedCandidate.fit_score && (
+                                        <span className="text-[9px] text-emerald-400 font-semibold block">
+                                          {assignedCandidate.fit_score}% Fit
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
                                 ) : (
-                                  <span className="text-ink-secondary">Expansion</span>
+                                  <div>
+                                    <span className="text-ink-secondary text-xs font-semibold block">
+                                      {req.pipeline_size || 8} Pelamar
+                                    </span>
+                                    <span className="text-[10px] text-ink-tertiary">
+                                      In Pipeline
+                                    </span>
+                                  </div>
                                 )}
                               </td>
-                              <td className="py-3 px-3 text-center font-semibold text-ink-primary">
-                                {openings}
+
+                              <td className="py-3 px-3 whitespace-nowrap">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-surface-ground border border-surface-border text-ink-primary">
+                                  {stage}
+                                </span>
                               </td>
-                              <td className="py-3 px-3 text-center">
-                                <span className={`font-mono font-bold block ${
+
+                              <td className="py-3 px-3 text-center whitespace-nowrap">
+                                <span className={`font-mono font-bold block text-xs ${
                                   days > target
                                     ? "text-status-danger"
                                     : days > target - 5
                                     ? "text-status-attention"
                                     : "text-ink-primary"
                                 }`}>
-                                  {days}d
-                                </span>
-                                <span className="text-[10px] text-ink-tertiary block">
-                                  Target: {target}d
+                                  {days}d <span className="text-[10px] font-normal text-ink-tertiary">/ {target}d</span>
                                 </span>
                                 <div className="w-16 mx-auto bg-surface-ground h-1 rounded-full overflow-hidden mt-1 border border-surface-border/60">
                                   <div
@@ -1013,53 +1113,54 @@ function VacancyContent() {
                                   />
                                 </div>
                               </td>
-                              <td className="py-3 px-4 text-ink-secondary font-medium">
-                                {stage}
-                              </td>
-                              <td className="py-3 px-3 text-center">
-                                {stat === "WITHIN_SLA" ? (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-healthy/10 text-status-healthy border border-status-healthy/20">
-                                    Within SLA
-                                  </span>
-                                ) : stat === "AT_RISK" ? (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-attention/10 text-status-attention border border-status-attention/20">
-                                    At Risk
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-danger/10 text-status-danger border border-status-danger/20">
-                                    Breached
-                                  </span>
-                                )}
-                              </td>
-                              <td className="py-3 px-3 text-center">
+
+                              <td className="py-3 px-3 text-center whitespace-nowrap">
                                 {health === "Healthy" ? (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-healthy">
-                                    <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-status-healthy px-2 py-0.5 rounded-full bg-status-healthy/10 border border-status-healthy/20">
+                                    <CheckCircle2 className="w-3 h-3" />
                                     <span>Healthy</span>
                                   </span>
                                 ) : health === "At Risk" ? (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-status-attention">
-                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-status-attention px-2 py-0.5 rounded-full bg-status-attention/10 border border-status-attention/20">
+                                    <AlertTriangle className="w-3 h-3" />
                                     <span>At Risk</span>
                                   </span>
                                 ) : (
-                                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-status-danger">
-                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-status-danger px-2 py-0.5 rounded-full bg-status-danger/10 border border-status-danger/20">
+                                    <AlertTriangle className="w-3 h-3" />
                                     <span>Critical</span>
                                   </span>
                                 )}
                               </td>
-                              <td className="py-3 px-4 text-right">
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleOpenFulfillment(req);
-                                  }}
-                                  className="px-2.5 py-1.5 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all shadow-subtle inline-flex items-center gap-1 cursor-pointer"
-                                >
-                                  <Zap className="w-3.5 h-3.5" />
-                                  <span>Fulfill</span>
-                                </button>
+
+                              <td className="py-3 px-3 text-right whitespace-nowrap">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDetailModalReq(req);
+                                    }}
+                                    className="px-2 py-1 rounded-lg bg-surface-ground hover:bg-surface-card text-ink-primary border border-surface-border text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
+                                    title="Lihat Detail Requisition"
+                                  >
+                                    <Eye className="w-3 h-3 text-brand-teal" />
+                                    <span>Detail</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenFulfillment(req);
+                                    }}
+                                    className="px-2 py-1 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all shadow-subtle inline-flex items-center gap-1 cursor-pointer"
+                                    title="Buka 3-Way Fulfillment"
+                                  >
+                                    <Zap className="w-3 h-3" />
+                                    <span>Fulfill</span>
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -2240,6 +2341,289 @@ function VacancyContent() {
                 className="px-4 py-2 rounded-lg border border-surface-border text-xs font-semibold text-ink-secondary hover:text-ink-primary transition-colors cursor-pointer"
               >
                 Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 10. Interactive Requisition Detail Modal (Pop-up Detail) */}
+      {detailModalReq && (
+        <div className="fixed inset-0 bg-ink-primary/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-slideUp my-8 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="p-5 border-b border-surface-border flex items-start justify-between bg-surface-ground/60">
+              <div>
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-teal/20 text-brand-teal border border-brand-teal/30">
+                    {detailModalReq.req_code}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
+                      detailModalReq.sla_status === "WITHIN_SLA"
+                        ? "bg-status-healthy/15 text-status-healthy border-status-healthy/30"
+                        : detailModalReq.sla_status === "AT_RISK"
+                        ? "bg-status-attention/15 text-status-attention border-status-attention/30"
+                        : "bg-status-danger/15 text-status-danger border-status-danger/30"
+                    }`}
+                  >
+                    {detailModalReq.sla_status === "WITHIN_SLA"
+                      ? "Within SLA"
+                      : detailModalReq.sla_status === "AT_RISK"
+                      ? "At Risk"
+                      : "SLA Breached"}
+                  </span>
+                  <span className="text-[10px] font-semibold text-ink-tertiary">
+                    {detailModalReq.hiring_type} • {detailModalReq.days_open} Hari Terbuka (Target: {detailModalReq.sla_target_days}d)
+                  </span>
+                </div>
+                <h3 className="text-lg font-bold text-ink-primary">
+                  Detail Lowongan: {detailModalReq.role_name}
+                </h3>
+                <p className="text-xs text-ink-secondary mt-0.5">
+                  Cabang: <strong className="text-ink-primary">{detailModalReq.location_name} ({detailModalReq.club_name || "Central"})</strong> • Hiring Manager: {detailModalReq.hiring_manager}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDetailModalReq(null)}
+                className="p-1.5 rounded-lg hover:bg-surface-ground text-ink-tertiary hover:text-ink-primary transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Notification alert within modal */}
+            {stageActionMessage && (
+              <div className="px-5 py-2.5 bg-status-healthy/15 border-b border-status-healthy/30 text-xs font-semibold text-status-healthy flex items-center gap-2 animate-fadeIn">
+                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                <span>{stageActionMessage}</span>
+              </div>
+            )}
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {/* Urgency Context Banner */}
+              <div className="p-3.5 rounded-xl bg-surface-ground border border-surface-border flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 text-status-attention flex-shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <span className="font-bold text-ink-primary block mb-0.5">Alasan Kebutuhan & Konteks Turnover:</span>
+                  <p className="text-ink-secondary leading-relaxed">{detailModalReq.urgency_reason}</p>
+                  {detailModalReq.linked_exit_code && (
+                    <span className="text-[10px] text-status-critical font-mono font-semibold block mt-1">
+                      Linked Turnover Exit: {detailModalReq.linked_exit_code}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* 1. Sourcing Origin & Multi-Channel Breakdown */}
+              <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-ink-primary uppercase tracking-wider flex items-center gap-1.5">
+                    <Globe className="w-3.5 h-3.5 text-brand-teal" />
+                    <span>Jalur & Kanal Sourcing Aktif</span>
+                  </span>
+                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-teal/15 text-brand-teal border border-brand-teal/30">
+                    {detailModalReq.sourcing_channel || "⚡ Frontline Ready Pool"}
+                  </span>
+                </div>
+
+                {/* Multi-source details or channels */}
+                {detailModalReq.sourcing_details && detailModalReq.sourcing_details.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {detailModalReq.sourcing_details.map((sd, i) => (
+                      <div key={i} className="p-2.5 rounded-lg bg-surface-card border border-surface-border space-y-1">
+                        <div className="flex items-center justify-between font-bold text-ink-primary">
+                          <span>{sd.channel}</span>
+                          <span className="text-brand-teal font-mono">{sd.applicants || 0} Pelamar</span>
+                        </div>
+                        {sd.notes && <p className="text-[10px] text-ink-tertiary">{sd.notes}</p>}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-xs text-ink-secondary">
+                    Lowongan ini diprioritaskan melalui kanal <strong>{detailModalReq.sourcing_channel || "Frontline Ready Pool"}</strong> untuk kompresi SLA.
+                  </p>
+                )}
+
+                {/* External Tracker Link if present */}
+                {detailModalReq.external_tracker_url && (
+                  <div className="pt-2 border-t border-surface-border/60 flex items-center justify-between">
+                    <span className="text-xs text-ink-secondary flex items-center gap-1.5">
+                      <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                      <span>Google Sheet / ATS Tracker Terhubung</span>
+                    </span>
+                    <a
+                      href={detailModalReq.external_tracker_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-1 rounded-lg text-xs font-bold bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal border border-brand-teal/30 flex items-center gap-1 transition-colors"
+                    >
+                      <span>Buka Spreadsheet / Tracker</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. Active Candidates in Process */}
+              <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-ink-primary uppercase tracking-wider flex items-center gap-1.5">
+                    <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Kandidat yang Sedang Diproses (Shortlist & Assignee)</span>
+                  </span>
+                  <span className="text-xs text-ink-tertiary font-mono">
+                    {(detailModalReq.assigned_candidates?.length || 0)} Kandidat Terpilih
+                  </span>
+                </div>
+
+                {detailModalReq.assigned_candidates && detailModalReq.assigned_candidates.length > 0 ? (
+                  <div className="space-y-2.5">
+                    {detailModalReq.assigned_candidates.map((cand, idx) => {
+                      const currentStageName = cand.stage || detailModalReq.current_stage || "HR Screening";
+                      return (
+                        <div
+                          key={cand.id || idx}
+                          className="p-3.5 rounded-xl bg-surface-card border border-surface-border space-y-2.5 hover:border-brand-teal/40 transition-all"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-full bg-brand-teal/20 text-brand-teal font-bold text-xs flex items-center justify-center">
+                                {cand.name.charAt(0)}
+                              </div>
+                              <div>
+                                <div className="font-bold text-xs text-ink-primary flex items-center gap-2">
+                                  <span>{cand.name}</span>
+                                  {cand.fit_score && (
+                                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
+                                      {cand.fit_score}% Fit
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[10px] text-ink-tertiary mt-0.5 flex items-center gap-2">
+                                  <span>Asal: {cand.source_type}</span>
+                                  {cand.current_role && <span>• {cand.current_role}</span>}
+                                  {cand.applied_at && <span>• Diajukan: {cand.applied_at}</span>}
+                                </div>
+                              </div>
+                            </div>
+
+                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface-ground border border-surface-border text-ink-primary whitespace-nowrap">
+                              Tahap: {currentStageName}
+                            </span>
+                          </div>
+
+                          {cand.notes && (
+                            <p className="text-[11px] text-ink-secondary bg-surface-ground/50 p-2 rounded-lg border border-surface-border/40">
+                              {cand.notes}
+                            </p>
+                          )}
+
+                          {/* Stage Advancer Button Group */}
+                          <div className="pt-2 border-t border-surface-border/60 flex items-center justify-between text-xs">
+                            <span className="text-[10px] text-ink-tertiary">
+                              Aksi Progresi Rekrutmen:
+                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              {currentStageName !== "Manager Interview" && (
+                                <button
+                                  type="button"
+                                  disabled={advancingStage}
+                                  onClick={() => handleAdvanceStage(detailModalReq.req_code, "Manager Interview", cand.id)}
+                                  className="px-2 py-1 rounded bg-surface-ground hover:bg-surface-border text-ink-primary text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                  ➔ Ke Manager Interview
+                                </button>
+                              )}
+                              {currentStageName !== "Offering Stage" && (
+                                <button
+                                  type="button"
+                                  disabled={advancingStage}
+                                  onClick={() => handleAdvanceStage(detailModalReq.req_code, "Offering Stage", cand.id)}
+                                  className="px-2 py-1 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                                >
+                                  ➔ Ke Offering Stage
+                                </button>
+                              )}
+                              {currentStageName !== "Hired" && (
+                                <button
+                                  type="button"
+                                  disabled={advancingStage}
+                                  onClick={() => handleAdvanceStage(detailModalReq.req_code, "Hired", cand.id)}
+                                  className="px-2.5 py-1 rounded bg-status-healthy text-surface-ground text-[11px] font-bold hover:bg-status-healthy/90 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                                >
+                                  ✓ Konfirmasi Hired
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-surface-card border border-surface-border text-center space-y-2 text-xs">
+                    <p className="text-ink-secondary">
+                      Belum ada kandidat spesifik yang di-assign ke lowongan ini.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const targetReq = detailModalReq;
+                        setDetailModalReq(null);
+                        handleOpenFulfillment(targetReq);
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Alokasikan Kandidat via 3-Way Hub</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 3. Interactive Pipeline Stage Stepper */}
+              <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
+                <span className="text-xs font-bold text-ink-primary uppercase tracking-wider block">
+                  Pipeline Stage Progression
+                </span>
+                <div className="grid grid-cols-5 gap-1 text-center text-xs font-semibold">
+                  {[
+                    { label: "1. Intake", active: true },
+                    { label: "2. Screening", active: true },
+                    { label: "3. Audition / Interview", active: detailModalReq.current_stage !== "HR Screening" },
+                    { label: "4. Offering", active: ["Offering Stage", "IDP Transition", "Hired"].includes(detailModalReq.current_stage || "") },
+                    { label: "5. Hired / Onboarding", active: (detailModalReq.current_stage || "").includes("Hired") },
+                  ].map((st, i) => (
+                    <div
+                      key={i}
+                      className={`p-2 rounded-lg border transition-all ${
+                        st.active
+                          ? "bg-brand-teal/15 border-brand-teal/50 text-brand-teal"
+                          : "bg-surface-card border-surface-border text-ink-tertiary"
+                      }`}
+                    >
+                      <span className="text-[10px] block">{st.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-surface-border bg-surface-ground/50 flex items-center justify-between">
+              <span className="text-[11px] text-ink-tertiary">
+                Perubahan tahapan langsung tersinkronisasi ke PostgreSQL Supabase.
+              </span>
+              <button
+                type="button"
+                onClick={() => setDetailModalReq(null)}
+                className="px-4 py-2 rounded-xl bg-surface-card border border-surface-border text-xs font-semibold text-ink-secondary hover:text-ink-primary transition-colors cursor-pointer"
+              >
+                Tutup Detail
               </button>
             </div>
           </div>

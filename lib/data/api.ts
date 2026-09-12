@@ -28,6 +28,7 @@ import {
   fallbackRetentionCohorts,
   fallbackEngagementSummaries,
   fallbackMobilityMatches,
+  fallbackIncomingRequisitions,
   fallbackRequisitions,
   fallbackSourcingChannels,
   fallbackFunnelStages,
@@ -60,18 +61,134 @@ export async function getVacancyKPIs(): Promise<{ data: VacancyKPI[]; isLive: bo
   }
 }
 
-export async function getRequisitions(): Promise<{ data: RequisitionItem[]; isLive: boolean }> {
+export async function getRequisitions(filter?: {
+  status?: 'PENDING_SOURCING' | 'ACTIVE_MONITORING' | 'ALL';
+}): Promise<{ data: RequisitionItem[]; isLive: boolean }> {
+  const status = filter?.status || 'ACTIVE_MONITORING';
   if (!supabase) {
+    if (status === 'PENDING_SOURCING') {
+      return { data: fallbackIncomingRequisitions, isLive: false };
+    }
+    if (status === 'ALL') {
+      return { data: [...fallbackIncomingRequisitions, ...fallbackRequisitions], isLive: false };
+    }
     return { data: fallbackRequisitions, isLive: false };
   }
   try {
-    const { data, error } = await supabase.from("mart_requisitions").select("*");
+    let query = supabase.from("mart_requisitions").select("*");
+    if (status !== 'ALL') {
+      query = query.eq("requisition_status", status);
+    }
+    const { data, error } = await query;
     if (error || !data || data.length === 0) {
+      if (status === 'PENDING_SOURCING') {
+        return { data: fallbackIncomingRequisitions, isLive: false };
+      }
       return { data: fallbackRequisitions, isLive: false };
     }
     return { data: data as RequisitionItem[], isLive: true };
   } catch {
+    if (status === 'PENDING_SOURCING') {
+      return { data: fallbackIncomingRequisitions, isLive: false };
+    }
     return { data: fallbackRequisitions, isLive: false };
+  }
+}
+
+export async function saveRequisitionSourcing(
+  reqCode: string,
+  payload: {
+    sourcing_channel: string;
+    sourcing_details?: any[];
+    assigned_candidates?: any[];
+    current_stage?: string;
+    external_tracker_url?: string;
+  }
+): Promise<{ success: boolean; data?: RequisitionItem; error?: string }> {
+  if (!supabase) {
+    return { success: true };
+  }
+  try {
+    const updateData = {
+      ...payload,
+      requisition_status: 'ACTIVE_MONITORING',
+    };
+    const { data, error } = await supabase
+      .from("mart_requisitions")
+      .update(updateData)
+      .eq("req_code", reqCode)
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true, data: data as RequisitionItem };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to update requisition' };
+  }
+}
+
+export async function updateRequisitionStage(
+  reqCode: string,
+  newStage: string,
+  candidateId?: string,
+  note?: string
+): Promise<{ success: boolean; data?: RequisitionItem; error?: string }> {
+  if (!supabase) {
+    return { success: true };
+  }
+  try {
+    const { data: existing, error: fetchErr } = await supabase
+      .from("mart_requisitions")
+      .select("*")
+      .eq("req_code", reqCode)
+      .single();
+
+    if (fetchErr || !existing) {
+      return { success: false, error: fetchErr?.message || 'Requisition not found' };
+    }
+
+    let assignedCandidates = existing.assigned_candidates || [];
+    if (candidateId) {
+      assignedCandidates = assignedCandidates.map((c: any) =>
+        c.id === candidateId ? { ...c, stage: newStage, notes: note || c.notes } : c
+      );
+    } else if (assignedCandidates.length > 0) {
+      assignedCandidates = assignedCandidates.map((c: any) => ({
+        ...c,
+        stage: newStage,
+      }));
+    }
+
+    const history = existing.stage_history || [];
+    history.push({
+      stage: newStage,
+      timestamp: new Date().toISOString(),
+      note: note || `Stage updated to ${newStage}`,
+    });
+
+    const isHired = newStage.toLowerCase().includes('hired');
+    const updatePayload: any = {
+      current_stage: newStage,
+      assigned_candidates: assignedCandidates,
+      stage_history: history,
+      requisition_status: isHired ? 'FULFILLED' : existing.requisition_status,
+    };
+
+    const { data, error } = await supabase
+      .from("mart_requisitions")
+      .update(updatePayload)
+      .eq("req_code", reqCode)
+      .select()
+      .single();
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+    return { success: true, data: data as RequisitionItem };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Failed to advance stage' };
   }
 }
 

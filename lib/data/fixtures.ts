@@ -746,6 +746,24 @@ export const dataProvenanceRegistry: ProvenanceRecord[] = [
     impact_on_decision: "Proves that 70.7% of all open requisitions stem directly from employee turnover.",
   },
 ];
+export interface RequisitionSourcingDetail {
+  channel: string;
+  url?: string;
+  applicants?: number;
+  notes?: string;
+}
+
+export interface RequisitionCandidateItem {
+  id: string;
+  name: string;
+  current_role?: string;
+  source_type: 'TALENT_POOL' | 'INTERNAL_MOBILITY' | 'CONVENTIONAL' | string;
+  stage: 'HR Screening' | 'Manager Interview' | 'Technical Audition' | 'GM Final Audition' | 'Offering Stage' | 'IDP Transition' | 'Hired' | string;
+  fit_score?: number;
+  contact?: string;
+  applied_at?: string;
+  notes?: string;
+}
 
 export interface RequisitionItem {
   req_code: string;
@@ -753,7 +771,9 @@ export interface RequisitionItem {
   job_family?: 'Club Operations' | 'Fitness & Coaching' | 'Commercial & Sales' | string;
   tier_number?: 1 | 2 | 3 | 4 | number;
   recommended_fulfillment?: 'TALENT_POOL' | 'INTERNAL_MOBILITY' | 'CONVENTIONAL_ATS' | string;
+  requisition_status?: 'PENDING_SOURCING' | 'ACTIVE_MONITORING' | 'FULFILLED' | 'CANCELLED';
   location_name: string;
+  club_name?: string;
   hiring_type: "Replacement" | "Expansion";
   openings: number;
   days_open: number;
@@ -766,6 +786,13 @@ export interface RequisitionItem {
   linked_exit_code?: string;
   urgency_reason: string;
   data_provenance: "OBSERVED_CASE_STUDY" | "SYNTHETIC_ENABLER";
+  priority?: string;
+  sourcing_channel?: string;
+  sourcing_details?: RequisitionSourcingDetail[];
+  assigned_candidates?: RequisitionCandidateItem[];
+  current_stage?: string;
+  external_tracker_url?: string;
+  stage_history?: { stage: string; timestamp: string; note?: string }[];
 }
 
 export interface SourcingChannelMetric {
@@ -815,6 +842,147 @@ export interface HiringOutcomeMetric {
   ramp_up_speed_pct: number;
   manager_rating_avg: number;
 }
+
+export const fallbackIncomingRequisitions: RequisitionItem[] = [
+  {
+    req_code: "REQ-IN-001",
+    role_name: "Customer Service",
+    job_family: "Club Operations",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
+    requisition_status: "PENDING_SOURCING",
+    location_name: "Bali",
+    club_name: "Sunset Road",
+    hiring_type: "Replacement",
+    openings: 2,
+    days_open: 2,
+    sla_target_days: 14,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 0,
+    bottleneck_stage: "Sourcing Assessment",
+    health: "Healthy",
+    hiring_manager: "Bambang Wijaya (Club GM)",
+    linked_exit_code: "EXT-BLI-0089",
+    urgency_reason: "Sole CS resigned; front desk member check-in queue overflowing during morning peak.",
+    data_provenance: "SYNTHETIC_ENABLER",
+    current_stage: "Sourcing / Intake",
+    external_tracker_url: "https://docs.google.com/spreadsheets/d/1fithub-ta-bali-tracker",
+  },
+  {
+    req_code: "REQ-IN-002",
+    role_name: "Personal Trainer",
+    job_family: "Fitness & Coaching",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
+    requisition_status: "PENDING_SOURCING",
+    location_name: "Bali",
+    club_name: "Canggu",
+    hiring_type: "Replacement",
+    openings: 3,
+    days_open: 4,
+    sla_target_days: 14,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 0,
+    bottleneck_stage: "Sourcing Assessment",
+    health: "Healthy",
+    hiring_manager: "Wayan Surya (Fitness Manager)",
+    linked_exit_code: "EXT-BLI-0094",
+    urgency_reason: "Client session booking backlog in Canggu branch following senior coach exits.",
+    data_provenance: "SYNTHETIC_ENABLER",
+    current_stage: "Sourcing / Intake",
+  },
+  {
+    req_code: "REQ-IN-003",
+    role_name: "Fitness Consultant",
+    job_family: "Commercial & Sales",
+    tier_number: 1,
+    recommended_fulfillment: "TALENT_POOL",
+    requisition_status: "PENDING_SOURCING",
+    location_name: "Bandung",
+    club_name: "Pasteur",
+    hiring_type: "Expansion",
+    openings: 2,
+    days_open: 1,
+    sla_target_days: 14,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 0,
+    bottleneck_stage: "Sourcing Assessment",
+    health: "Healthy",
+    hiring_manager: "Rina Marlina (Commercial Lead)",
+    urgency_reason: "Target coverage for Q3 presale launch drive; need fast frontline conversion consultants.",
+    data_provenance: "SYNTHETIC_ENABLER",
+    current_stage: "Sourcing / Intake",
+  },
+  {
+    req_code: "REQ-IN-004",
+    role_name: "Club Manager",
+    job_family: "Club Operations",
+    tier_number: 3,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
+    requisition_status: "PENDING_SOURCING",
+    location_name: "Jakarta Selatan",
+    club_name: "Sudirman",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 5,
+    sla_target_days: 21,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 0,
+    bottleneck_stage: "Sourcing Assessment",
+    health: "Healthy",
+    hiring_manager: "Hendro Kusumo (Area GM)",
+    linked_exit_code: "EXT-JKT-0042",
+    urgency_reason: "Sudirman branch requires senior operational leadership and EBITDA margin governance.",
+    data_provenance: "SYNTHETIC_ENABLER",
+    current_stage: "Sourcing / Intake",
+  },
+  {
+    req_code: "REQ-IN-005",
+    role_name: "PT Team Leader",
+    job_family: "Fitness & Coaching",
+    tier_number: 2,
+    recommended_fulfillment: "INTERNAL_MOBILITY",
+    requisition_status: "PENDING_SOURCING",
+    location_name: "Surabaya",
+    club_name: "HR Muhammad",
+    hiring_type: "Replacement",
+    openings: 1,
+    days_open: 3,
+    sla_target_days: 21,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 0,
+    bottleneck_stage: "Sourcing Assessment",
+    health: "Healthy",
+    hiring_manager: "Budi Santoso (Fitness Manager)",
+    linked_exit_code: "EXT-SBY-0031",
+    urgency_reason: "Need team leader to run movement audits, monthly trainer quota pacing, and floor safety.",
+    data_provenance: "SYNTHETIC_ENABLER",
+    current_stage: "Sourcing / Intake",
+  },
+  {
+    req_code: "REQ-IN-006",
+    role_name: "Sales Manager",
+    job_family: "Commercial & Sales",
+    tier_number: 3,
+    recommended_fulfillment: "CONVENTIONAL_ATS",
+    requisition_status: "PENDING_SOURCING",
+    location_name: "Medan",
+    club_name: "Cambridge",
+    hiring_type: "Expansion",
+    openings: 1,
+    days_open: 3,
+    sla_target_days: 28,
+    sla_status: "WITHIN_SLA",
+    pipeline_size: 0,
+    bottleneck_stage: "Sourcing Assessment",
+    health: "Healthy",
+    hiring_manager: "Yusuf Siregar (Regional Commercial Head)",
+    urgency_reason: "North Sumatra commercial expansion requiring B2B partnership & corporate outreach director.",
+    data_provenance: "SYNTHETIC_ENABLER",
+    current_stage: "Sourcing / Intake",
+    external_tracker_url: "https://docs.google.com/spreadsheets/d/1medan-sales-hiring-tracker",
+  },
+];
 
 export const fallbackRequisitions: RequisitionItem[] = [
   {
