@@ -65,6 +65,11 @@ import {
   Eye,
   Globe,
   Plus,
+  Database,
+  Trash2,
+  UserPlus,
+  Phone,
+  Link2,
 } from "lucide-react";
 
 export interface ClusterDemandBreakdown {
@@ -169,6 +174,83 @@ function VacancyContent() {
   const [allocating, setAllocating] = useState<boolean>(false);
   const [allocationSuccess, setAllocationSuccess] = useState<string | null>(null);
 
+  // Conventional Sourcing Breakdown & Candidate Manual Entry States
+  type ConventionalCategoryKey = "SOCIAL_MEDIA_ADS" | "EMPLOYEE_REFERRAL" | "JOB_PORTAL" | "CAREER_SITE" | "AGENCY";
+  const [conventionalCategory, setConventionalCategory] = useState<ConventionalCategoryKey>("SOCIAL_MEDIA_ADS");
+  const [conventionalSubChannel, setConventionalSubChannel] = useState<string>("Instagram Ads");
+  const [conventionalCandidateName, setConventionalCandidateName] = useState<string>("");
+  const [conventionalCandidatePhone, setConventionalCandidatePhone] = useState<string>("");
+  const [conventionalCandidateUrl, setConventionalCandidateUrl] = useState<string>("");
+  const [conventionalCandidateRole, setConventionalCandidateRole] = useState<string>("");
+  const [conventionalCandidateNotes, setConventionalCandidateNotes] = useState<string>("");
+  const [conventionalCandidateList, setConventionalCandidateList] = useState<Array<{
+    id: string;
+    name: string;
+    phone: string;
+    url: string;
+    role: string;
+    notes: string;
+    category: ConventionalCategoryKey;
+    sub_channel: string;
+  }>>([]);
+  const [allocatingReq, setAllocatingReq] = useState<RequisitionItem | null>(null);
+
+  const CONVENTIONAL_CATEGORIES: Record<ConventionalCategoryKey, { label: string; icon: any; subChannels: string[]; description: string }> = {
+    SOCIAL_MEDIA_ADS: {
+      label: "Social Media Ads",
+      icon: Sparkles,
+      subChannels: ["Instagram Ads", "LinkedIn Sponsored Post", "TikTok Career Blitz", "Meta Paid Campaign"],
+      description: "Direct targeted social campaigns (e.g. sponsored reels, feed ads for club trainers).",
+    },
+    EMPLOYEE_REFERRAL: {
+      label: "Employee Referral",
+      icon: Users,
+      subChannels: ["Club Staff Referral", "Cluster Lead Referral", "HQ Referral", "Alumni Referral"],
+      description: "Internal team referrals (highest 12-month retention channel in FIT HUB case dataset).",
+    },
+    JOB_PORTAL: {
+      label: "Job Portal",
+      icon: Globe,
+      subChannels: ["JobStreet", "Glints", "Kalibrr", "Indeed", "LinkedIn Jobs"],
+      description: "Standard public job board aggregators & external candidate pools.",
+    },
+    CAREER_SITE: {
+      label: "Career Site",
+      icon: Building2,
+      subChannels: ["Official Careers Portal", "Club Walk-In Applicant", "Club QR Scan Application"],
+      description: "Direct applications from FIT HUB company careers page and in-club walk-in drop-offs.",
+    },
+    AGENCY: {
+      label: "Recruitment Agency",
+      icon: Briefcase,
+      subChannels: ["Frontline Placement Agency", "Executive Search Partner", "Specialized Fitness Recruiter"],
+      description: "External recruitment partners and headhunters.",
+    },
+  };
+
+  const handleAddConventionalCandidate = () => {
+    if (!conventionalCandidateName.trim()) return;
+    const newCand = {
+      id: `cand-ext-${Date.now()}`,
+      name: conventionalCandidateName.trim(),
+      phone: conventionalCandidatePhone.trim() || "+62 812-xxxx-xxxx",
+      url: conventionalCandidateUrl.trim(),
+      role: conventionalCandidateRole.trim() || selectedIntakeReq?.role_name || "Applicant",
+      notes: conventionalCandidateNotes.trim() || `Sourced via ${conventionalSubChannel}`,
+      category: conventionalCategory,
+      sub_channel: conventionalSubChannel,
+    };
+    setConventionalCandidateList((prev) => [...prev, newCand]);
+    setConventionalCandidateName("");
+    setConventionalCandidatePhone("");
+    setConventionalCandidateUrl("");
+    setConventionalCandidateNotes("");
+  };
+
+  const handleRemoveConventionalCandidate = (id: string) => {
+    setConventionalCandidateList((prev) => prev.filter((c) => c.id !== id));
+  };
+
   // Create Requisition Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [creatingRequisition, setCreatingRequisition] = useState(false);
@@ -194,14 +276,20 @@ function VacancyContent() {
     );
     if (isFrontline) {
       setIntakeSourcingChannel("READY_POOL");
-      const match = talentPool.find((c) => c.role_target.toLowerCase() === req.role_name.toLowerCase()) || talentPool[0];
-      setIntakeSelectedCandidate(match || null);
     } else {
       setIntakeSourcingChannel("INTERNAL_MOBILITY");
-      const match = fallbackMobilityMatches.find((m) => m.target_role_name.toLowerCase() === req.role_name.toLowerCase()) || fallbackMobilityMatches[0];
-      setIntakeSelectedCandidate(match || null);
     }
+    // Initially unselected/empty as requested by user ("pertamanya kosong kecuali dari talent pool dan di internal mobility udah dipilih")
+    setIntakeSelectedCandidate(null);
     setIntakeTrackerUrl(req.external_tracker_url || "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit");
+    setConventionalCategory("SOCIAL_MEDIA_ADS");
+    setConventionalSubChannel("Instagram Ads");
+    setConventionalCandidateName("");
+    setConventionalCandidatePhone("");
+    setConventionalCandidateUrl("");
+    setConventionalCandidateRole(req.role_name);
+    setConventionalCandidateNotes("");
+    setConventionalCandidateList([]);
   };
 
   const handleSaveIntakeAllocation = async () => {
@@ -218,15 +306,20 @@ function VacancyContent() {
         if (intakeSelectedCandidate) {
           assignedCandidates = [
             {
-              id: intakeSelectedCandidate.candidate_id || "cand-pool",
+              id: intakeSelectedCandidate.candidate_id || `cand-pool-${Date.now()}`,
               name: intakeSelectedCandidate.display_name,
-              current_role: intakeSelectedCandidate.current_role,
+              current_role: intakeSelectedCandidate.role_target || intakeSelectedCandidate.current_role || selectedIntakeReq.role_name,
               source_type: "TALENT_POOL",
               stage: "Manager Interview",
-              fit_score: intakeSelectedCandidate.fit_score,
+              fit_score: intakeSelectedCandidate.fit_score || 92,
               contact: "+62 812-3456-7890",
               applied_at: new Date().toISOString().split("T")[0],
-              notes: "Selected from Frontline Ready Pool",
+              notes: intakeSelectedCandidate.notes || "Selected from Frontline Ready Pool (FIT HUB Academy Bank)",
+              sourcing_metadata: {
+                internal_type: "TALENT_POOL",
+                channel: "TALENT_POOL",
+                talent_pool_program: "FIT HUB Frontline Fast-Track",
+              },
             },
           ];
         }
@@ -236,7 +329,7 @@ function VacancyContent() {
         if (intakeSelectedCandidate) {
           assignedCandidates = [
             {
-              id: intakeSelectedCandidate.match_id || "cand-mob",
+              id: intakeSelectedCandidate.match_id || `cand-mob-${Date.now()}`,
               name: intakeSelectedCandidate.candidate_name || "Internal Candidate",
               current_role: intakeSelectedCandidate.current_role_name || "Club Lead",
               source_type: "INTERNAL_MOBILITY",
@@ -244,26 +337,83 @@ function VacancyContent() {
               fit_score: intakeSelectedCandidate.final_readiness_score || 90,
               contact: "+62 811-9876-5432",
               applied_at: new Date().toISOString().split("T")[0],
-              notes: `Promoted from ${intakeSelectedCandidate.current_role_name || "Internal Team"}`,
+              notes: `Promoted from ${intakeSelectedCandidate.current_role_name || "Internal Team"} via IDP Benchmark`,
+              sourcing_metadata: {
+                internal_type: "INTERNAL_MOBILITY",
+                channel: "INTERNAL_MOBILITY",
+                mobility_employee_id: `EMP-${Math.floor(1000 + Math.random() * 9000)}`,
+                mobility_current_role: intakeSelectedCandidate.current_role_name || "Club Lead",
+                mobility_current_branch: intakeSelectedCandidate.current_location_name || selectedIntakeReq.location_name,
+              },
             },
           ];
         }
       } else {
-        sourcingChannelName = `💼 Conventional (${intakeChannels.join(", ")})`;
+        sourcingChannelName = `💼 Conventional (${conventionalSubChannel})`;
         currentStageName = "HR Screening";
-        assignedCandidates = [
-          {
-            id: "cand-ext-1",
-            name: "Siti Rahayu",
-            current_role: "External Applicant",
-            source_type: "CONVENTIONAL",
+        if (conventionalCandidateList.length > 0) {
+          assignedCandidates = conventionalCandidateList.map((c, idx) => ({
+            id: c.id || `cand-ext-${Date.now()}-${idx}`,
+            name: c.name,
+            current_role: c.role || selectedIntakeReq.role_name,
+            source_type: c.category,
             stage: "HR Screening",
-            fit_score: 84,
-            contact: "+62 813-2233-4455",
+            fit_score: 85,
+            contact: c.phone || "+62 812-3344-5566",
             applied_at: new Date().toISOString().split("T")[0],
-            notes: "Applied via LinkedIn Job Post",
-          },
-        ];
+            notes: c.notes || `Sourced via ${c.sub_channel}`,
+            sourcing_metadata: {
+              channel: c.category,
+              social_platform: c.sub_channel.includes("Instagram") ? "Instagram" : c.sub_channel.includes("LinkedIn") ? "LinkedIn" : c.sub_channel.includes("TikTok") ? "TikTok" : "Meta",
+              social_post_campaign: "Regional Recruitment Campaign",
+              portal_name: c.sub_channel,
+              referrer_name: c.notes?.includes("Referral") ? c.name : "Employee Referral Network",
+              profile_url: c.url || intakeTrackerUrl,
+            },
+          }));
+        } else if (conventionalCandidateName.trim()) {
+          assignedCandidates = [
+            {
+              id: `cand-ext-${Date.now()}`,
+              name: conventionalCandidateName.trim(),
+              current_role: conventionalCandidateRole.trim() || selectedIntakeReq.role_name,
+              source_type: conventionalCategory,
+              stage: "HR Screening",
+              fit_score: 85,
+              contact: conventionalCandidatePhone.trim() || "+62 812-3344-5566",
+              applied_at: new Date().toISOString().split("T")[0],
+              notes: conventionalCandidateNotes.trim() || `Sourced via ${conventionalSubChannel}`,
+              sourcing_metadata: {
+                channel: conventionalCategory,
+                social_platform: conventionalSubChannel.includes("Instagram") ? "Instagram" : conventionalSubChannel.includes("LinkedIn") ? "LinkedIn" : "Meta",
+                social_post_campaign: "Regional Sourcing Campaign",
+                portal_name: conventionalSubChannel,
+                referrer_name: conventionalCandidateNotes.includes("Referral") ? conventionalCandidateName : "Employee Referral Network",
+                profile_url: conventionalCandidateUrl.trim() || intakeTrackerUrl,
+              },
+            },
+          ];
+        } else {
+          assignedCandidates = [
+            {
+              id: `cand-ext-${Date.now()}`,
+              name: `Applicant (${conventionalSubChannel})`,
+              current_role: selectedIntakeReq.role_name,
+              source_type: conventionalCategory,
+              stage: "HR Screening",
+              fit_score: 82,
+              contact: "+62 812-0000-1111",
+              applied_at: new Date().toISOString().split("T")[0],
+              notes: `Inbound applicant logged via ${conventionalSubChannel}`,
+              sourcing_metadata: {
+                channel: conventionalCategory,
+                portal_name: conventionalSubChannel,
+                social_platform: conventionalSubChannel.includes("Instagram") ? "Instagram" : "External Portal",
+                profile_url: intakeTrackerUrl,
+              },
+            },
+          ];
+        }
       }
 
       const res = await saveRequisitionSourcing(selectedIntakeReq.req_code, {
@@ -272,14 +422,15 @@ function VacancyContent() {
         current_stage: currentStageName,
         external_tracker_url: intakeTrackerUrl,
         sourcing_details: [
-          { channel: sourcingChannelName, url: intakeTrackerUrl, applicants: intakeApplicantCount },
+          { channel: sourcingChannelName, url: intakeTrackerUrl, applicants: assignedCandidates.length || intakeApplicantCount },
         ],
       });
 
       if (res.success && res.data) {
         setIncomingRequisitions((prev) => prev.filter((r) => r.req_code !== selectedIntakeReq.req_code));
         setRequisitions((prev) => [res.data!, ...prev.filter((r) => r.req_code !== selectedIntakeReq.req_code)]);
-        setAllocationSuccess(`Requisition ${selectedIntakeReq.req_code} allocated to ${sourcingChannelName} and moved to Active Monitoring!`);
+        const candMsg = assignedCandidates.length > 0 && assignedCandidates[0].name ? ` with candidate ${assignedCandidates[0].name}` : "";
+        setAllocationSuccess(`Requisition ${selectedIntakeReq.req_code} allocated to ${sourcingChannelName}${candMsg} and moved to Active Monitoring!`);
         setSelectedIntakeReq(null);
         handleStageChange("active");
         setTimeout(() => setAllocationSuccess(null), 5000);
@@ -2631,6 +2782,42 @@ function VacancyContent() {
       {/* 7. TAB CONTENT: Frontline Ready Pool */}
       {activeTab === "talent-pool" && (
         <div className="space-y-6">
+          {/* Allocation Mode Banner if navigated from Stage 1 Intake Triage */}
+          {allocatingReq && (
+            <div className="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 shrink-0">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-teal/20 text-brand-teal border border-brand-teal/30">
+                      {allocatingReq.req_code}
+                    </span>
+                    <span className="text-xs font-bold text-ink-primary">
+                      Requisition Allocation Mode
+                    </span>
+                  </div>
+                  <p className="text-xs text-ink-secondary mt-0.5">
+                    Select any pre-screened candidate below to allocate directly to <strong>{allocatingReq.role_name}</strong> in {allocatingReq.location_name} ({allocatingReq.club_name || "Central"}).
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedIntakeReq(allocatingReq);
+                  setAllocatingReq(null);
+                  setActiveTab("overview");
+                  setStage("intake");
+                }}
+                className="px-3 py-1.5 rounded-lg bg-surface-card hover:bg-surface-elevated border border-surface-border text-xs font-semibold text-ink-secondary hover:text-ink-primary transition-colors whitespace-nowrap cursor-pointer"
+              >
+                Return to Allocation Drawer
+              </button>
+            </div>
+          )}
+
           <div className="p-6 rounded-xl bg-surface-card border border-surface-border">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
               <div>
@@ -2737,13 +2924,31 @@ function VacancyContent() {
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-surface-border">
-                    <button
-                      onClick={() => handleFastTrack(c.display_name)}
-                      className="w-full py-1.5 px-3 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>Fast-Track to Interview</span>
-                    </button>
+                    {allocatingReq ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIntakeSelectedCandidate(c);
+                          setSelectedIntakeReq(allocatingReq);
+                          setAllocatingReq(null);
+                          setActiveTab("overview");
+                          setStage("intake");
+                        }}
+                        className="w-full py-1.5 px-3 rounded-lg bg-emerald-500 text-surface-ground text-xs font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Allocate to {allocatingReq.req_code}</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleFastTrack(c.display_name)}
+                        className="w-full py-1.5 px-3 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        <span>Fast-Track to Interview</span>
+                      </button>
+                    )}
                   </div>
                 </div>
               )))}
@@ -4087,159 +4292,471 @@ function VacancyContent() {
 
               {/* Pathway Details: Ready Pool */}
               {intakeSourcingChannel === "READY_POOL" && (
-                <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3 animate-fadeIn">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-ink-primary">
-                      Matching Candidates in Frontline Ready Pool:
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-400">
-                      Bypasses HR Screening
-                    </span>
+                <div className="space-y-4 animate-fadeIn">
+                  {/* Banner directing user to the dedicated menu */}
+                  <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <span className="font-bold text-xs text-emerald-400 flex items-center gap-1.5">
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>Frontline Ready Pool Assessment</span>
+                        </span>
+                        <p className="text-[11px] text-ink-secondary mt-0.5 leading-relaxed">
+                          Candidate technical auditions, shift availability, and coach certifications are vetted directly in the <strong>Frontline Ready Pool</strong> roster.
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 shrink-0">
+                        Bypasses HR Screening
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAllocatingReq(selectedIntakeReq);
+                        setSelectedIntakeReq(null);
+                        setActiveTab("talent-pool");
+                      }}
+                      className="w-full py-2 px-3 rounded-lg bg-emerald-500 text-surface-ground text-xs font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:scale-[1.01] active:scale-[0.99]"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Open Frontline Ready Pool Tab to Assess & Allocate Candidates →</span>
+                    </button>
                   </div>
 
-                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    {talentPool.slice(0, 4).map((cand) => {
-                      const isSelected = intakeSelectedCandidate?.candidate_id === cand.candidate_id;
-                      return (
-                        <div
-                          key={cand.candidate_id}
-                          onClick={() => setIntakeSelectedCandidate(cand)}
-                          className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between gap-3 ${
-                            isSelected
-                              ? "bg-emerald-500/10 border-emerald-500 ring-1 ring-emerald-500"
-                              : "bg-surface-card border-surface-border hover:border-brand-teal/40"
-                          }`}
-                        >
+                  {/* Candidate Selection Status */}
+                  <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-ink-primary">
+                        Candidate Allocation Status:
+                      </span>
+                      {intakeSelectedCandidate ? (
+                        <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Candidate Selected
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-ink-tertiary">
+                          Unselected (Starts Empty)
+                        </span>
+                      )}
+                    </div>
+
+                    {intakeSelectedCandidate ? (
+                      /* Highlighted Selected Candidate Card */
+                      <div className="p-3.5 rounded-xl border border-emerald-500 bg-emerald-500/10 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div className="font-bold text-ink-primary flex items-center gap-2">
-                              <span>{cand.display_name}</span>
+                            <div className="font-bold text-xs text-ink-primary flex items-center gap-2">
+                              <span>{intakeSelectedCandidate.display_name}</span>
                               <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
-                                {cand.fit_score}% Fit
+                                {intakeSelectedCandidate.fit_score}% Fit Benchmark
                               </span>
                             </div>
-                            <div className="text-[10px] text-ink-tertiary mt-0.5">
-                              {cand.role_target} • Pref: {cand.location_preference}
+                            <div className="text-[11px] text-ink-secondary mt-0.5">
+                              {intakeSelectedCandidate.role_target} • Pref: {intakeSelectedCandidate.location_preference}
                             </div>
                           </div>
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                            isSelected ? "bg-emerald-500 text-surface-ground" : "border border-surface-border text-transparent"
-                          }`}>
-                            ✓
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIntakeSelectedCandidate(null)}
+                            className="text-[10px] font-bold text-status-danger hover:underline cursor-pointer"
+                          >
+                            Remove / Deselect
+                          </button>
                         </div>
-                      );
-                    })}
+                        <div className="flex flex-wrap gap-1 pt-1">
+                          {(intakeSelectedCandidate.verified_competencies || []).map((skill: string) => (
+                            <span key={skill} className="px-1.5 py-0.5 rounded text-[9px] bg-surface-card border border-surface-border text-ink-secondary">
+                              {skill}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="text-[10px] text-emerald-400 block pt-1 font-medium">
+                          ✓ Fast-tracks directly to Manager Interview upon allocation.
+                        </span>
+                      </div>
+                    ) : (
+                      /* Empty State with Quick Select Roster */
+                      <div className="space-y-2.5">
+                        <div className="p-3 rounded-lg bg-surface-card border border-surface-border text-center space-y-1">
+                          <p className="text-xs text-ink-secondary">
+                            No frontline candidate currently selected for this requisition.
+                          </p>
+                          <p className="text-[11px] text-ink-tertiary">
+                            Click the button above to evaluate in the Frontline Ready Pool, or select a pre-screened profile below:
+                          </p>
+                        </div>
+
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {talentPool.slice(0, 4).map((cand) => (
+                            <div
+                              key={cand.candidate_id}
+                              onClick={() => setIntakeSelectedCandidate(cand)}
+                              className="p-2.5 rounded-xl border border-surface-border bg-surface-card hover:border-emerald-500/50 hover:bg-surface-elevated text-xs cursor-pointer transition-all flex items-center justify-between gap-3"
+                            >
+                              <div>
+                                <div className="font-bold text-ink-primary flex items-center gap-2">
+                                  <span>{cand.display_name}</span>
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
+                                    {cand.fit_score}% Fit
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-ink-tertiary mt-0.5">
+                                  {cand.role_target} • Pref: {cand.location_preference}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="px-2 py-1 rounded bg-surface-ground border border-surface-border text-[10px] font-bold text-ink-secondary hover:text-emerald-400 hover:border-emerald-500/50"
+                              >
+                                Select
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
               {/* Pathway Details: Internal Mobility */}
               {intakeSourcingChannel === "INTERNAL_MOBILITY" && (
-                <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3 animate-fadeIn">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-ink-primary">
-                      Internal High-Potential Succession Candidates:
-                    </span>
-                    <span className="text-[10px] font-bold text-purple-400">
-                      Fast-Track IDP
-                    </span>
+                <div className="space-y-4 animate-fadeIn">
+                  {/* Banner directing user to the dedicated menu */}
+                  <div className="p-3.5 rounded-xl bg-purple-500/10 border border-purple-500/30 space-y-2">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <span className="font-bold text-xs text-purple-400 flex items-center gap-1.5">
+                          <Users className="w-3.5 h-3.5" />
+                          <span>Internal Mobility & Succession Matching</span>
+                        </span>
+                        <p className="text-[11px] text-ink-secondary mt-0.5 leading-relaxed">
+                          Tenure benchmarks, capability mastery scores, and IDP promotion readiness are evaluated inside the <strong>Internal Mobility Engine</strong>.
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 shrink-0">
+                        Fast-Track IDP
+                      </span>
+                    </div>
+
+                    <a
+                      href={`/team?tab=mobility&allocating_req=${selectedIntakeReq.req_code}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full py-2 px-3 rounded-lg bg-purple-600 text-surface-ground text-xs font-bold hover:bg-purple-700 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-sm hover:scale-[1.01] active:scale-[0.99]"
+                    >
+                      <Users className="w-3.5 h-3.5" />
+                      <span>Open Internal Mobility Match Tab (/team?tab=mobility) ↗</span>
+                    </a>
                   </div>
 
-                  <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                    {fallbackMobilityMatches.slice(0, 4).map((cand) => {
-                      const isSelected = intakeSelectedCandidate?.match_id === cand.match_id;
-                      return (
-                        <div
-                          key={cand.match_id}
-                          onClick={() => setIntakeSelectedCandidate(cand)}
-                          className={`p-3 rounded-xl border text-xs cursor-pointer transition-all flex items-center justify-between gap-3 ${
-                            isSelected
-                              ? "bg-purple-500/10 border-purple-500 ring-1 ring-purple-500"
-                              : "bg-surface-card border-surface-border hover:border-purple-500/40"
-                          }`}
-                        >
+                  {/* Candidate Selection Status */}
+                  <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-ink-primary">
+                        Succession Candidate Status:
+                      </span>
+                      {intakeSelectedCandidate ? (
+                        <span className="text-[10px] font-bold text-purple-400 flex items-center gap-1">
+                          <Check className="w-3 h-3" /> Candidate Selected
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-semibold text-ink-tertiary">
+                          Unselected (Starts Empty)
+                        </span>
+                      )}
+                    </div>
+
+                    {intakeSelectedCandidate ? (
+                      /* Highlighted Selected Candidate Card */
+                      <div className="p-3.5 rounded-xl border border-purple-500 bg-purple-500/10 space-y-2">
+                        <div className="flex items-start justify-between gap-2">
                           <div>
-                            <div className="font-bold text-ink-primary flex items-center gap-2">
-                              <span>{cand.candidate_name}</span>
+                            <div className="font-bold text-xs text-ink-primary flex items-center gap-2">
+                              <span>{intakeSelectedCandidate.candidate_name || intakeSelectedCandidate.display_name}</span>
                               <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300">
-                                {cand.readiness_status} ({cand.final_readiness_score}%)
+                                {intakeSelectedCandidate.readiness_status || "Ready Now"} ({intakeSelectedCandidate.final_readiness_score || intakeSelectedCandidate.fit_score || 90}%)
                               </span>
                             </div>
-                            <div className="text-[10px] text-ink-tertiary mt-0.5">
-                              Current: {cand.current_role_name} • {cand.current_location_name}
+                            <div className="text-[11px] text-ink-secondary mt-0.5">
+                              Current: {intakeSelectedCandidate.current_role_name || "Internal Team"} • {intakeSelectedCandidate.current_location_name || selectedIntakeReq.location_name}
                             </div>
                           </div>
-                          <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold ${
-                            isSelected ? "bg-purple-500 text-surface-ground" : "border border-surface-border text-transparent"
-                          }`}>
-                            ✓
-                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIntakeSelectedCandidate(null)}
+                            className="text-[10px] font-bold text-status-danger hover:underline cursor-pointer"
+                          >
+                            Remove / Deselect
+                          </button>
                         </div>
-                      );
-                    })}
+                        <span className="text-[10px] text-purple-300 block pt-1 font-medium">
+                          ✓ Direct promotion via IDP transition upon allocation.
+                        </span>
+                      </div>
+                    ) : (
+                      /* Empty State with Quick Select Succession List */
+                      <div className="space-y-2.5">
+                        <div className="p-3 rounded-lg bg-surface-card border border-surface-border text-center space-y-1">
+                          <p className="text-xs text-ink-secondary">
+                            No succession candidate currently selected for this requisition.
+                          </p>
+                          <p className="text-[11px] text-ink-tertiary">
+                            Inspect benchmarks in the Internal Mobility tab above, or select an IDP-ready candidate below:
+                          </p>
+                        </div>
+
+                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                          {fallbackMobilityMatches.slice(0, 4).map((cand) => (
+                            <div
+                              key={cand.match_id}
+                              onClick={() => setIntakeSelectedCandidate(cand)}
+                              className="p-2.5 rounded-xl border border-surface-border bg-surface-card hover:border-purple-500/50 hover:bg-surface-elevated text-xs cursor-pointer transition-all flex items-center justify-between gap-3"
+                            >
+                              <div>
+                                <div className="font-bold text-ink-primary flex items-center gap-2">
+                                  <span>{cand.candidate_name}</span>
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300">
+                                    {cand.readiness_status} ({cand.final_readiness_score}%)
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-ink-tertiary mt-0.5">
+                                  Current: {cand.current_role_name} • {cand.current_location_name}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                className="px-2 py-1 rounded bg-surface-ground border border-surface-border text-[10px] font-bold text-ink-secondary hover:text-purple-400 hover:border-purple-500/50"
+                              >
+                                Select
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Pathway Details: Conventional ATS */}
+              {/* Pathway Details: Conventional Sourcing (Excel Grounded + Manual DB Entry) */}
               {intakeSourcingChannel === "CONVENTIONAL" && (
-                <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3.5 animate-fadeIn">
-                  <div>
-                    <label className="block text-xs font-semibold text-ink-primary mb-1.5">
-                      Active Multi-Channel Job Postings:
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {["LinkedIn", "JobStreet", "Glints", "Employee Referral", "Kalibrr"].map((channel) => {
-                        const isIncluded = intakeChannels.includes(channel);
+                <div className="space-y-4 animate-fadeIn">
+                  {/* Step 1: Channel Category Selector */}
+                  <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-ink-primary uppercase tracking-wider mb-1">
+                        1. Sourcing Channel Category
+                      </label>
+                      <p className="text-[11px] text-ink-secondary">
+                        Select recruitment channel grounded in FIT HUB historical hiring dataset:
+                      </p>
+                    </div>
+
+                    {/* Category Selector Tabs */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                      {(Object.keys(CONVENTIONAL_CATEGORIES) as ConventionalCategoryKey[]).map((catKey) => {
+                        const cat = CONVENTIONAL_CATEGORIES[catKey];
+                        const IconComp = cat.icon;
+                        const isCatSelected = conventionalCategory === catKey;
                         return (
                           <button
-                            key={channel}
+                            key={catKey}
                             type="button"
                             onClick={() => {
-                              setIntakeChannels((prev) =>
-                                isIncluded ? prev.filter((c) => c !== channel) : [...prev, channel]
-                              );
+                              setConventionalCategory(catKey);
+                              setConventionalSubChannel(cat.subChannels[0]);
                             }}
-                            className={`px-3 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
-                              isIncluded
-                                ? "bg-brand-teal/15 text-brand-teal border-brand-teal/40 font-bold"
-                                : "bg-surface-card text-ink-secondary border-surface-border hover:text-ink-primary"
+                            className={`p-2.5 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                              isCatSelected
+                                ? "bg-sky-500/15 border-sky-500 ring-1 ring-sky-500"
+                                : "bg-surface-card border-surface-border hover:border-ink-secondary"
                             }`}
                           >
-                            {isIncluded ? "✓ " : "+ "}
-                            {channel}
+                            <div className="flex items-center gap-1.5 font-bold text-xs text-ink-primary mb-1">
+                              <IconComp className={`w-3.5 h-3.5 ${isCatSelected ? "text-sky-400" : "text-ink-tertiary"}`} />
+                              <span>{cat.label}</span>
+                            </div>
+                            <span className="text-[9px] text-ink-tertiary line-clamp-1">
+                              {cat.subChannels[0]}
+                            </span>
                           </button>
                         );
                       })}
                     </div>
+
+                    {/* Sub-channel pills */}
+                    <div className="pt-2 border-t border-surface-border/60">
+                      <span className="text-[11px] font-semibold text-ink-primary block mb-1.5">
+                        Specific Sub-Channel Platform:
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {CONVENTIONAL_CATEGORIES[conventionalCategory].subChannels.map((sub) => {
+                          const isSubSelected = conventionalSubChannel === sub;
+                          return (
+                            <button
+                              key={sub}
+                              type="button"
+                              onClick={() => setConventionalSubChannel(sub)}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all cursor-pointer ${
+                                isSubSelected
+                                  ? "bg-sky-500 text-surface-ground border-sky-500 font-bold shadow-sm"
+                                  : "bg-surface-card text-ink-secondary border-surface-border hover:text-ink-primary"
+                              }`}
+                            >
+                              {isSubSelected ? "✓ " : ""}
+                              {sub}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-ink-primary mb-1">
-                        Applicants Already Sourced
-                      </label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={intakeApplicantCount}
-                        onChange={(e) => setIntakeApplicantCount(Number(e.target.value))}
-                        className="w-full px-3 py-1.5 text-xs rounded-xl bg-surface-card border border-surface-border text-ink-primary focus:outline-none focus:border-brand-teal/60"
-                      />
+                  {/* Step 2: Manual Candidate Database Entry Card */}
+                  <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3.5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Database className="w-4 h-4 text-sky-400" />
+                          <h4 className="text-xs font-bold text-ink-primary uppercase tracking-wider">
+                            2. Manual Candidate Database Entry
+                          </h4>
+                        </div>
+                        <p className="text-[11px] text-ink-secondary mt-0.5">
+                          Log candidate application from <strong>{conventionalSubChannel}</strong> directly into the recruitment pipeline:
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-surface-card border border-surface-border text-ink-primary">
+                        {conventionalCandidateList.length} In Queue
+                      </span>
                     </div>
 
-                    <div>
-                      <label className="block text-xs font-semibold text-ink-primary mb-1">
-                        Google Sheet / ATS URL
-                      </label>
-                      <input
-                        type="url"
-                        value={intakeTrackerUrl}
-                        onChange={(e) => setIntakeTrackerUrl(e.target.value)}
-                        placeholder="https://docs.google.com/spreadsheets/..."
-                        className="w-full px-3 py-1.5 text-xs rounded-xl bg-surface-card border border-surface-border text-ink-primary placeholder-ink-tertiary focus:outline-none focus:border-brand-teal/60"
-                      />
+                    {/* Candidate Input Fields */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-ink-primary mb-1">
+                          Candidate Full Name *
+                        </label>
+                        <input
+                          type="text"
+                          value={conventionalCandidateName}
+                          onChange={(e) => setConventionalCandidateName(e.target.value)}
+                          placeholder="e.g. Dimas Wicaksono"
+                          className="w-full px-3 py-1.5 text-xs rounded-xl bg-surface-card border border-surface-border text-ink-primary placeholder-ink-tertiary focus:outline-none focus:border-sky-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-ink-primary mb-1">
+                          Contact Phone / WhatsApp
+                        </label>
+                        <input
+                          type="text"
+                          value={conventionalCandidatePhone}
+                          onChange={(e) => setConventionalCandidatePhone(e.target.value)}
+                          placeholder="e.g. +62 812-3456-7890"
+                          className="w-full px-3 py-1.5 text-xs rounded-xl bg-surface-card border border-surface-border text-ink-primary placeholder-ink-tertiary focus:outline-none focus:border-sky-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-ink-primary mb-1">
+                          Source URL / Profile Handle / CV Link
+                        </label>
+                        <input
+                          type="text"
+                          value={conventionalCandidateUrl}
+                          onChange={(e) => setConventionalCandidateUrl(e.target.value)}
+                          placeholder="e.g. instagram.com/dimas_pt or linkedin.com/in/..."
+                          className="w-full px-3 py-1.5 text-xs rounded-xl bg-surface-card border border-surface-border text-ink-primary placeholder-ink-tertiary focus:outline-none focus:border-sky-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-ink-primary mb-1">
+                          Current Role / Background
+                        </label>
+                        <input
+                          type="text"
+                          value={conventionalCandidateRole}
+                          onChange={(e) => setConventionalCandidateRole(e.target.value)}
+                          placeholder={`Default: ${selectedIntakeReq.role_name}`}
+                          className="w-full px-3 py-1.5 text-xs rounded-xl bg-surface-card border border-surface-border text-ink-primary placeholder-ink-tertiary focus:outline-none focus:border-sky-500"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-semibold text-ink-primary mb-1">
+                          Initial Screening Notes / Application Remarks
+                        </label>
+                        <input
+                          type="text"
+                          value={conventionalCandidateNotes}
+                          onChange={(e) => setConventionalCandidateNotes(e.target.value)}
+                          placeholder="e.g. Applied via IG sponsored campaign in Bali. APKI Level 1 certified coach."
+                          className="w-full px-3 py-1.5 text-xs rounded-xl bg-surface-card border border-surface-border text-ink-primary placeholder-ink-tertiary focus:outline-none focus:border-sky-500"
+                        />
+                      </div>
                     </div>
+
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-[10px] text-ink-tertiary">
+                        Candidate will be registered under <strong>HR Screening</strong> stage.
+                      </span>
+                      <button
+                        type="button"
+                        disabled={!conventionalCandidateName.trim()}
+                        onClick={handleAddConventionalCandidate}
+                        className="px-3.5 py-1.5 rounded-lg bg-sky-500 text-surface-ground text-xs font-bold hover:bg-sky-600 transition-all flex items-center gap-1 cursor-pointer disabled:opacity-40"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Add Candidate to Requisition</span>
+                      </button>
+                    </div>
+
+                    {/* Queued Candidates List */}
+                    {conventionalCandidateList.length > 0 && (
+                      <div className="space-y-2 pt-2 border-t border-surface-border/60">
+                        <span className="text-xs font-bold text-ink-primary block">
+                          Registered Candidates for this Requisition ({conventionalCandidateList.length}):
+                        </span>
+                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                          {conventionalCandidateList.map((cand) => (
+                            <div
+                              key={cand.id}
+                              className="p-2.5 rounded-xl bg-surface-card border border-surface-border flex items-center justify-between gap-3 text-xs"
+                            >
+                              <div>
+                                <div className="font-bold text-ink-primary flex items-center gap-2">
+                                  <span>{cand.name}</span>
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-sky-500/20 text-sky-400">
+                                    {cand.sub_channel}
+                                  </span>
+                                </div>
+                                <div className="text-[10px] text-ink-tertiary mt-0.5 flex items-center gap-2">
+                                  <span>Role: {cand.role}</span>
+                                  {cand.phone && <span>• Tel: {cand.phone}</span>}
+                                  {cand.url && (
+                                    <span className="text-brand-teal truncate max-w-[150px]">
+                                      • {cand.url}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveConventionalCandidate(cand.id)}
+                                className="p-1 rounded text-ink-tertiary hover:text-status-danger transition-colors cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
