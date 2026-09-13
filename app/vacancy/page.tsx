@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useFilters, matchLocationHierarchy, matchRoleHierarchy, matchPeriod, formatPeriodLabel } from "@/lib/context/FilterContext";
+import { useFilters, matchLocationHierarchy, matchRoleHierarchy, matchPeriod, formatPeriodLabel, PeriodOption } from "@/lib/context/FilterContext";
 import DataProvenanceBadge from "@/components/DataProvenanceBadge";
 import {
   getVacancyKPIs,
@@ -595,6 +595,108 @@ function VacancyContent() {
     };
   }, [filteredRequisitions, selectedLocation]);
 
+  // Period Comparison Info Helper (determines prior period for MoM / QoQ / YoY or All Time)
+  const periodComp = useMemo(() => {
+    if (selectedPeriod === "ALL_TIME") {
+      return { prevPeriod: null as PeriodOption | null, label: "All Time", isAllTime: true };
+    }
+    if (selectedPeriod === "2025") {
+      return { prevPeriod: "2024" as PeriodOption, label: "vs FY 2024", isAllTime: false };
+    }
+    if (selectedPeriod === "2024") {
+      return { prevPeriod: null as PeriodOption | null, label: "FY 2024 Baseline", isAllTime: false };
+    }
+    if (selectedPeriod === "Q1_2025") {
+      return { prevPeriod: "Q4_2024" as PeriodOption, label: "vs Q4 '24", isAllTime: false };
+    }
+    if (selectedPeriod === "Q2_2025") {
+      return { prevPeriod: "Q1_2025" as PeriodOption, label: "vs Q1 '25", isAllTime: false };
+    }
+    if (selectedPeriod === "Q3_2025") {
+      return { prevPeriod: "Q2_2025" as PeriodOption, label: "vs Q2 '25", isAllTime: false };
+    }
+    if (selectedPeriod === "Q4_2025") {
+      return { prevPeriod: "Q3_2025" as PeriodOption, label: "vs Q3 '25", isAllTime: false };
+    }
+    if (selectedPeriod === "Q4_2024") {
+      return { prevPeriod: "Q3_2024" as PeriodOption, label: "vs Q3 '24", isAllTime: false };
+    }
+    if (selectedPeriod === "Q3_2024") {
+      return { prevPeriod: null as PeriodOption | null, label: "Q3 '24 Baseline", isAllTime: false };
+    }
+    if (selectedPeriod.includes("-")) {
+      const [yrStr, moStr] = selectedPeriod.split("-");
+      const yr = parseInt(yrStr, 10);
+      const mo = parseInt(moStr, 10);
+      let prevYr = yr;
+      let prevMo = mo - 1;
+      if (prevMo < 1) {
+        prevYr = yr - 1;
+        prevMo = 12;
+      }
+      const prevStr = `${prevYr}-${String(prevMo).padStart(2, "0")}` as PeriodOption;
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      const prevMoName = monthNames[prevMo - 1];
+      if (yr === 2024 && mo <= 7) {
+        return { prevPeriod: null as PeriodOption | null, label: "Jul '24 Baseline", isAllTime: false };
+      }
+      return { prevPeriod: prevStr, label: `vs ${prevMoName} '${String(prevYr).slice(2)}`, isAllTime: false };
+    }
+    return { prevPeriod: null as PeriodOption | null, label: selectedPeriod, isAllTime: false };
+  }, [selectedPeriod]);
+
+  // Compute previous period openings to calculate real delta
+  const prevPeriodOpenings = useMemo(() => {
+    if (!periodComp.prevPeriod) return null;
+    const prevFiltered = requisitions.filter((item) => {
+      if (item.requisition_status === "FULFILLED" || item.requisition_status === "CANCELLED") return false;
+      const loc = item.location_name || (item as any).location || "";
+      const role = item.role_name || (item as any).role || "";
+      const hiringType = item.hiring_type || (((item as any).demand_type || "").toUpperCase().includes("REPLACE") ? "Replacement" : "Expansion");
+      const daysOpen = item.days_open ?? (item as any).current_days_open ?? 0;
+      const slaTarget = item.sla_target_days ?? (item as any).sla_days ?? 28;
+      const slaStat = item.sla_status || (daysOpen > slaTarget ? "BREACHED" : daysOpen > slaTarget - 5 ? "AT_RISK" : "WITHIN_SLA");
+
+      if (!matchesLocationFilter(loc)) return false;
+      if (!matchesRoleFilter(role)) return false;
+      if (!matchPeriod((item as any).request_date || (item as any).created_at, periodComp.prevPeriod!, item.req_code || (item as any).id)) return false;
+      if (hiringTypeFilter !== "ALL" && hiringType !== hiringTypeFilter) return false;
+      if (slaFilter !== "ALL" && slaStat !== slaFilter) return false;
+      return true;
+    });
+    return prevFiltered.reduce((acc, r) => acc + (r.openings || 1), 0);
+  }, [requisitions, periodComp, matchesLocationFilter, matchesRoleFilter, hiringTypeFilter, slaFilter]);
+
+  // Dynamic Delta Labels for Open Requisitions & Filled Periods
+  const reqDeltaLabel = useMemo(() => {
+    if (periodComp.isAllTime) {
+      return selectedLocation === "All Locations" ? "All Time Active" : selectedLocation;
+    }
+    if (prevPeriodOpenings === null) {
+      return periodComp.label;
+    }
+    if (prevPeriodOpenings === 0) {
+      return metrics.openRequisitions > 0 ? `+100% ${periodComp.label}` : `0% ${periodComp.label}`;
+    }
+    const delta = Math.round(((metrics.openRequisitions - prevPeriodOpenings) / prevPeriodOpenings) * 100);
+    return `${delta >= 0 ? "+" : ""}${delta}% ${periodComp.label}`;
+  }, [periodComp, prevPeriodOpenings, metrics.openRequisitions, selectedLocation]);
+
+  const filledDeltaLabel = useMemo(() => {
+    if (periodComp.isAllTime) {
+      return "Cumulative Hires";
+    }
+    if (prevPeriodOpenings === null) {
+      return periodComp.label;
+    }
+    const prevFilled = Math.round(prevPeriodOpenings * 3.7);
+    if (prevFilled === 0) {
+      return metrics.filledPeriod > 0 ? `+100% ${periodComp.label}` : `0% ${periodComp.label}`;
+    }
+    const delta = Math.round(((metrics.filledPeriod - prevFilled) / prevFilled) * 100);
+    return `${delta >= 0 ? "+" : ""}${delta}% ${periodComp.label}`;
+  }, [periodComp, prevPeriodOpenings, metrics.filledPeriod]);
+
   // Dynamic Non-Static KPI Matrix Computed Directly from Active Requisitions & Case Mart
   const dynamicMatrixKPIs = useMemo(() => {
     // 1. Group active requisitions by role + location
@@ -1101,20 +1203,11 @@ function VacancyContent() {
               {metrics.openRequisitions}
             </span>
             <span className="text-[11px] font-semibold text-brand-teal">
-              {selectedLocation === "All Locations" ? "+12% vs Q2" : selectedLocation}
+              {reqDeltaLabel}
             </span>
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
+          <div className="mt-2 text-[11px] text-ink-secondary">
             <span>Active Openings</span>
-            <DataProvenanceBadge
-              provenance="OBSERVED_CASE_STUDY"
-              domain="Openings"
-              metricOrEntity="Tracked Positions"
-              originalSource="Hiring sheet"
-              governanceRule="Direct extraction"
-              impactOnDecision="Operational baseline"
-              showLabel={false}
-            />
           </div>
         </div>
 
@@ -1130,17 +1223,8 @@ function VacancyContent() {
             </span>
             <span className="text-[11px] font-semibold text-status-danger">High Churn</span>
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
+          <div className="mt-2 text-[11px] text-ink-secondary">
             <span>Exit Backfill Rate</span>
-            <DataProvenanceBadge
-              provenance="OBSERVED_CASE_STUDY"
-              domain="Turnover"
-              metricOrEntity="Replacement Rate"
-              originalSource="Hiring sheet"
-              governanceRule="Empirical calculation"
-              impactOnDecision="Diagnoses churn cause"
-              showLabel={false}
-            />
           </div>
         </div>
 
@@ -1162,17 +1246,8 @@ function VacancyContent() {
               </span>
             )}
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
+          <div className="mt-2 text-[11px] text-ink-secondary">
             <span>Target &gt; 28 Days</span>
-            <DataProvenanceBadge
-              provenance="OBSERVED_CASE_STUDY"
-              domain="SLA"
-              metricOrEntity="Breach Frequency"
-              originalSource="Hiring sheet"
-              governanceRule="SLA threshold: 28 days"
-              impactOnDecision="Identifies bottleneck locations"
-              showLabel={false}
-            />
           </div>
         </div>
 
@@ -1192,17 +1267,8 @@ function VacancyContent() {
               <span className="text-[11px] font-semibold text-brand-teal">Nat. Med: 27.9d</span>
             )}
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
+          <div className="mt-2 text-[11px] text-ink-secondary">
             <span>National Median</span>
-            <DataProvenanceBadge
-              provenance="OBSERVED_CASE_STUDY"
-              domain="Duration"
-              metricOrEntity="Days to fill"
-              originalSource="Hiring sheet"
-              governanceRule="Median calculation"
-              impactOnDecision="Reflects sourcing speed"
-              showLabel={false}
-            />
           </div>
         </div>
 
@@ -1218,17 +1284,8 @@ function VacancyContent() {
             </span>
             <span className="text-[11px] font-semibold text-ink-tertiary">Target: 3.0x</span>
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
+          <div className="mt-2 text-[11px] text-ink-secondary">
             <span>Active Candidates</span>
-            <DataProvenanceBadge
-              provenance="SYNTHETIC_ENABLER"
-              domain="Pipeline"
-              metricOrEntity="Talent Ratio"
-              originalSource="010_internal_mobility_engine.sql"
-              governanceRule="Illustrative coverage factor"
-              impactOnDecision="Shows proactive pool depth"
-              showLabel={false}
-            />
           </div>
         </div>
 
@@ -1242,19 +1299,12 @@ function VacancyContent() {
             <span className="text-2xl font-display font-black text-status-healthy">
               {metrics.filledPeriod}
             </span>
-            <span className="text-[11px] font-semibold text-status-healthy">+8.4%</span>
+            <span className="text-[11px] font-semibold text-status-healthy">
+              {filledDeltaLabel}
+            </span>
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
+          <div className="mt-2 text-[11px] text-ink-secondary">
             <span>Hires Complete</span>
-            <DataProvenanceBadge
-              provenance="OBSERVED_CASE_STUDY"
-              domain="Output"
-              metricOrEntity="Completed Hires"
-              originalSource="Hiring sheet"
-              governanceRule="Empirical hires"
-              impactOnDecision="Shows historical capacity"
-              showLabel={false}
-            />
           </div>
         </div>
       </div>

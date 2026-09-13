@@ -45,14 +45,23 @@ import {
 } from "./fixtures";
 
 // ponytail: Unified data access with automatic fallback to pre-bundled typed fixtures.
-// If Supabase is reachable, returns live PostgreSQL data; if offline or errored, returns fixtures seamlessly.
+// If Supabase is reachable within 1500ms, returns live PostgreSQL data; if offline, errored or timing out, returns fixtures seamlessly.
+
+async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs = 1500): Promise<T> {
+  return Promise.race([
+    Promise.resolve(promise),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Supabase network timeout")), timeoutMs)
+    ),
+  ]);
+}
 
 export async function getVacancyKPIs(): Promise<{ data: VacancyKPI[]; isLive: boolean }> {
   if (!supabase) {
     return { data: fallbackVacancyKPIs, isLive: false };
   }
   try {
-    const { data, error } = await supabase.from("mart_vacancy_kpi").select("*");
+    const { data, error } = await withTimeout(supabase.from("mart_vacancy_kpi").select("*"), 1500);
     if (error || !data || data.length === 0) {
       return { data: fallbackVacancyKPIs, isLive: false };
     }
@@ -80,7 +89,7 @@ export async function getRequisitions(filter?: {
     if (status !== 'ALL') {
       query = query.eq("requisition_status", status);
     }
-    const { data, error } = await query;
+    const { data, error } = await withTimeout(query, 1500);
     if (error || !data || data.length === 0) {
       if (status === 'PENDING_SOURCING') {
         return { data: fallbackIncomingRequisitions, isLive: false };
@@ -302,7 +311,7 @@ export async function getSourcingChannels(): Promise<{ data: SourcingChannelMetr
     return { data: fallbackSourcingChannels, isLive: false };
   }
   try {
-    const { data, error } = await supabase.from("sourcing_channels").select("*");
+    const { data, error } = await withTimeout(supabase.from("sourcing_channels").select("*"), 1500);
     if (error || !data || data.length === 0) {
       return { data: fallbackSourcingChannels, isLive: false };
     }
@@ -317,7 +326,7 @@ export async function getFunnelStages(): Promise<{ data: FunnelStageMetric[]; is
     return { data: fallbackFunnelStages, isLive: false };
   }
   try {
-    const { data, error } = await supabase.from("funnel_stages").select("*").order("stage_order", { ascending: true });
+    const { data, error } = await withTimeout(supabase.from("funnel_stages").select("*").order("stage_order", { ascending: true }), 1500);
     if (error || !data || data.length === 0) {
       return { data: fallbackFunnelStages, isLive: false };
     }
@@ -332,7 +341,7 @@ export async function getTalentPoolCandidates(): Promise<{ data: TalentPoolCandi
     return { data: fallbackTalentPool, isLive: false };
   }
   try {
-    const { data, error } = await supabase.from("synthetic_talent_pool").select("*");
+    const { data, error } = await withTimeout(supabase.from("synthetic_talent_pool").select("*"), 1500);
     if (error || !data || data.length === 0) {
       return { data: fallbackTalentPool, isLive: false };
     }
@@ -347,7 +356,7 @@ export async function getHiringOutcomes(): Promise<{ data: HiringOutcomeMetric[]
     return { data: fallbackHiringOutcomes, isLive: false };
   }
   try {
-    const { data, error } = await supabase.from("hiring_outcomes").select("*");
+    const { data, error } = await withTimeout(supabase.from("hiring_outcomes").select("*"), 1500);
     if (error || !data || data.length === 0) {
       return { data: fallbackHiringOutcomes, isLive: false };
     }
