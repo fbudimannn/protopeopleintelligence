@@ -46,6 +46,71 @@ export function SectionCard({
   );
 }
 
+// --- Metric Info Tooltip ---
+export interface MetricInfoTooltipProps {
+  title: string;
+  description: string;
+  formula?: string;
+  benchmark?: string;
+  align?: 'left' | 'center' | 'right';
+  className?: string;
+}
+
+export function MetricInfoTooltip({
+  title,
+  description,
+  formula,
+  benchmark,
+  align = 'left',
+  className = '',
+}: MetricInfoTooltipProps) {
+  const alignClass = {
+    left: 'left-0',
+    center: 'left-1/2 -translate-x-1/2',
+    right: 'right-0',
+  }[align];
+
+  return (
+    <div className={`relative inline-flex items-center group/tooltip ${className}`}>
+      <button
+        type="button"
+        aria-label={`About ${title}`}
+        className="text-ink-tertiary/60 hover:text-brand-teal transition-colors p-0.5 rounded-full hover:bg-brand-teal/10 focus:outline-none"
+      >
+        <Info className="w-3.5 h-3.5" />
+      </button>
+      <div
+        className={`absolute top-full ${alignClass} mt-2 w-64 md:w-72 p-3.5 bg-slate-900 text-white rounded-xl shadow-2xl border border-slate-700/80 opacity-0 pointer-events-none group-hover/tooltip:opacity-100 group-hover/tooltip:pointer-events-auto transition-all duration-200 z-50 text-left`}
+      >
+        <div className="flex items-center justify-between gap-2 mb-1.5 pb-1.5 border-b border-slate-700/60">
+          <span className="font-bold text-xs text-white flex items-center gap-1.5 font-spartan">
+            <Info className="w-3.5 h-3.5 text-brand-teal shrink-0" />
+            {title}
+          </span>
+          <span className="text-[9px] font-mono font-bold bg-brand-teal/20 text-brand-teal px-1.5 py-0.5 rounded">
+            KPI Guide
+          </span>
+        </div>
+        <p className="text-[11px] text-slate-300 leading-relaxed mb-2">{description}</p>
+        {formula && (
+          <div className="bg-slate-800/90 rounded-lg p-2 mb-2 border border-slate-700/50">
+            <div className="text-[9px] uppercase tracking-wider text-slate-400 font-bold mb-0.5">
+              Calculation Formula
+            </div>
+            <div className="text-[10px] font-mono text-brand-teal leading-tight">{formula}</div>
+          </div>
+        )}
+        {benchmark && (
+          <div className="flex items-start gap-1.5 text-[10px] text-amber-300 font-medium bg-amber-400/10 p-1.5 rounded-lg border border-amber-400/20">
+            <span className="shrink-0">🎯</span>
+            <span className="leading-snug">{benchmark}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // --- KPI Card ---
 export interface KpiCardProps {
   label: string;
@@ -55,6 +120,13 @@ export interface KpiCardProps {
   tone?: 'healthy' | 'attention' | 'critical' | 'teal' | 'neutral';
   badge?: string;
   icon?: React.ReactNode;
+  infoTooltip?: {
+    title?: string;
+    description: string;
+    formula?: string;
+    benchmark?: string;
+    align?: 'left' | 'center' | 'right';
+  };
 }
 
 export function KpiCard({
@@ -65,6 +137,7 @@ export function KpiCard({
   tone = 'neutral',
   badge,
   icon,
+  infoTooltip,
 }: KpiCardProps) {
   const toneBorder = {
     healthy: 'border-l-4 border-l-status-healthy',
@@ -85,7 +158,18 @@ export function KpiCard({
   return (
     <div className={`bg-white rounded-xl border border-border-default shadow-card p-5 ${toneBorder} flex flex-col justify-between hover:shadow-dropdown transition-all`}>
       <div className="flex items-center justify-between gap-2 mb-2">
-        <span className="label-xs text-ink-secondary">{label}</span>
+        <span className="label-xs text-ink-secondary flex items-center gap-1.5">
+          {label}
+          {infoTooltip && (
+            <MetricInfoTooltip
+              title={infoTooltip.title || label}
+              description={infoTooltip.description}
+              formula={infoTooltip.formula}
+              benchmark={infoTooltip.benchmark}
+              align={infoTooltip.align || 'left'}
+            />
+          )}
+        </span>
         {badge && (
           <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-surface-soft border border-border-default text-ink-secondary">
             {badge}

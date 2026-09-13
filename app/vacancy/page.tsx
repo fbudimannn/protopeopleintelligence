@@ -32,7 +32,7 @@ import {
   SourcingMetadata,
   SourcingChannelCategory,
 } from "@/lib/data/fixtures";
-import { KpiCard, SectionCard, LifecycleStrip, Chip } from "@/components/primitives";
+import { KpiCard, SectionCard, LifecycleStrip, Chip, MetricInfoTooltip } from "@/components/primitives";
 import { SimpleBar, ColoredBar, SimpleLine, StackedBarShare, FunnelWaterfall } from "@/components/charts";
 import {
   BarChart2,
@@ -1193,10 +1193,19 @@ function VacancyContent() {
       {/* 2. Top Executive KPI Row (6 Metric Cards) */}
       <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
         {/* Metric 1 */}
-        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle">
+        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle relative group/card">
           <div className="flex items-center justify-between text-ink-tertiary text-xs font-medium mb-1">
-            <span>Open Requisitions</span>
-            <Briefcase className="w-4 h-4 text-brand-teal" />
+            <span className="flex items-center gap-1.5 font-medium">
+              <span>Open Requisitions</span>
+              <MetricInfoTooltip
+                title="Open Requisitions"
+                description="Total active headcount openings currently in recruitment across clubs and corporate."
+                formula="Sum of openings across all in-flight requisitions"
+                benchmark="Baseline capacity: 150–200 active roles nationwide"
+                align="left"
+              />
+            </span>
+            <Briefcase className="w-4 h-4 text-brand-teal shrink-0" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-display font-black text-ink-primary">
@@ -1212,10 +1221,19 @@ function VacancyContent() {
         </div>
 
         {/* Metric 2 */}
-        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle">
+        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle relative group/card">
           <div className="flex items-center justify-between text-ink-tertiary text-xs font-medium mb-1">
-            <span>Replacement Share</span>
-            <AlertTriangle className="w-4 h-4 text-status-attention" />
+            <span className="flex items-center gap-1.5 font-medium">
+              <span>Replacement Share</span>
+              <MetricInfoTooltip
+                title="Replacement Share"
+                description="Proportion of open requisitions created to backfill turnover vs new club expansion."
+                formula="(Replacement Openings / Total Requisitions) × 100%"
+                benchmark="Healthy: < 60%. Critical (> 70%): signals frontline revolving door churn"
+                align="left"
+              />
+            </span>
+            <AlertTriangle className="w-4 h-4 text-status-attention shrink-0" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-display font-black text-status-attention">
@@ -1229,10 +1247,19 @@ function VacancyContent() {
         </div>
 
         {/* Metric 3 */}
-        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle">
+        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle relative group/card">
           <div className="flex items-center justify-between text-ink-tertiary text-xs font-medium mb-1">
-            <span>Beyond SLA Rate</span>
-            <Clock className="w-4 h-4 text-status-danger" />
+            <span className="flex items-center gap-1.5 font-medium">
+              <span>Beyond SLA Rate</span>
+              <MetricInfoTooltip
+                title="Beyond SLA Rate"
+                description="Percentage of active requisitions open longer than the 28-day hiring SLA threshold."
+                formula="(Requisitions Open > 28 Days / Total Requisitions) × 100%"
+                benchmark="Target: ≤ 20%. Breaches highlight regional sourcing bottlenecks"
+                align="center"
+              />
+            </span>
+            <Clock className="w-4 h-4 text-status-danger shrink-0" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-display font-black text-status-danger">
@@ -1252,10 +1279,19 @@ function VacancyContent() {
         </div>
 
         {/* Metric 4 */}
-        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle">
+        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle relative group/card">
           <div className="flex items-center justify-between text-ink-tertiary text-xs font-medium mb-1">
-            <span>Median TTF</span>
-            <Target className="w-4 h-4 text-brand-teal" />
+            <span className="flex items-center gap-1.5 font-medium">
+              <span>Median TTF</span>
+              <MetricInfoTooltip
+                title="Median Time-to-Fill"
+                description="Median elapsed days from requisition opening date to final candidate hiring confirmation."
+                formula="Median (Hire Confirmed Date - Requisition Opened Date)"
+                benchmark="Target: ≤ 28.0 days (Historical FIT HUB national median is 27.9 days)"
+                align="center"
+              />
+            </span>
+            <Target className="w-4 h-4 text-brand-teal shrink-0" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-display font-black text-ink-primary">
@@ -1273,10 +1309,19 @@ function VacancyContent() {
         </div>
 
         {/* Metric 5 */}
-        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle">
+        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle relative group/card">
           <div className="flex items-center justify-between text-ink-tertiary text-xs font-medium mb-1">
-            <span>Pipeline Coverage</span>
-            <Users className="w-4 h-4 text-brand-teal" />
+            <span className="flex items-center gap-1.5 font-medium">
+              <span>Pipeline Coverage</span>
+              <MetricInfoTooltip
+                title="Pipeline Coverage Ratio"
+                description="Candidate volume in active screening and interview stages per open headcount vacancy."
+                formula="Total Active Candidates / Total Open Openings"
+                benchmark="Target: 3.0x–5.0x. < 3.0x indicates talent shortage; > 10.0x signals screening backlog"
+                align="right"
+              />
+            </span>
+            <Users className="w-4 h-4 text-brand-teal shrink-0" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-display font-black text-ink-primary">
@@ -1290,10 +1335,19 @@ function VacancyContent() {
         </div>
 
         {/* Metric 6 */}
-        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle">
+        <div className="p-4 rounded-xl bg-surface-card border border-surface-border hover:border-brand-teal/30 transition-all shadow-subtle relative group/card">
           <div className="flex items-center justify-between text-ink-tertiary text-xs font-medium mb-1">
-            <span>Filled This Period</span>
-            <CheckCircle2 className="w-4 h-4 text-status-healthy" />
+            <span className="flex items-center gap-1.5 font-medium">
+              <span>Filled This Period</span>
+              <MetricInfoTooltip
+                title="Filled This Period"
+                description="Total candidate hires confirmed and closed within the active filtered timeframe."
+                formula="Count of requisitions transitioned to FULFILLED status"
+                benchmark="Tracked against monthly/quarterly club headcount intake targets"
+                align="right"
+              />
+            </span>
+            <CheckCircle2 className="w-4 h-4 text-status-healthy shrink-0" />
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-display font-black text-status-healthy">
