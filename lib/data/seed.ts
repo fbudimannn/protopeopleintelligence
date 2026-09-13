@@ -16,9 +16,9 @@ export interface Employee {
   name: string;
   email: string;
   avatarUrl: string;
-  jobFamily: 'Frontline Operations' | 'Club Leadership' | 'Area & Operations' | 'Corporate Support';
+  jobFamily: 'Club Operations' | 'Fitness & Coaching' | 'Commercial & Sales';
   role: string;
-  department: 'Fitness' | 'Sales & Membership' | 'Club Operations' | 'People & Culture';
+  department: 'Club Operations' | 'Fitness & Coaching' | 'Commercial & Sales';
   location: string;
   clubId: string;
   clubName: string;
@@ -163,7 +163,7 @@ function generateDataset(): { employees: Employee[]; requisitions: Requisition[]
       name,
       email: `${fn.toLowerCase()}.${ln.toLowerCase()}@fithub.id`,
       avatarUrl: `https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80`,
-      jobFamily: 'Club Leadership',
+      jobFamily: 'Club Operations',
       role: 'Club Manager',
       department: 'Club Operations',
       location: club.city,
@@ -195,13 +195,13 @@ function generateDataset(): { employees: Employee[]; requisitions: Requisition[]
     });
   }
 
-  // 2. Generate ~240 Frontline & Supervisory Staff (FC, PT, FDO, Team Leaders)
+  // 2. Generate ~240 Frontline & Supervisory Staff (CS, PT, FC, PT Leader, FC Leader)
   const roleDistribution = [
-    { role: 'Fitness Consultant', family: 'Frontline Operations', dept: 'Sales & Membership', weight: 0.40 },
-    { role: 'Personal Trainer', family: 'Frontline Operations', dept: 'Fitness', weight: 0.35 },
-    { role: 'Front Desk Officer', family: 'Frontline Operations', dept: 'Club Operations', weight: 0.12 },
-    { role: 'FC Team Leader', family: 'Club Leadership', dept: 'Sales & Membership', weight: 0.07 },
-    { role: 'PT Team Leader', family: 'Club Leadership', dept: 'Fitness', weight: 0.06 },
+    { role: 'Fitness Consultant', family: 'Commercial & Sales', dept: 'Commercial & Sales', weight: 0.40 },
+    { role: 'Personal Trainer', family: 'Fitness & Coaching', dept: 'Fitness & Coaching', weight: 0.35 },
+    { role: 'Customer Service', family: 'Club Operations', dept: 'Club Operations', weight: 0.12 },
+    { role: 'Fitness Consultant Leader', family: 'Commercial & Sales', dept: 'Commercial & Sales', weight: 0.07 },
+    { role: 'Personal Trainer Leader', family: 'Fitness & Coaching', dept: 'Fitness & Coaching', weight: 0.06 },
   ];
 
   for (let i = 0; i < 240; i++) {
@@ -255,7 +255,7 @@ function generateDataset(): { employees: Employee[]; requisitions: Requisition[]
     const memberEmpathy = Number((isFitness ? 4.0 + rng() * 0.9 : 3.4 + rng() * 1.3).toFixed(1));
     const resilience = Number((3.0 + rng() * 1.8).toFixed(1));
     const detailDiscipline = Number((3.2 + rng() * 1.5).toFixed(1));
-    const leadershipCoach = Number((selected.family === 'Club Leadership' ? 4.0 + rng() * 0.9 : 2.0 + rng() * 2.0).toFixed(1));
+    const leadershipCoach = Number((selected.role.includes('Leader') || selected.role.includes('Manager') ? 4.0 + rng() * 0.9 : 2.0 + rng() * 2.0).toFixed(1));
 
     // Capabilities (1-5)
     const capabilities = {

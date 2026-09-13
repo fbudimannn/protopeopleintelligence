@@ -65,7 +65,7 @@ const INITIAL_LOGGED_EXITS: ExitSurveyRecord[] = [
   {
     id: 'EXT-2024-003',
     employeeName: 'Rian Santoso',
-    role: 'Front Desk Officer',
+    role: 'Customer Service',
     clubName: 'FIT HUB Senopati (Jakarta)',
     exitType: 'INVOLUNTARY',
     primaryReason: 'Performance & Probation Non-Attainment',

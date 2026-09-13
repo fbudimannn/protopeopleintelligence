@@ -373,7 +373,7 @@ export const fallbackEngagementSummaries: EngagementSummary[] = [
   },
   {
     summary_id: "eng-05",
-    role_name: "Housekeeping",
+    role_name: "Operation Manager",
     location_name: "National Total",
     enps_score: 73.6,
     promoter_pct: 75.6,
@@ -389,7 +389,7 @@ export const fallbackEngagementSummaries: EngagementSummary[] = [
   },
   {
     summary_id: "eng-06",
-    role_name: "Manajerial Club",
+    role_name: "Club Manager",
     location_name: "National Total",
     enps_score: 56.7,
     promoter_pct: 59.6,
@@ -453,7 +453,7 @@ export const fallbackEngagementSummaries: EngagementSummary[] = [
   },
   {
     summary_id: "eng-10",
-    role_name: "Housekeeping",
+    role_name: "Operation Manager",
     location_name: "Bali",
     enps_score: 50.0,
     promoter_pct: 64.3,
@@ -517,7 +517,7 @@ export const fallbackEngagementSummaries: EngagementSummary[] = [
   },
   {
     summary_id: "eng-14",
-    role_name: "Housekeeping",
+    role_name: "Operation Manager",
     location_name: "Jabodetabek",
     enps_score: 76.7,
     promoter_pct: 78.3,
@@ -1000,7 +1000,7 @@ export const fallbackIncomingRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-IN-005",
-    role_name: "PT Team Leader",
+    role_name: "Personal Trainer Leader",
     job_family: "Fitness & Coaching",
     tier_number: 2,
     recommended_fulfillment: "INTERNAL_MOBILITY",
@@ -1070,7 +1070,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
       {
         id: "cand-bli-1",
         name: "Made Dananjaya",
-        current_role: "Academy Vetted Trainee",
+        current_role: "Customer Service",
         source_type: "INTERNAL_HIRING",
         sourcing_metadata: {
           channel: "INTERNAL_HIRING",
@@ -1086,13 +1086,13 @@ export const fallbackRequisitions: RequisitionItem[] = [
       {
         id: "cand-bli-2",
         name: "Putu Suartana",
-        current_role: "Gym Floor Staff",
+        current_role: "Customer Service",
         source_type: "INTERNAL_HIRING",
         sourcing_metadata: {
           channel: "INTERNAL_HIRING",
           internal_type: "INTERNAL_MOBILITY",
           mobility_employee_id: "EMP-2091",
-          mobility_current_role: "Gym Floor Staff",
+          mobility_current_role: "Customer Service",
           mobility_current_branch: "Renon Club, Bali",
         },
         stage: "Manager Interview",
@@ -1104,7 +1104,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
       {
         id: "cand-bli-3",
         name: "Kadek Suryani",
-        current_role: "Front Desk Associate",
+        current_role: "Customer Service",
         source_type: "EMPLOYEE_REFERRAL",
         sourcing_metadata: {
           channel: "EMPLOYEE_REFERRAL",
@@ -1122,7 +1122,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
       {
         id: "cand-bli-4",
         name: "Ni Luh Putu Dewi",
-        current_role: "Hospitality Lead",
+        current_role: "Customer Service Leader",
         source_type: "SOCIAL_MEDIA_ADS",
         sourcing_metadata: {
           channel: "SOCIAL_MEDIA_ADS",
@@ -1139,7 +1139,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
       {
         id: "cand-bli-5",
         name: "Gede Arya Wiratama",
-        current_role: "Guest Relations Officer",
+        current_role: "Customer Service",
         source_type: "JOB_PORTAL",
         sourcing_metadata: {
           channel: "JOB_PORTAL",
@@ -1155,7 +1155,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
       {
         id: "cand-bli-6",
         name: "Ketut Ariana",
-        current_role: "Tourism Graduate",
+        current_role: "Customer Service",
         source_type: "EMPLOYER_BRANDING",
         sourcing_metadata: {
           channel: "EMPLOYER_BRANDING",
@@ -1193,7 +1193,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
       {
         id: "cand-pt-1",
         name: "I Wayan Dharma",
-        current_role: "Certified Fitness Coach",
+        current_role: "Personal Trainer",
         source_type: "INTERNAL_HIRING",
         sourcing_metadata: {
           channel: "INTERNAL_HIRING",
@@ -1209,7 +1209,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
       {
         id: "cand-pt-2",
         name: "Bagus Setiawan",
-        current_role: "Floor Coach",
+        current_role: "Personal Trainer",
         source_type: "EMPLOYEE_REFERRAL",
         sourcing_metadata: {
           channel: "EMPLOYEE_REFERRAL",
@@ -1227,7 +1227,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
       {
         id: "cand-pt-3",
         name: "Clara Wijaya",
-        current_role: "Freelance Trainer",
+        current_role: "Personal Trainer",
         source_type: "SOCIAL_MEDIA_ADS",
         sourcing_metadata: {
           channel: "SOCIAL_MEDIA_ADS",
@@ -1244,7 +1244,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
       {
         id: "cand-pt-4",
         name: "Rizky Firmansyah",
-        current_role: "Gym Assistant Coach",
+        current_role: "Personal Trainer",
         source_type: "JOB_PORTAL",
         sourcing_metadata: {
           channel: "JOB_PORTAL",
@@ -1260,7 +1260,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
       {
         id: "cand-pt-5",
         name: "Agus Pratama",
-        current_role: "Sports Science Student",
+        current_role: "Personal Trainer",
         source_type: "EMPLOYER_BRANDING",
         sourcing_metadata: {
           channel: "EMPLOYER_BRANDING",
@@ -1551,7 +1551,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-5005",
-    role_name: "PT Team Leader",
+    role_name: "Personal Trainer Leader",
     job_family: "Fitness & Coaching",
     tier_number: 2,
     recommended_fulfillment: "INTERNAL_MOBILITY",
@@ -1570,7 +1570,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-5035",
-    role_name: "PT Team Leader",
+    role_name: "Personal Trainer Leader",
     job_family: "Fitness & Coaching",
     tier_number: 2,
     recommended_fulfillment: "INTERNAL_MOBILITY",
@@ -1589,7 +1589,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-5028",
-    role_name: "FC Team Leader",
+    role_name: "Fitness Consultant Leader",
     job_family: "Commercial & Sales",
     tier_number: 2,
     recommended_fulfillment: "INTERNAL_MOBILITY",
@@ -1608,7 +1608,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-5060",
-    role_name: "FC Team Leader",
+    role_name: "Fitness Consultant Leader",
     job_family: "Commercial & Sales",
     tier_number: 2,
     recommended_fulfillment: "INTERNAL_MOBILITY",
@@ -1665,7 +1665,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-PTL-0101",
-    role_name: "PT Team Leader",
+    role_name: "Personal Trainer Leader",
     job_family: "Fitness & Coaching",
     tier_number: 2,
     recommended_fulfillment: "INTERNAL_MOBILITY",
@@ -1684,7 +1684,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-PTL-0102",
-    role_name: "PT Team Leader",
+    role_name: "Personal Trainer Leader",
     job_family: "Fitness & Coaching",
     tier_number: 2,
     recommended_fulfillment: "INTERNAL_MOBILITY",
@@ -1703,7 +1703,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-PTL-0103",
-    role_name: "PT Team Leader",
+    role_name: "Personal Trainer Leader",
     job_family: "Fitness & Coaching",
     tier_number: 2,
     recommended_fulfillment: "INTERNAL_MOBILITY",
@@ -1722,7 +1722,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-FCL-0201",
-    role_name: "FC Team Leader",
+    role_name: "Fitness Consultant Leader",
     job_family: "Commercial & Sales",
     tier_number: 2,
     recommended_fulfillment: "INTERNAL_MOBILITY",
@@ -1741,7 +1741,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-FCL-0202",
-    role_name: "FC Team Leader",
+    role_name: "Fitness Consultant Leader",
     job_family: "Commercial & Sales",
     tier_number: 2,
     recommended_fulfillment: "INTERNAL_MOBILITY",
@@ -1760,7 +1760,7 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
   {
     req_code: "REQ-FCL-0203",
-    role_name: "FC Team Leader",
+    role_name: "Fitness Consultant Leader",
     job_family: "Commercial & Sales",
     tier_number: 2,
     recommended_fulfillment: "INTERNAL_MOBILITY",
@@ -1964,14 +1964,14 @@ export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCa
       candidate_id: `CND-4012`,
       requisition_id: req.req_code,
       name: `Rian ${role.split(" ")[0]} Santoso`,
-      current_role: "Internal Associate",
+      current_role: role,
       source_type: "INTERNAL_HIRING",
       source_channel_name: "Internal Mobility Engine",
       sourcing_metadata: {
         channel: "INTERNAL_HIRING",
         internal_type: "INTERNAL_MOBILITY",
         mobility_employee_id: "EMP-3042",
-        mobility_current_role: "Gym Support",
+        mobility_current_role: "Customer Service",
         mobility_current_branch: `${loc} Branch`,
       },
       stage: "Manager Interview",
@@ -1986,21 +1986,21 @@ export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCa
       candidate_id: `CND-4013`,
       requisition_id: req.req_code,
       name: "Dewi Lestari",
-      current_role: `${role} Specialist`,
+      current_role: role,
       source_type: "EMPLOYEE_REFERRAL",
       source_channel_name: "Club Staff Referral",
       sourcing_metadata: {
         channel: "EMPLOYEE_REFERRAL",
         referrer_employee_id: "EMP-1021",
         referrer_name: "Arief Hidayat",
-        referrer_role: "Club Operations Lead",
+        referrer_role: "Customer Service Leader",
         referrer_branch: `${loc} Club`,
       },
       stage: "HR Screening",
       fit_score: 85,
       contact: "+62 818-5566-7788",
       applied_at: "2026-08-18",
-      notes: "Referred by Club Operations Lead with 2 years domain experience.",
+      notes: "Referred by Customer Service Leader with 2 years domain experience.",
     },
     {
       id: `cand-${req.req_code}-4`,
@@ -2008,7 +2008,7 @@ export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCa
       candidate_id: `CND-4014`,
       requisition_id: req.req_code,
       name: "Siti Rahayu",
-      current_role: `Senior ${role} Candidate`,
+      current_role: role,
       source_type: "JOB_PORTAL",
       source_channel_name: "JobStreet",
       sourcing_metadata: {
@@ -2028,7 +2028,7 @@ export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCa
       candidate_id: `CND-4015`,
       requisition_id: req.req_code,
       name: "Fajar Nugraha",
-      current_role: "Social Applicant",
+      current_role: role,
       source_type: "SOCIAL_MEDIA_ADS",
       source_channel_name: "Instagram Ads",
       sourcing_metadata: {
@@ -2049,7 +2049,7 @@ export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCa
       candidate_id: `CND-4016`,
       requisition_id: req.req_code,
       name: "Kevin Sanjaya",
-      current_role: "Campus Graduate",
+      current_role: role,
       source_type: "EMPLOYER_BRANDING",
       source_channel_name: "Campus Outreach",
       sourcing_metadata: {
