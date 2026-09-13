@@ -84,11 +84,6 @@ function SidebarNavItems() {
           icon: <Briefcase className="w-5 h-5 flex-shrink-0" />,
         },
         {
-          label: "Demand & SLA Heatmap",
-          href: "/vacancy?tab=matrix",
-          icon: <Target className="w-5 h-5 flex-shrink-0" />,
-        },
-        {
           label: "Sourcing & Funnel",
           href: "/vacancy?tab=funnel",
           icon: <TrendingUp className="w-5 h-5 flex-shrink-0" />,

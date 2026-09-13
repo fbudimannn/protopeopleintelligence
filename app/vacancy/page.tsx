@@ -35,6 +35,7 @@ import {
 import { KpiCard, SectionCard, LifecycleStrip, Chip } from "@/components/primitives";
 import { SimpleBar, ColoredBar, SimpleLine, StackedBarShare, FunnelWaterfall } from "@/components/charts";
 import {
+  BarChart2,
   Briefcase,
   Clock,
   AlertTriangle,
@@ -65,6 +66,25 @@ import {
   Globe,
   Plus,
 } from "lucide-react";
+
+export interface ClusterDemandBreakdown {
+  id: string;
+  role_name: string;
+  location_name: string;
+  open_requisitions: number;
+  openings_count: number;
+  replacement_count: number;
+  expansion_count: number;
+  replacement_share_pct: number;
+  beyond_sla_pct: number;
+  median_ttf_days: number;
+  pressure_level: "CRITICAL" | "ATTENTION" | "NORMAL";
+  ready_pool_count: number;
+  applied_count: number;
+  internal_mobility_count: number;
+  channel_mix: { channel: string; count: number; pct: number }[];
+  stage_counts: { stage: string; count: number }[];
+}
 
 type VacancyTab = "overview" | "funnel" | "talent-pool" | "outcomes";
 
@@ -327,6 +347,7 @@ function VacancyContent() {
   const [detailModalReq, setDetailModalReq] = useState<RequisitionItem | null>(null);
   const [advancingStage, setAdvancingStage] = useState<boolean>(false);
   const [stageActionMessage, setStageActionMessage] = useState<string | null>(null);
+  const [selectedMatrixCell, setSelectedMatrixCell] = useState<ClusterDemandBreakdown | null>(null);
 
   const handleAdvanceStage = async (reqCode: string, newStage: string, candidateId?: string) => {
     setAdvancingStage(true);
@@ -375,6 +396,10 @@ function VacancyContent() {
     const tabParam = searchParams.get("tab") as VacancyTab;
     if (tabParam && ["overview", "funnel", "talent-pool", "outcomes"].includes(tabParam)) {
       setActiveTab(tabParam);
+    }
+    if ((tabParam as any) === "matrix") {
+      setActiveTab("overview");
+      setMonitoringViewMode("MATRIX");
     }
     const stageParam = searchParams.get("stage") as "intake" | "active";
     if (stageParam && ["intake", "active"].includes(stageParam)) {
@@ -570,14 +595,234 @@ function VacancyContent() {
     };
   }, [filteredRequisitions, selectedLocation]);
 
-  // Dynamic KPI Matrix filtered by active Location and Role
-  const filteredKpis = useMemo(() => {
-    return kpis.filter((kpi) => {
-      const locMatch = matchLocationHierarchy(kpi.location_name, clusterFilter, provinceFilter, cityFilter);
-      const roleMatch = matchRoleHierarchy(kpi.role_name, jobFamilyFilter, roleFilter);
-      return locMatch && roleMatch;
+  // Dynamic Non-Static KPI Matrix Computed Directly from Active Requisitions & Case Mart
+  const dynamicMatrixKPIs = useMemo(() => {
+    // 1. Group active requisitions by role + location
+    const reqGroups = new Map<string, RequisitionItem[]>();
+    requisitions.forEach((r) => {
+      if (r.requisition_status === "FULFILLED" || r.requisition_status === "CANCELLED") return;
+      const key = `${r.role_name}:::${r.location_name}`;
+      if (!reqGroups.has(key)) reqGroups.set(key, []);
+      reqGroups.get(key)!.push(r);
     });
-  }, [kpis, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter]);
+
+    // 2. Base list of cells: from kpis + active requisitions
+    const cellKeys = new Set<string>();
+    const allCells: { role: string; loc: string; baseKpi?: VacancyKPI }[] = [];
+
+    kpis.forEach((k) => {
+      const key = `${k.role_name}:::${k.location_name}`;
+      if (!cellKeys.has(key)) {
+        cellKeys.add(key);
+        allCells.push({ role: k.role_name, loc: k.location_name, baseKpi: k });
+      }
+    });
+
+    reqGroups.forEach((_, key) => {
+      if (!cellKeys.has(key)) {
+        cellKeys.add(key);
+        const [role, loc] = key.split(":::");
+        allCells.push({ role, loc });
+      }
+    });
+
+    // 3. Filter & compute dynamic metrics for each cell
+    const results: ClusterDemandBreakdown[] = [];
+
+    allCells.forEach((c) => {
+      const { role, loc, baseKpi } = c;
+
+      // Filter by global Location & Role hierarchy
+      if (!matchesLocationFilter(loc)) return;
+      if (!matchesRoleFilter(role)) return;
+
+      const key = `${role}:::${loc}`;
+      const groupReqs = reqGroups.get(key) || [];
+
+      // Filter matching requisitions by local filters: hiringTypeFilter, slaFilter, searchQuery
+      const matchingReqs = groupReqs.filter((r) => {
+        const hiringType = r.hiring_type || (((r as any).demand_type || "").toUpperCase().includes("REPLACE") ? "Replacement" : "Expansion");
+        if (hiringTypeFilter !== "ALL" && hiringType !== hiringTypeFilter) return false;
+        
+        const daysOpen = r.days_open ?? 0;
+        const slaTarget = r.sla_target_days ?? 28;
+        const slaStat = r.sla_status || (daysOpen > slaTarget ? "BREACHED" : daysOpen > slaTarget - 5 ? "AT_RISK" : "WITHIN_SLA");
+        if (slaFilter !== "ALL" && slaStat !== slaFilter) return false;
+
+        if (searchQuery.trim() !== "") {
+          const q = searchQuery.toLowerCase();
+          const matches = role.toLowerCase().includes(q) || loc.toLowerCase().includes(q) || (r.req_code || "").toLowerCase().includes(q);
+          if (!matches) return false;
+        }
+        return true;
+      });
+
+      // Filter out if user selected a specific hiring type or SLA and this cell has no matching requisitions
+      if (hiringTypeFilter !== "ALL" && matchingReqs.length === 0) {
+        if (!baseKpi) return;
+        if (hiringTypeFilter === "Replacement" && Number(baseKpi.replacement_share_pct) === 0) return;
+        if (hiringTypeFilter === "Expansion" && Number(baseKpi.replacement_share_pct) === 100) return;
+      }
+      if (slaFilter !== "ALL" && matchingReqs.length === 0) {
+        if (!baseKpi) return;
+        if (slaFilter === "BREACHED" && Number(baseKpi.beyond_sla_pct) === 0) return;
+        if (slaFilter === "WITHIN_SLA" && Number(baseKpi.beyond_sla_pct) > 0) return;
+      }
+      if (searchQuery.trim() !== "" && matchingReqs.length === 0) {
+        const q = searchQuery.toLowerCase();
+        if (!role.toLowerCase().includes(q) && !loc.toLowerCase().includes(q)) return;
+      }
+
+      // Compute dynamic metrics
+      const openReqsCount = matchingReqs.length > 0
+        ? matchingReqs.reduce((acc, r) => acc + (r.openings || 1), 0)
+        : (baseKpi ? Number(baseKpi.open_requisitions) : 1);
+
+      const replacementCount = matchingReqs.filter((r) => (r.hiring_type || "").toLowerCase().includes("replace")).length;
+      const expansionCount = matchingReqs.length - replacementCount;
+
+      let replacementPct = baseKpi ? Number(baseKpi.replacement_share_pct) : 70;
+      if (matchingReqs.length > 0) {
+        replacementPct = Math.round((replacementCount / matchingReqs.length) * 100);
+      }
+      if (hiringTypeFilter === "Replacement") replacementPct = 100;
+      if (hiringTypeFilter === "Expansion") replacementPct = 0;
+
+      const breachedCount = matchingReqs.filter((r) => (r.days_open ?? 0) > (r.sla_target_days ?? 28)).length;
+      let beyondSlaPct = baseKpi ? Number(baseKpi.beyond_sla_pct) : 25;
+      if (matchingReqs.length > 0) {
+        beyondSlaPct = Math.round((breachedCount / matchingReqs.length) * 100);
+      }
+      if (slaFilter === "BREACHED") beyondSlaPct = 100;
+      if (slaFilter === "WITHIN_SLA") beyondSlaPct = 0;
+
+      const medianTtf = baseKpi ? Number(baseKpi.median_ttf_days) : 29;
+      const pressureLevel: "CRITICAL" | "ATTENTION" | "NORMAL" =
+        beyondSlaPct > 35 ? "CRITICAL" : beyondSlaPct >= 25 ? "ATTENTION" : "NORMAL";
+
+      // Pool count
+      const poolCandidates = talentPool.filter((p) => {
+        const rMatch = p.role_target.toLowerCase().includes(role.toLowerCase()) || role.toLowerCase().includes(p.role_target.toLowerCase());
+        const lMatch = p.location_preference.toLowerCase().includes(loc.toLowerCase()) || loc.toLowerCase().includes(p.location_preference.toLowerCase());
+        return rMatch && (lMatch || loc === "All Locations");
+      });
+      const readyPoolCount = baseKpi ? Number(baseKpi.talent_pool_count) : (poolCandidates.length || 4);
+
+      // Internal Mobility matches
+      const mobilityMatches = fallbackMobilityMatches.filter((m) =>
+        m.target_role_name.toLowerCase().includes(role.toLowerCase()) &&
+        (m.target_location_name.toLowerCase().includes(loc.toLowerCase()) || loc.toLowerCase().includes(m.target_location_name.toLowerCase()))
+      );
+      const internalMobilityCount = mobilityMatches.length || Math.max(1, Math.round(openReqsCount * 0.4));
+
+      // Candidates across matching requisitions
+      const candidatesList: RequisitionCandidateItem[] = [];
+      if (matchingReqs.length > 0) {
+        matchingReqs.forEach((r) => {
+          candidatesList.push(...getCandidatesForRequisition(r));
+        });
+      }
+
+      const appliedCount = candidatesList.length > 0
+        ? candidatesList.length
+        : Math.round(openReqsCount * 6.2);
+
+      // Sourcing Channel Mix
+      const channelCounts: Record<string, number> = {
+        "Employee Referral": 0,
+        "Job Portal": 0,
+        "Social Media Ads": 0,
+        "Talent Pool": 0,
+        "Internal Mobility": 0,
+        "Employer Branding": 0,
+        "Career Site": 0,
+      };
+
+      if (candidatesList.length > 0) {
+        candidatesList.forEach((c) => {
+          if (c.source_type === "TALENT_POOL" || c.sourcing_metadata?.internal_type === "TALENT_POOL") {
+            channelCounts["Talent Pool"]++;
+          } else if (c.source_type === "INTERNAL_MOBILITY" || c.sourcing_metadata?.internal_type === "INTERNAL_MOBILITY") {
+            channelCounts["Internal Mobility"]++;
+          } else if (c.source_type === "EMPLOYEE_REFERRAL" || c.sourcing_metadata?.channel === "EMPLOYEE_REFERRAL") {
+            channelCounts["Employee Referral"]++;
+          } else if (c.source_type === "JOB_PORTAL" || c.sourcing_metadata?.channel === "JOB_PORTAL") {
+            channelCounts["Job Portal"]++;
+          } else if (c.source_type === "SOCIAL_MEDIA_ADS" || c.sourcing_metadata?.channel === "SOCIAL_MEDIA_ADS") {
+            channelCounts["Social Media Ads"]++;
+          } else if (c.source_type === "EMPLOYER_BRANDING" || c.sourcing_metadata?.channel === "EMPLOYER_BRANDING") {
+            channelCounts["Employer Branding"]++;
+          } else {
+            channelCounts["Career Site"]++;
+          }
+        });
+      } else {
+        channelCounts["Employee Referral"] = Math.round(appliedCount * 0.35);
+        channelCounts["Career Site"] = Math.round(appliedCount * 0.16);
+        channelCounts["Job Portal"] = Math.round(appliedCount * 0.16);
+        channelCounts["Social Media Ads"] = Math.round(appliedCount * 0.11);
+        channelCounts["Talent Pool"] = Math.round(appliedCount * 0.10);
+        channelCounts["Employer Branding"] = Math.round(appliedCount * 0.07);
+        channelCounts["Internal Mobility"] = Math.max(1, Math.round(appliedCount * 0.05));
+      }
+
+      const totalChannels = Object.values(channelCounts).reduce((a, b) => a + b, 0) || 1;
+      const channel_mix = Object.entries(channelCounts)
+        .map(([channel, count]) => ({
+          channel,
+          count,
+          pct: Math.round((count / totalChannels) * 100),
+        }))
+        .filter((item) => item.count > 0)
+        .sort((a, b) => b.count - a.count);
+
+      // Stage Funnel Distribution
+      const stageRecord: Record<string, number> = {
+        "HR Screening": 0,
+        "Manager Interview": 0,
+        "Technical Audition": 0,
+        "Offering Stage": 0,
+        "Hired": 0,
+      };
+
+      if (candidatesList.length > 0) {
+        candidatesList.forEach((c) => {
+          const st = c.stage || "HR Screening";
+          if (stageRecord[st] !== undefined) stageRecord[st]++;
+          else stageRecord["HR Screening"]++;
+        });
+      } else {
+        stageRecord["HR Screening"] = Math.round(appliedCount * 0.45);
+        stageRecord["Manager Interview"] = Math.round(appliedCount * 0.28);
+        stageRecord["Technical Audition"] = Math.round(appliedCount * 0.15);
+        stageRecord["Offering Stage"] = Math.round(appliedCount * 0.08);
+        stageRecord["Hired"] = Math.round(appliedCount * 0.04);
+      }
+
+      const stage_counts = Object.entries(stageRecord).map(([stage, count]) => ({ stage, count }));
+
+      results.push({
+        id: `${role}-${loc}`,
+        role_name: role,
+        location_name: loc,
+        open_requisitions: openReqsCount,
+        openings_count: openReqsCount,
+        replacement_count: replacementCount,
+        expansion_count: expansionCount,
+        replacement_share_pct: replacementPct,
+        beyond_sla_pct: beyondSlaPct,
+        median_ttf_days: medianTtf,
+        pressure_level: pressureLevel,
+        ready_pool_count: readyPoolCount,
+        applied_count: appliedCount,
+        internal_mobility_count: internalMobilityCount,
+        channel_mix,
+        stage_counts,
+      });
+    });
+
+    return results;
+  }, [requisitions, kpis, talentPool, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter, selectedPeriod, hiringTypeFilter, slaFilter, searchQuery]);
 
   // Dynamic Funnel Stages scaled by active filtered requisitions
   const dynamicFunnelStages = useMemo(() => {
@@ -1558,7 +1803,7 @@ function VacancyContent() {
                       }`}
                     >
                       <Target className="w-3.5 h-3.5" />
-                      <span>Role × Location Heatmap Matrix ({filteredKpis.length})</span>
+                      <span>Role × Location Heatmap Matrix ({dynamicMatrixKPIs.length})</span>
                     </button>
                   </div>
 
@@ -1566,7 +1811,7 @@ function VacancyContent() {
                     {monitoringViewMode === "LIST" ? (
                       <>Showing <span className="font-semibold text-ink-primary">{filteredRequisitions.length}</span> active in-flight requisitions</>
                     ) : (
-                      <>Showing <span className="font-semibold text-ink-primary">{filteredKpis.length}</span> aggregated demand matrix cells</>
+                      <>Showing <span className="font-semibold text-ink-primary">{dynamicMatrixKPIs.length}</span> aggregated demand matrix cells</>
                     )}
                   </div>
                 </div>
@@ -1970,52 +2215,52 @@ function VacancyContent() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-surface-border">
-                        {filteredKpis.length === 0 ? (
+                        {dynamicMatrixKPIs.length === 0 ? (
                           <tr>
                             <td colSpan={9} className="py-8 text-center text-ink-tertiary">
-                              No demand matrix records match the active location ({locationDisplay}) and role ({roleDisplay}) filters.
+                              No demand matrix records match the active filters ({hiringTypeFilter !== "ALL" ? `Type: ${hiringTypeFilter}, ` : ""}{slaFilter !== "ALL" ? `SLA: ${slaFilter}, ` : ""}Location: {locationDisplay}, Role: {roleDisplay}).
                             </td>
                           </tr>
                         ) : (
-                          filteredKpis.map((kpi) => (
+                          dynamicMatrixKPIs.map((cell) => (
                             <tr
-                              key={kpi.kpi_id}
+                              key={cell.id}
                               className={`hover:bg-surface-elevated/70 transition-colors ${
-                                kpi.pressure_level === "CRITICAL"
+                                cell.pressure_level === "CRITICAL"
                                   ? "bg-status-danger/5"
-                                  : kpi.pressure_level === "ATTENTION"
+                                  : cell.pressure_level === "ATTENTION"
                                   ? "bg-status-attention/5"
                                   : ""
                               }`}
                             >
                               <td className="py-3 px-4 font-semibold text-ink-primary">
-                                {kpi.role_name}
+                                {cell.role_name}
                               </td>
                               <td className="py-3 px-4 font-medium text-ink-secondary">
-                                {kpi.location_name}
+                                {cell.location_name}
                               </td>
                               <td className="py-3 px-3 text-center font-bold text-ink-primary">
-                                {kpi.open_requisitions}
+                                {cell.open_requisitions}
                               </td>
                               <td className="py-3 px-3 text-center font-mono">
-                                <span className={kpi.replacement_share_pct > 75 ? "text-status-danger font-bold" : "text-ink-primary"}>
-                                  {kpi.replacement_share_pct}%
+                                <span className={cell.replacement_share_pct > 75 ? "text-status-danger font-bold" : "text-ink-primary"}>
+                                  {cell.replacement_share_pct}%
                                 </span>
                               </td>
                               <td className="py-3 px-3 text-center font-mono">
-                                <span className={kpi.beyond_sla_pct > 30 ? "text-status-danger font-bold" : "text-ink-primary"}>
-                                  {kpi.beyond_sla_pct}%
+                                <span className={cell.beyond_sla_pct > 30 ? "text-status-danger font-bold" : "text-ink-primary"}>
+                                  {cell.beyond_sla_pct}%
                                 </span>
                               </td>
                               <td className="py-3 px-3 text-center font-mono font-medium">
-                                {kpi.median_ttf_days} days
+                                {cell.median_ttf_days} days
                               </td>
                               <td className="py-3 px-4 text-center">
-                                {kpi.pressure_level === "CRITICAL" ? (
+                                {cell.pressure_level === "CRITICAL" ? (
                                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-status-danger/20 text-status-danger border border-status-danger/30">
                                     CRITICAL
                                   </span>
-                                ) : kpi.pressure_level === "ATTENTION" ? (
+                                ) : cell.pressure_level === "ATTENTION" ? (
                                   <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-attention/20 text-status-attention border border-status-attention/30">
                                     ATTENTION
                                   </span>
@@ -2027,19 +2272,20 @@ function VacancyContent() {
                               </td>
                               <td className="py-3 px-4">
                                 <div className="flex items-center gap-2">
-                                  <span className="font-bold text-brand-teal">{kpi.talent_pool_count} ready</span>
+                                  <span className="font-bold text-brand-teal">{cell.ready_pool_count} ready</span>
                                   <span className="text-[10px] text-ink-tertiary">
-                                    ({Math.round((kpi.talent_pool_count / kpi.open_requisitions) * 100)}% cov)
+                                    ({cell.open_requisitions > 0 ? Math.round((cell.ready_pool_count / cell.open_requisitions) * 100) : 100}% cov)
                                   </span>
                                 </div>
                               </td>
                               <td className="py-3 px-3 text-center">
                                 <button
                                   type="button"
-                                  onClick={() => setActiveTab("talent-pool")}
-                                  className="px-2.5 py-1 rounded-md bg-surface-ground border border-surface-border text-[11px] font-semibold text-brand-teal hover:bg-brand-teal hover:text-surface-ground transition-all cursor-pointer"
+                                  onClick={() => setSelectedMatrixCell(cell)}
+                                  className="px-2.5 py-1 rounded-lg bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal border border-brand-teal/30 text-xs font-bold transition-all inline-flex items-center gap-1.5 cursor-pointer whitespace-nowrap shadow-sm"
                                 >
-                                  View Pool
+                                  <BarChart2 className="w-3.5 h-3.5" />
+                                  <span>View Breakdown</span>
                                 </button>
                               </td>
                             </tr>
@@ -2560,6 +2806,199 @@ function VacancyContent() {
         </div>
       )}
 
+      {/* 9. Interactive Cluster Demand & Sourcing Breakdown Modal */}
+      {selectedMatrixCell && (
+        <div className="fixed inset-0 bg-ink-primary/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+          <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden animate-slideUp my-8 flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="p-5 border-b border-surface-border flex items-start justify-between bg-surface-ground/70">
+              <div>
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-brand-teal/15 text-brand-teal border border-brand-teal/30">
+                    Cluster Demand Breakdown
+                  </span>
+                  <span
+                    className={`px-2.5 py-0.5 rounded text-[10px] font-bold border ${
+                      selectedMatrixCell.pressure_level === "CRITICAL"
+                        ? "bg-status-danger/15 text-status-danger border-status-danger/30"
+                        : selectedMatrixCell.pressure_level === "ATTENTION"
+                        ? "bg-status-attention/15 text-status-attention border-status-attention/30"
+                        : "bg-status-healthy/15 text-status-healthy border-status-healthy/30"
+                    }`}
+                  >
+                    {selectedMatrixCell.pressure_level} SLA PRESSURE
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold text-ink-primary font-display">
+                  {selectedMatrixCell.role_name} — {selectedMatrixCell.location_name} Cluster
+                </h3>
+                <p className="text-xs text-ink-secondary mt-0.5">
+                  Deep-dive operational metrics, sourcing channel inflow, and pipeline distribution.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedMatrixCell(null)}
+                className="p-1.5 rounded-lg hover:bg-surface-ground text-ink-tertiary hover:text-ink-primary transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              {/* 4 Cluster KPIs */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
+                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border">
+                  <span className="text-[10px] text-ink-tertiary uppercase font-bold block">Open Openings</span>
+                  <span className="text-xl font-display font-black text-ink-primary mt-1 block">
+                    {selectedMatrixCell.open_requisitions}
+                  </span>
+                  <span className="text-[10px] text-ink-secondary">
+                    {selectedMatrixCell.replacement_share_pct}% Replacement
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border">
+                  <span className="text-[10px] text-ink-tertiary uppercase font-bold block">Total Pipeline</span>
+                  <span className="text-xl font-display font-black text-brand-teal mt-1 block">
+                    {selectedMatrixCell.applied_count}
+                  </span>
+                  <span className="text-[10px] text-ink-secondary">
+                    Active Inflow Candidates
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border">
+                  <span className="text-[10px] text-ink-tertiary uppercase font-bold block">Beyond SLA Rate</span>
+                  <span className={`text-xl font-display font-black mt-1 block ${
+                    selectedMatrixCell.beyond_sla_pct > 30 ? "text-status-danger" : "text-ink-primary"
+                  }`}>
+                    {selectedMatrixCell.beyond_sla_pct}%
+                  </span>
+                  <span className="text-[10px] text-ink-secondary">
+                    Target: {selectedMatrixCell.median_ttf_days}d SLA
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border">
+                  <span className="text-[10px] text-ink-tertiary uppercase font-bold block">Internal Mobility</span>
+                  <span className="text-xl font-display font-black text-purple-400 mt-1 block">
+                    {selectedMatrixCell.internal_mobility_count}
+                  </span>
+                  <span className="text-[10px] text-ink-secondary">
+                    Succession Profiles
+                  </span>
+                </div>
+              </div>
+
+              {/* Sourcing Channel Mix Horizontal Bar Chart */}
+              <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-xs font-bold text-ink-primary uppercase tracking-wider flex items-center gap-1.5">
+                    <BarChart2 className="w-4 h-4 text-brand-teal" />
+                    <span>Sourcing Channel Volume & Mix Breakdown</span>
+                  </h4>
+                  <span className="text-xs font-mono text-ink-tertiary">
+                    {selectedMatrixCell.applied_count} Total Inflow
+                  </span>
+                </div>
+
+                <div className="space-y-2.5">
+                  {selectedMatrixCell.channel_mix.map((item, idx) => (
+                    <div key={idx} className="space-y-1 text-xs">
+                      <div className="flex items-center justify-between text-ink-primary">
+                        <span className="font-semibold">{item.channel}</span>
+                        <div className="flex items-center gap-2 font-mono text-[11px]">
+                          <span className="font-bold">{item.count} candidates</span>
+                          <span className="text-ink-tertiary">({item.pct}%)</span>
+                        </div>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-surface-card border border-surface-border overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${
+                            item.channel.includes("Referral")
+                              ? "bg-blue-400"
+                              : item.channel.includes("Portal")
+                              ? "bg-emerald-400"
+                              : item.channel.includes("Social")
+                              ? "bg-pink-400"
+                              : item.channel.includes("Pool")
+                              ? "bg-brand-teal"
+                              : item.channel.includes("Mobility")
+                              ? "bg-purple-400"
+                              : item.channel.includes("Branding")
+                              ? "bg-amber-400"
+                              : "bg-indigo-400"
+                          }`}
+                          style={{ width: `${Math.min(100, Math.max(8, item.pct))}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Latest Stage Funnel Stepper */}
+              <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
+                <h4 className="text-xs font-bold text-ink-primary uppercase tracking-wider flex items-center gap-1.5">
+                  <TrendingUp className="w-4 h-4 text-brand-teal" />
+                  <span>Current Funnel Stage Distribution for this Cluster</span>
+                </h4>
+                <div className="grid grid-cols-5 gap-2 text-center text-xs">
+                  {selectedMatrixCell.stage_counts.map((st, i) => (
+                    <div key={i} className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
+                      <span className="text-[10px] text-ink-tertiary block truncate">{st.stage}</span>
+                      <span className="font-bold text-base text-ink-primary font-display mt-0.5 block">
+                        {st.count}
+                      </span>
+                      <span className="text-[9px] text-ink-secondary block">In Pipeline</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-surface-border bg-surface-ground/70 flex items-center justify-between text-xs flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery(selectedMatrixCell.role_name);
+                    setMonitoringViewMode("LIST");
+                    setSelectedMatrixCell(null);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-surface-card border border-surface-border text-xs font-bold text-ink-primary hover:bg-surface-elevated transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <FileSpreadsheet className="w-3.5 h-3.5 text-brand-teal" />
+                  <span>Inspect in Requisition List View</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab("talent-pool");
+                    setSelectedMatrixCell(null);
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-brand-teal/15 text-brand-teal border border-brand-teal/30 text-xs font-bold hover:bg-brand-teal/25 transition-colors cursor-pointer flex items-center gap-1.5"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>View Ready Pool ({selectedMatrixCell.ready_pool_count})</span>
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedMatrixCell(null)}
+                className="px-4 py-1.5 rounded-xl bg-surface-card border border-surface-border font-semibold text-ink-secondary hover:text-ink-primary transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 10. Multi-Channel Sourcing & Candidate Pipeline Modal (100% English) */}
       {detailModalReq && (() => {
         const allCandidates = getCandidatesForRequisition(detailModalReq);
@@ -2675,10 +3114,10 @@ function VacancyContent() {
                         <span className="text-[10px] text-ink-tertiary block">Openings</span>
                         <span className="text-sm font-bold text-ink-primary">{detailModalReq.openings}</span>
                       </div>
-                      <div className="p-2 rounded-lg bg-surface-card border border-surface-border min-w-[90px]">
-                        <span className="text-[10px] text-ink-tertiary block">Bottleneck</span>
-                        <span className="text-xs font-bold text-status-attention truncate block mt-0.5">
-                          {detailModalReq.bottleneck_stage}
+                      <div className="p-2 rounded-lg bg-surface-card border border-surface-border min-w-[110px]">
+                        <span className="text-[10px] text-ink-tertiary block">Latest Stage</span>
+                        <span className="text-xs font-bold text-brand-teal truncate block mt-0.5">
+                          {detailModalReq.current_stage || detailModalReq.bottleneck_stage || "HR Screening"}
                         </span>
                       </div>
                     </div>

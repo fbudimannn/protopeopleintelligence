@@ -150,7 +150,7 @@ export interface LifecycleStepDef {
 export const LIFECYCLE_STEPS: LifecycleStepDef[] = [
   { id: 'vacancy', label: '1. Vacancy Demand', sub: 'Replacement Cycle', href: '/vacancy?tab=overview', targetTab: 'overview', pageScope: 'vacancy' },
   { id: 'sourcing', label: '2. Sourcing Mix', sub: 'Channels & Inflow', href: '/vacancy?tab=funnel', targetTab: 'funnel', pageScope: 'vacancy' },
-  { id: 'funnel', label: '3. Hiring Funnel', sub: 'SLA & TTF Matrix', href: '/vacancy?tab=matrix', targetTab: 'matrix', pageScope: 'vacancy' },
+  { id: 'funnel', label: '3. Hiring Funnel', sub: 'SLA & TTF Matrix', href: '/vacancy?tab=funnel', targetTab: 'funnel', pageScope: 'vacancy' },
   { id: 'onboarding', label: '4. 30/60/90 Listening', sub: 'Early Retention Cliff', href: '/team?tab=cliff', targetTab: 'cliff', pageScope: 'team' },
   { id: 'engagement', label: '5. eNPS Experience', sub: '6 Voice Dimensions', href: '/team?tab=engagement', targetTab: 'engagement', pageScope: 'team' },
   { id: 'capability', label: '6. Capability Matrix', sub: 'Competency (L1-L5)', href: '/team/capability/framework', pageScope: 'other' },
