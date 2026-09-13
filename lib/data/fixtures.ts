@@ -790,6 +790,12 @@ export interface SourcingMetadata {
 
 export interface RequisitionCandidateItem {
   id: string;
+  person_id?: string;
+  candidate_id?: string;
+  requisition_id?: string;
+  employee_id?: string;
+  employment_id?: string;
+  source_channel_name?: string;
   name: string;
   current_role?: string;
   source_type: SourcingChannelCategory | 'TALENT_POOL' | 'INTERNAL_MOBILITY' | 'CONVENTIONAL' | string;
@@ -799,6 +805,7 @@ export interface RequisitionCandidateItem {
   contact?: string;
   applied_at?: string;
   notes?: string;
+  parsed_from_sheet?: boolean;
 }
 
 export interface RequisitionItem {
@@ -1933,9 +1940,13 @@ export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCa
   return [
     {
       id: `cand-${req.req_code}-1`,
+      person_id: `PRS-8412`,
+      candidate_id: `CND-4011`,
+      requisition_id: req.req_code,
       name: `Made ${role.split(" ")[0]} Pratama`,
       current_role: `Academy Certified ${role}`,
       source_type: "INTERNAL_HIRING",
+      source_channel_name: "Frontline Ready Pool",
       sourcing_metadata: {
         channel: "INTERNAL_HIRING",
         internal_type: "TALENT_POOL",
@@ -1949,9 +1960,13 @@ export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCa
     },
     {
       id: `cand-${req.req_code}-2`,
+      person_id: `PRS-8413`,
+      candidate_id: `CND-4012`,
+      requisition_id: req.req_code,
       name: `Rian ${role.split(" ")[0]} Santoso`,
       current_role: "Internal Associate",
       source_type: "INTERNAL_HIRING",
+      source_channel_name: "Internal Mobility Engine",
       sourcing_metadata: {
         channel: "INTERNAL_HIRING",
         internal_type: "INTERNAL_MOBILITY",
@@ -1967,9 +1982,13 @@ export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCa
     },
     {
       id: `cand-${req.req_code}-3`,
+      person_id: `PRS-8414`,
+      candidate_id: `CND-4013`,
+      requisition_id: req.req_code,
       name: "Dewi Lestari",
       current_role: `${role} Specialist`,
       source_type: "EMPLOYEE_REFERRAL",
+      source_channel_name: "Club Staff Referral",
       sourcing_metadata: {
         channel: "EMPLOYEE_REFERRAL",
         referrer_employee_id: "EMP-1021",
@@ -1985,9 +2004,13 @@ export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCa
     },
     {
       id: `cand-${req.req_code}-4`,
+      person_id: `PRS-8415`,
+      candidate_id: `CND-4014`,
+      requisition_id: req.req_code,
       name: "Siti Rahayu",
       current_role: `Senior ${role} Candidate`,
       source_type: "JOB_PORTAL",
+      source_channel_name: "JobStreet",
       sourcing_metadata: {
         channel: "JOB_PORTAL",
         portal_name: "JobStreet",
@@ -2001,9 +2024,13 @@ export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCa
     },
     {
       id: `cand-${req.req_code}-5`,
+      person_id: `PRS-8416`,
+      candidate_id: `CND-4015`,
+      requisition_id: req.req_code,
       name: "Fajar Nugraha",
       current_role: "Social Applicant",
       source_type: "SOCIAL_MEDIA_ADS",
+      source_channel_name: "Instagram Ads",
       sourcing_metadata: {
         channel: "SOCIAL_MEDIA_ADS",
         social_platform: "Instagram",
@@ -2018,9 +2045,13 @@ export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCa
     },
     {
       id: `cand-${req.req_code}-6`,
+      person_id: `PRS-8417`,
+      candidate_id: `CND-4016`,
+      requisition_id: req.req_code,
       name: "Kevin Sanjaya",
       current_role: "Campus Graduate",
       source_type: "EMPLOYER_BRANDING",
+      source_channel_name: "Campus Outreach",
       sourcing_metadata: {
         channel: "EMPLOYER_BRANDING",
         branding_event_type: "Campus Career Fair",
