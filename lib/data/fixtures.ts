@@ -753,11 +753,47 @@ export interface RequisitionSourcingDetail {
   notes?: string;
 }
 
+export type SourcingChannelCategory =
+  | 'INTERNAL_HIRING'
+  | 'EMPLOYEE_REFERRAL'
+  | 'CAREER_SITE'
+  | 'JOB_PORTAL'
+  | 'SOCIAL_MEDIA_ADS'
+  | 'EMPLOYER_BRANDING'
+  | 'REHIRE'
+  | 'DIRECT_SOURCE';
+
+export interface SourcingMetadata {
+  channel: SourcingChannelCategory | string;
+  internal_type?: 'TALENT_POOL' | 'INTERNAL_MOBILITY';
+  talent_pool_program?: string;
+  mobility_employee_id?: string;
+  mobility_current_role?: string;
+  mobility_current_branch?: string;
+  referrer_employee_id?: string;
+  referrer_name?: string;
+  referrer_role?: string;
+  referrer_branch?: string;
+  social_platform?: 'Instagram' | 'TikTok' | 'LinkedIn' | 'Meta' | string;
+  social_post_campaign?: string;
+  social_ad_id?: string;
+  branding_event_type?: 'Campus Career Fair' | 'Fitness Expo' | 'Community Marathon' | string;
+  branding_institution?: string;
+  portal_name?: 'JobStreet' | 'LinkedIn' | 'Glints' | 'KitaLulus' | string;
+  portal_posting_id?: string;
+  career_site_url?: string;
+  rehire_previous_id?: string;
+  rehire_previous_role?: string;
+  direct_source_method?: string;
+  direct_source_recruiter?: string;
+}
+
 export interface RequisitionCandidateItem {
   id: string;
   name: string;
   current_role?: string;
-  source_type: 'TALENT_POOL' | 'INTERNAL_MOBILITY' | 'CONVENTIONAL' | string;
+  source_type: SourcingChannelCategory | 'TALENT_POOL' | 'INTERNAL_MOBILITY' | 'CONVENTIONAL' | string;
+  sourcing_metadata?: SourcingMetadata;
   stage: 'HR Screening' | 'Manager Interview' | 'Technical Audition' | 'GM Final Audition' | 'Offering Stage' | 'IDP Transition' | 'Hired' | string;
   fit_score?: number;
   contact?: string;
@@ -1023,6 +1059,109 @@ export const fallbackRequisitions: RequisitionItem[] = [
     linked_exit_code: "EXT-BLI-0089",
     urgency_reason: "Front desk shift shortage causing overtime surge and member check-in delays",
     data_provenance: "OBSERVED_CASE_STUDY",
+    assigned_candidates: [
+      {
+        id: "cand-bli-1",
+        name: "Made Dananjaya",
+        current_role: "Academy Vetted Trainee",
+        source_type: "INTERNAL_HIRING",
+        sourcing_metadata: {
+          channel: "INTERNAL_HIRING",
+          internal_type: "TALENT_POOL",
+          talent_pool_program: "FIT HUB Academy Frontline Cohort 12",
+        },
+        stage: "Manager Interview",
+        fit_score: 93,
+        contact: "+62 812-3901-4412",
+        applied_at: "2026-08-14",
+        notes: "Passed English conversational check & core club POS simulation. Fast-track ready.",
+      },
+      {
+        id: "cand-bli-2",
+        name: "Putu Suartana",
+        current_role: "Gym Floor Staff",
+        source_type: "INTERNAL_HIRING",
+        sourcing_metadata: {
+          channel: "INTERNAL_HIRING",
+          internal_type: "INTERNAL_MOBILITY",
+          mobility_employee_id: "EMP-2091",
+          mobility_current_role: "Gym Floor Staff",
+          mobility_current_branch: "Renon Club, Bali",
+        },
+        stage: "Manager Interview",
+        fit_score: 88,
+        contact: "+62 813-8821-5501",
+        applied_at: "2026-08-16",
+        notes: "Excellent attendance score in Renon. Recommended for front desk customer service promotion.",
+      },
+      {
+        id: "cand-bli-3",
+        name: "Kadek Suryani",
+        current_role: "Front Desk Associate",
+        source_type: "EMPLOYEE_REFERRAL",
+        sourcing_metadata: {
+          channel: "EMPLOYEE_REFERRAL",
+          referrer_employee_id: "EMP-1048",
+          referrer_name: "Budi Santoso",
+          referrer_role: "Club Manager",
+          referrer_branch: "Sunset Road, Bali",
+        },
+        stage: "HR Screening",
+        fit_score: 86,
+        contact: "+62 819-4402-9911",
+        applied_at: "2026-08-19",
+        notes: "Direct referral by Club GM. 2 years boutique gym reception experience in Seminyak.",
+      },
+      {
+        id: "cand-bli-4",
+        name: "Ni Luh Putu Dewi",
+        current_role: "Hospitality Lead",
+        source_type: "SOCIAL_MEDIA_ADS",
+        sourcing_metadata: {
+          channel: "SOCIAL_MEDIA_ADS",
+          social_platform: "Instagram",
+          social_post_campaign: "Reels Blitz: #BaliFrontlineHiring",
+          social_ad_id: "IG-ADS-8821",
+        },
+        stage: "HR Screening",
+        fit_score: 79,
+        contact: "+62 878-1129-4433",
+        applied_at: "2026-08-21",
+        notes: "Applied via Instagram recruitment reel. Shift schedule flexibility verified.",
+      },
+      {
+        id: "cand-bli-5",
+        name: "Gede Arya Wiratama",
+        current_role: "Guest Relations Officer",
+        source_type: "JOB_PORTAL",
+        sourcing_metadata: {
+          channel: "JOB_PORTAL",
+          portal_name: "JobStreet",
+          portal_posting_id: "JS-ID-88214",
+        },
+        stage: "Offering Stage",
+        fit_score: 91,
+        contact: "+62 811-9920-1144",
+        applied_at: "2026-08-10",
+        notes: "Completed GM interview. Salary expectations aligned with Bali UMK + frontline allowance.",
+      },
+      {
+        id: "cand-bli-6",
+        name: "Ketut Ariana",
+        current_role: "Tourism Graduate",
+        source_type: "EMPLOYER_BRANDING",
+        sourcing_metadata: {
+          channel: "EMPLOYER_BRANDING",
+          branding_event_type: "Campus Career Fair",
+          branding_institution: "Universitas Udayana, Bali",
+        },
+        stage: "HR Screening",
+        fit_score: 82,
+        contact: "+62 821-4401-2299",
+        applied_at: "2026-08-22",
+        notes: "Met at Udayana University career fair booth. Bilingual communication skills.",
+      },
+    ],
   },
   {
     req_code: "REQ-BLI-0109",
@@ -1043,6 +1182,91 @@ export const fallbackRequisitions: RequisitionItem[] = [
     linked_exit_code: "EXT-BLI-0094",
     urgency_reason: "Client session backlog in Sunset Road branch following senior trainer resignations",
     data_provenance: "OBSERVED_CASE_STUDY",
+    assigned_candidates: [
+      {
+        id: "cand-pt-1",
+        name: "I Wayan Dharma",
+        current_role: "Certified Fitness Coach",
+        source_type: "INTERNAL_HIRING",
+        sourcing_metadata: {
+          channel: "INTERNAL_HIRING",
+          internal_type: "TALENT_POOL",
+          talent_pool_program: "FIT HUB Academy PT Cohort 8",
+        },
+        stage: "Technical Audition",
+        fit_score: 95,
+        contact: "+62 813-5590-2211",
+        applied_at: "2026-08-15",
+        notes: "APKI Level 2 certified. Practical coaching score 94/100.",
+      },
+      {
+        id: "cand-pt-2",
+        name: "Bagus Setiawan",
+        current_role: "Floor Coach",
+        source_type: "EMPLOYEE_REFERRAL",
+        sourcing_metadata: {
+          channel: "EMPLOYEE_REFERRAL",
+          referrer_employee_id: "EMP-1092",
+          referrer_name: "Wayan Surya",
+          referrer_role: "Fitness Manager",
+          referrer_branch: "Sunset Road, Bali",
+        },
+        stage: "Manager Interview",
+        fit_score: 89,
+        contact: "+62 818-7721-0033",
+        applied_at: "2026-08-18",
+        notes: "Referred by Fitness Manager. 3 years strength & conditioning experience.",
+      },
+      {
+        id: "cand-pt-3",
+        name: "Clara Wijaya",
+        current_role: "Freelance Trainer",
+        source_type: "SOCIAL_MEDIA_ADS",
+        sourcing_metadata: {
+          channel: "SOCIAL_MEDIA_ADS",
+          social_platform: "Instagram",
+          social_post_campaign: "Reels Blitz: #BaliPTChallenge",
+          social_ad_id: "IG-ADS-9912",
+        },
+        stage: "HR Screening",
+        fit_score: 81,
+        contact: "+62 856-4433-2211",
+        applied_at: "2026-08-20",
+        notes: "Specializes in functional training and female client transformations.",
+      },
+      {
+        id: "cand-pt-4",
+        name: "Rizky Firmansyah",
+        current_role: "Gym Assistant Coach",
+        source_type: "JOB_PORTAL",
+        sourcing_metadata: {
+          channel: "JOB_PORTAL",
+          portal_name: "LinkedIn",
+          portal_posting_id: "LI-POST-4412",
+        },
+        stage: "HR Screening",
+        fit_score: 84,
+        contact: "+62 812-9900-1122",
+        applied_at: "2026-08-17",
+        notes: "CPR certified, previous experience in high-traffic gym chain.",
+      },
+      {
+        id: "cand-pt-5",
+        name: "Agus Pratama",
+        current_role: "Sports Science Student",
+        source_type: "EMPLOYER_BRANDING",
+        sourcing_metadata: {
+          channel: "EMPLOYER_BRANDING",
+          branding_event_type: "Fitness Expo",
+          branding_institution: "Bali Wellness Expo 2026",
+        },
+        stage: "HR Screening",
+        fit_score: 83,
+        contact: "+62 877-3311-9988",
+        applied_at: "2026-08-22",
+        notes: "Met at Bali Wellness Expo. Enthusiastic with sports science degree.",
+      },
+    ],
   },
   {
     req_code: "REQ-BLI-0115",
@@ -1700,13 +1924,124 @@ export const fallbackRequisitions: RequisitionItem[] = [
   },
 ];
 
+export function getCandidatesForRequisition(req: RequisitionItem): RequisitionCandidateItem[] {
+  if (req.assigned_candidates && req.assigned_candidates.length > 0) {
+    return req.assigned_candidates;
+  }
+  const loc = req.location_name || "Club";
+  const role = req.role_name || "Frontline";
+  return [
+    {
+      id: `cand-${req.req_code}-1`,
+      name: `Made ${role.split(" ")[0]} Pratama`,
+      current_role: `Academy Certified ${role}`,
+      source_type: "INTERNAL_HIRING",
+      sourcing_metadata: {
+        channel: "INTERNAL_HIRING",
+        internal_type: "TALENT_POOL",
+        talent_pool_program: `FIT HUB Academy ${role} Fast-Track Cohort`,
+      },
+      stage: "Manager Interview",
+      fit_score: 92,
+      contact: "+62 812-3344-5566",
+      applied_at: "2026-08-15",
+      notes: "Completed standard operational assessment with 92% benchmark score.",
+    },
+    {
+      id: `cand-${req.req_code}-2`,
+      name: `Rian ${role.split(" ")[0]} Santoso`,
+      current_role: "Internal Associate",
+      source_type: "INTERNAL_HIRING",
+      sourcing_metadata: {
+        channel: "INTERNAL_HIRING",
+        internal_type: "INTERNAL_MOBILITY",
+        mobility_employee_id: "EMP-3042",
+        mobility_current_role: "Gym Support",
+        mobility_current_branch: `${loc} Branch`,
+      },
+      stage: "Manager Interview",
+      fit_score: 87,
+      contact: "+62 813-4455-6677",
+      applied_at: "2026-08-16",
+      notes: "Internal mobility applicant with verified performance appraisals.",
+    },
+    {
+      id: `cand-${req.req_code}-3`,
+      name: "Dewi Lestari",
+      current_role: `${role} Specialist`,
+      source_type: "EMPLOYEE_REFERRAL",
+      sourcing_metadata: {
+        channel: "EMPLOYEE_REFERRAL",
+        referrer_employee_id: "EMP-1021",
+        referrer_name: "Arief Hidayat",
+        referrer_role: "Club Operations Lead",
+        referrer_branch: `${loc} Club`,
+      },
+      stage: "HR Screening",
+      fit_score: 85,
+      contact: "+62 818-5566-7788",
+      applied_at: "2026-08-18",
+      notes: "Referred by Club Operations Lead with 2 years domain experience.",
+    },
+    {
+      id: `cand-${req.req_code}-4`,
+      name: "Siti Rahayu",
+      current_role: `Senior ${role} Candidate`,
+      source_type: "JOB_PORTAL",
+      sourcing_metadata: {
+        channel: "JOB_PORTAL",
+        portal_name: "JobStreet",
+        portal_posting_id: `JS-${req.req_code}`,
+      },
+      stage: "Offering Stage",
+      fit_score: 89,
+      contact: "+62 856-7788-9900",
+      applied_at: "2026-08-12",
+      notes: "Passed technical interview with flying colors. Offer letter drafted.",
+    },
+    {
+      id: `cand-${req.req_code}-5`,
+      name: "Fajar Nugraha",
+      current_role: "Social Applicant",
+      source_type: "SOCIAL_MEDIA_ADS",
+      sourcing_metadata: {
+        channel: "SOCIAL_MEDIA_ADS",
+        social_platform: "Instagram",
+        social_post_campaign: `Reels Campaign: #${loc}HiringBlitz`,
+        social_ad_id: `IG-ADS-${req.req_code}`,
+      },
+      stage: "HR Screening",
+      fit_score: 78,
+      contact: "+62 878-9900-1122",
+      applied_at: "2026-08-20",
+      notes: "Applied via recruitment reel on official FIT HUB Instagram.",
+    },
+    {
+      id: `cand-${req.req_code}-6`,
+      name: "Kevin Sanjaya",
+      current_role: "Campus Graduate",
+      source_type: "EMPLOYER_BRANDING",
+      sourcing_metadata: {
+        channel: "EMPLOYER_BRANDING",
+        branding_event_type: "Campus Career Fair",
+        branding_institution: `${loc} State University Career Expo`,
+      },
+      stage: "HR Screening",
+      fit_score: 81,
+      contact: "+62 821-2233-4455",
+      applied_at: "2026-08-21",
+      notes: "Met at regional career expo. Strong culture fit and communication skills.",
+    },
+  ];
+}
+
 export const fallbackSourcingChannels: SourcingChannelMetric[] = [
   {
     channel_name: "Employee Referral",
-    applicants: 420,
-    hires: 118,
-    conversion_rate_pct: 28.1,
-    beyond_sla_rate_pct: 12.0,
+    applicants: 1980,
+    hires: 552,
+    conversion_rate_pct: 27.9,
+    beyond_sla_rate_pct: 25.0,
     median_ttf_days: 21.0,
     offer_acceptance_pct: 92.4,
     six_month_retention_pct: 84.5,
@@ -1714,24 +2049,24 @@ export const fallbackSourcingChannels: SourcingChannelMetric[] = [
     data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
-    channel_name: "Direct Career Site",
-    applicants: 640,
-    hires: 94,
-    conversion_rate_pct: 14.7,
-    beyond_sla_rate_pct: 22.0,
-    median_ttf_days: 26.0,
+    channel_name: "Career Site",
+    applicants: 1650,
+    hires: 279,
+    conversion_rate_pct: 16.9,
+    beyond_sla_rate_pct: 19.7,
+    median_ttf_days: 24.5,
     offer_acceptance_pct: 88.0,
-    six_month_retention_pct: 76.2,
-    quality_rating: 4.2,
+    six_month_retention_pct: 78.2,
+    quality_rating: 4.3,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
-    channel_name: "Job Portal (Aggregator)",
-    applicants: 1850,
-    hires: 215,
-    conversion_rate_pct: 11.6,
-    beyond_sla_rate_pct: 26.5,
-    median_ttf_days: 28.5,
+    channel_name: "Job Portal",
+    applicants: 2420,
+    hires: 278,
+    conversion_rate_pct: 11.5,
+    beyond_sla_rate_pct: 32.4,
+    median_ttf_days: 29.0,
     offer_acceptance_pct: 85.5,
     six_month_retention_pct: 72.0,
     quality_rating: 3.9,
@@ -1739,26 +2074,74 @@ export const fallbackSourcingChannels: SourcingChannelMetric[] = [
   },
   {
     channel_name: "Social Media Ads",
-    applicants: 980,
-    hires: 82,
-    conversion_rate_pct: 8.4,
-    beyond_sla_rate_pct: 38.0,
-    median_ttf_days: 33.0,
+    applicants: 1890,
+    hires: 225,
+    conversion_rate_pct: 11.9,
+    beyond_sla_rate_pct: 42.7,
+    median_ttf_days: 34.0,
     offer_acceptance_pct: 78.0,
     six_month_retention_pct: 61.4,
     quality_rating: 3.2,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
-    channel_name: "Specialized Search / Agency",
-    applicants: 95,
-    hires: 22,
-    conversion_rate_pct: 23.2,
-    beyond_sla_rate_pct: 41.0,
-    median_ttf_days: 36.0,
-    offer_acceptance_pct: 91.0,
-    six_month_retention_pct: 82.0,
-    quality_rating: 4.4,
+    channel_name: "Internal Hiring Program",
+    applicants: 185,
+    hires: 91,
+    conversion_rate_pct: 49.2,
+    beyond_sla_rate_pct: 22.0,
+    median_ttf_days: 14.0,
+    offer_acceptance_pct: 94.5,
+    six_month_retention_pct: 88.2,
+    quality_rating: 4.7,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    channel_name: "Employer Branding Channel",
+    applicants: 430,
+    hires: 67,
+    conversion_rate_pct: 15.6,
+    beyond_sla_rate_pct: 17.9,
+    median_ttf_days: 22.0,
+    offer_acceptance_pct: 89.2,
+    six_month_retention_pct: 81.0,
+    quality_rating: 4.2,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    channel_name: "Internal Movement",
+    applicants: 72,
+    hires: 46,
+    conversion_rate_pct: 63.9,
+    beyond_sla_rate_pct: 30.4,
+    median_ttf_days: 18.0,
+    offer_acceptance_pct: 96.0,
+    six_month_retention_pct: 89.5,
+    quality_rating: 4.9,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    channel_name: "Rehire",
+    applicants: 14,
+    hires: 9,
+    conversion_rate_pct: 64.3,
+    beyond_sla_rate_pct: 22.2,
+    median_ttf_days: 12.0,
+    offer_acceptance_pct: 98.0,
+    six_month_retention_pct: 91.0,
+    quality_rating: 4.6,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    channel_name: "Direct Source",
+    applicants: 12,
+    hires: 5,
+    conversion_rate_pct: 41.7,
+    beyond_sla_rate_pct: 0.0,
+    median_ttf_days: 15.0,
+    offer_acceptance_pct: 95.0,
+    six_month_retention_pct: 86.0,
+    quality_rating: 4.5,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
 ];

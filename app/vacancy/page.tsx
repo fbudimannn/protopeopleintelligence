@@ -28,6 +28,9 @@ import {
   HiringOutcomeMetric,
   InternalMobilityMatch,
   fallbackMobilityMatches,
+  getCandidatesForRequisition,
+  SourcingMetadata,
+  SourcingChannelCategory,
 } from "@/lib/data/fixtures";
 import { KpiCard, SectionCard, LifecycleStrip, Chip } from "@/components/primitives";
 import { SimpleBar, ColoredBar, SimpleLine, StackedBarShare, FunnelWaterfall } from "@/components/charts";
@@ -63,7 +66,7 @@ import {
   Plus,
 } from "lucide-react";
 
-type VacancyTab = "overview" | "matrix" | "funnel" | "talent-pool" | "outcomes";
+type VacancyTab = "overview" | "funnel" | "talent-pool" | "outcomes";
 
 function VacancyContent() {
   const searchParams = useSearchParams();
@@ -110,22 +113,14 @@ function VacancyContent() {
   const [slaFilter, setSlaFilter] = useState<"ALL" | "WITHIN_SLA" | "AT_RISK" | "BREACHED">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Modal / Interaction State
-  const [selectedRequisition, setSelectedRequisition] = useState<RequisitionItem | null>(null);
-  const [fastTrackSuccess, setFastTrackSuccess] = useState<string | null>(null);
-  const [fulfillmentTab, setFulfillmentTab] = useState<"TALENT_POOL" | "INTERNAL_MOBILITY" | "CONVENTIONAL_ATS">("TALENT_POOL");
-  const [fulfillmentSuccessMessage, setFulfillmentSuccessMessage] = useState<string | null>(null);
+  // Sub-View Switcher for Stage 2 (Active Monitoring): Requisition List View vs Role x Location Matrix
+  const [monitoringViewMode, setMonitoringViewMode] = useState<"LIST" | "MATRIX">("LIST");
 
-  // Auto-set recommended fulfillment tab when requisition is selected
-  const handleOpenFulfillment = (req: RequisitionItem) => {
-    setSelectedRequisition(req);
-    const tier = req.tier_number || (['Customer Service', 'Personal Trainer', 'Fitness Consultant', 'Housekeeping'].includes(req.role_name) ? 1 : 2);
-    if (tier >= 2) {
-      setFulfillmentTab("INTERNAL_MOBILITY");
-    } else {
-      setFulfillmentTab("TALENT_POOL");
-    }
-  };
+  // Candidate Pipeline Source Sub-Filter for Requisition Detail Modal
+  const [candidateSourceFilter, setCandidateSourceFilter] = useState<string>("ALL");
+
+  // Fast-track notification
+  const [fastTrackSuccess, setFastTrackSuccess] = useState<string | null>(null);
 
   // Stage Switcher State (1. Intake Assessment vs 2. Active Monitoring)
   const initialStage = (searchParams.get("stage") as "intake" | "active") || "active";
@@ -336,17 +331,39 @@ function VacancyContent() {
   const handleAdvanceStage = async (reqCode: string, newStage: string, candidateId?: string) => {
     setAdvancingStage(true);
     try {
-      const res = await updateRequisitionStage(reqCode, newStage, candidateId, `Stage advanced to ${newStage}`);
-      if (res.success && res.data) {
-        setRequisitions((prev) =>
-          prev.map((r) => (r.req_code === reqCode ? { ...r, ...res.data } : r))
+      const isFulfilled = newStage === "Hired";
+      await updateRequisitionStage(
+        reqCode,
+        newStage,
+        candidateId,
+        isFulfilled ? "Candidate Hired, Requisition Fulfilled" : `Stage advanced to ${newStage}`
+      );
+
+      const updateReq = (req: RequisitionItem): RequisitionItem => {
+        const baseCandidates = getCandidatesForRequisition(req);
+        const updatedCandidates = baseCandidates.map((c) =>
+          c.id === candidateId ? { ...c, stage: newStage } : c
         );
-        if (detailModalReq && detailModalReq.req_code === reqCode) {
-          setDetailModalReq((prev) => (prev ? { ...prev, ...res.data } : null));
-        }
-        setStageActionMessage(`Candidate stage successfully updated to: ${newStage}`);
-        setTimeout(() => setStageActionMessage(null), 4000);
+        return {
+          ...req,
+          current_stage: newStage,
+          requisition_status: isFulfilled ? "FULFILLED" : req.requisition_status,
+          assigned_candidates: updatedCandidates,
+        };
+      };
+
+      setRequisitions((prev) => prev.map((r) => (r.req_code === reqCode ? updateReq(r) : r)));
+
+      if (detailModalReq && detailModalReq.req_code === reqCode) {
+        setDetailModalReq((prev) => (prev ? updateReq(prev) : null));
       }
+
+      if (isFulfilled) {
+        setStageActionMessage(`🎉 Candidate successfully confirmed Hired! Requisition ${reqCode} is marked as FULFILLED and archived.`);
+      } else {
+        setStageActionMessage(`Candidate stage updated to: ${newStage}`);
+      }
+      setTimeout(() => setStageActionMessage(null), 5000);
     } catch (err) {
       console.error("Failed to advance stage:", err);
     } finally {
@@ -356,7 +373,7 @@ function VacancyContent() {
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as VacancyTab;
-    if (tabParam && ["overview", "matrix", "funnel", "talent-pool", "outcomes"].includes(tabParam)) {
+    if (tabParam && ["overview", "funnel", "talent-pool", "outcomes"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
     const stageParam = searchParams.get("stage") as "intake" | "active";
@@ -377,7 +394,6 @@ function VacancyContent() {
   const currentLifecycleStep = useMemo(() => {
     if (activeTab === "overview") return "vacancy";
     if (activeTab === "funnel") return "sourcing";
-    if (activeTab === "matrix") return "funnel";
     if (activeTab === "talent-pool") return "mobility";
     if (activeTab === "outcomes") return "exit";
     return "vacancy";
@@ -422,6 +438,11 @@ function VacancyContent() {
   // Filtered Requisitions
   const filteredRequisitions = useMemo(() => {
     return requisitions.filter((item) => {
+      // Active monitoring only tracks in-flight requisitions (Fulfilled are archived)
+      if (item.requisition_status === "FULFILLED" || item.requisition_status === "CANCELLED") {
+        return false;
+      }
+
       const loc = item.location_name || (item as any).location || "";
       const role = item.role_name || (item as any).role || "";
       const hiringType = item.hiring_type || (((item as any).demand_type || "").toUpperCase().includes("REPLACE") ? "Replacement" : "Expansion");
@@ -1005,22 +1026,10 @@ function VacancyContent() {
             }`}
           >
             <Briefcase className="w-4 h-4" />
-            <span>Requisition Health & Priority</span>
-            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-brand-teal/10 text-brand-teal">
+            <span>Requisition Health</span>
+            <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-brand-teal/10 text-brand-teal font-mono font-bold">
               {filteredRequisitions.length}
             </span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange("matrix")}
-            className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-              activeTab === "matrix"
-                ? "border-brand-teal text-brand-teal"
-                : "border-transparent text-ink-secondary hover:text-ink-primary"
-            }`}
-          >
-            <Target className="w-4 h-4" />
-            <span>Demand & SLA Heatmap</span>
           </button>
 
           <button
@@ -1032,7 +1041,7 @@ function VacancyContent() {
             }`}
           >
             <TrendingUp className="w-4 h-4" />
-            <span>Sourcing & Funnel Diagnosis</span>
+            <span>Sourcing & Funnel Intelligence</span>
           </button>
 
           <button
@@ -1044,7 +1053,7 @@ function VacancyContent() {
             }`}
           >
             <Sparkles className="w-4 h-4 text-status-attention" />
-            <span>Frontline Ready Pool</span>
+            <span>Supply Talent Pools</span>
             <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-status-attention/10 text-status-attention font-bold">
               {talentPool.length}
             </span>
@@ -1059,7 +1068,7 @@ function VacancyContent() {
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Quality & SLA Outcomes</span>
+            <span>Quality & Retention</span>
           </button>
         </div>
 
@@ -1524,13 +1533,48 @@ function VacancyContent() {
                   </div>
                 </div>
 
-                <div className="text-xs text-ink-tertiary">
-                  Showing <span className="font-semibold text-ink-primary">{filteredRequisitions.length}</span> of {requisitions.length} open requisitions
+                {/* Sub-View Switcher: List View vs Role x Location Matrix */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                  <div className="flex items-center gap-1.5 p-1 bg-surface-ground rounded-xl border border-surface-border">
+                    <button
+                      type="button"
+                      onClick={() => setMonitoringViewMode("LIST")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        monitoringViewMode === "LIST"
+                          ? "bg-brand-teal text-surface-ground shadow-sm"
+                          : "text-ink-secondary hover:text-ink-primary"
+                      }`}
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                      <span>Requisition List View ({filteredRequisitions.length})</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMonitoringViewMode("MATRIX")}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        monitoringViewMode === "MATRIX"
+                          ? "bg-brand-teal text-surface-ground shadow-sm"
+                          : "text-ink-secondary hover:text-ink-primary"
+                      }`}
+                    >
+                      <Target className="w-3.5 h-3.5" />
+                      <span>Role × Location Heatmap Matrix ({filteredKpis.length})</span>
+                    </button>
+                  </div>
+
+                  <div className="text-xs text-ink-tertiary">
+                    {monitoringViewMode === "LIST" ? (
+                      <>Showing <span className="font-semibold text-ink-primary">{filteredRequisitions.length}</span> active in-flight requisitions</>
+                    ) : (
+                      <>Showing <span className="font-semibold text-ink-primary">{filteredKpis.length}</span> aggregated demand matrix cells</>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Main 12-Column Layout */}
-              <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
+              {monitoringViewMode === "LIST" ? (
+                /* Main 12-Column Layout */
+                <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                 {/* Left 8 Columns: Requisitions Table */}
                 <div className="xl:col-span-8 space-y-4">
                   <div className="rounded-xl bg-surface-card border border-surface-border overflow-hidden shadow-subtle">
@@ -1743,24 +1787,11 @@ function VacancyContent() {
                                           e.stopPropagation();
                                           setDetailModalReq(req);
                                         }}
-                                        className="px-2 py-1 rounded-lg bg-surface-ground hover:bg-surface-card text-ink-primary border border-surface-border text-xs font-semibold inline-flex items-center gap-1 transition-colors cursor-pointer"
-                                        title="View Requisition Details"
+                                        className="px-2.5 py-1.5 rounded-lg bg-surface-ground hover:bg-surface-card text-ink-primary border border-surface-border text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                                        title="View Requisition Details & Candidate Pipeline"
                                       >
-                                        <Eye className="w-3 h-3 text-brand-teal" />
+                                        <Eye className="w-3.5 h-3.5 text-brand-teal" />
                                         <span>Detail</span>
-                                      </button>
-
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleOpenFulfillment(req);
-                                        }}
-                                        className="px-2 py-1 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all shadow-subtle inline-flex items-center gap-1 cursor-pointer"
-                                        title="Open Sourcing Fulfillment"
-                                      >
-                                        <Zap className="w-3 h-3" />
-                                        <span>Fulfill</span>
                                       </button>
                                     </div>
                                   </td>
@@ -1875,164 +1906,163 @@ function VacancyContent() {
                       <ArrowUpRight className="w-3.5 h-3.5 text-brand-teal" />
                     </button>
                   </div>
-                </div>
 
-                {/* Data Provenance Card */}
-                <div className="p-4 rounded-xl bg-surface-card border border-surface-border">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-xs font-bold text-ink-primary font-display">
-                      Governance & Provenance
-                    </span>
-                    <DataProvenanceBadge
-                      provenance="OBSERVED_CASE_STUDY"
-                      domain="Requisitions"
-                      metricOrEntity="Vacancy Mart"
-                      originalSource="Hiring sheet"
-                      governanceRule="Cleaned without person-level leakage"
-                      impactOnDecision="Verified empirical baseline"
-                    />
+                  {/* Data Provenance Card */}
+                  <div className="p-4 rounded-xl bg-surface-card border border-surface-border">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-ink-primary font-display">
+                        Governance & Provenance
+                      </span>
+                      <DataProvenanceBadge
+                        provenance="OBSERVED_CASE_STUDY"
+                        domain="Requisitions"
+                        metricOrEntity="Vacancy Mart"
+                        originalSource="Hiring sheet"
+                        governanceRule="Cleaned without person-level leakage"
+                        impactOnDecision="Verified empirical baseline"
+                      />
+                    </div>
+                    <p className="text-[11px] text-ink-secondary leading-relaxed">
+                      Historical hiring records (1,552 hires) did not contain employee IDs. The prototype links synthetic requisition codes to empirical cluster averages to illustrate future-state capability without violating case data integrity.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-ink-secondary leading-relaxed">
-                    Historical hiring records (1,552 hires) did not contain employee IDs. The prototype links synthetic requisition codes to empirical cluster averages to illustrate future-state capability without violating case data integrity.
-                  </p>
                 </div>
               </div>
+              ) : (
+                /* Sub-View: Role x Location Hiring Demand & SLA Matrix */
+                <div className="rounded-xl bg-surface-card border border-surface-border p-4 space-y-4 shadow-subtle animate-fadeIn">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+                    <div>
+                      <h2 className="text-sm font-bold text-ink-primary font-display flex items-center gap-2">
+                        <Target className="w-4 h-4 text-brand-teal" />
+                        <span>Role × Location Hiring Demand & SLA Heatmap Matrix</span>
+                      </h2>
+                      <p className="text-xs text-ink-secondary mt-0.5">
+                        Cross-tabulation of open headcount, replacement pressure, and SLA compliance aggregated by operational cluster.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="flex items-center gap-1 text-status-danger font-medium">
+                        <span className="w-2.5 h-2.5 rounded bg-status-danger" /> Critical (&gt; 35% breach)
+                      </span>
+                      <span className="flex items-center gap-1 text-status-attention font-medium">
+                        <span className="w-2.5 h-2.5 rounded bg-status-attention" /> Attention (25-35%)
+                      </span>
+                      <span className="flex items-center gap-1 text-status-healthy font-medium">
+                        <span className="w-2.5 h-2.5 rounded bg-status-healthy" /> Normal (&lt; 25%)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="bg-surface-ground border-b border-surface-border text-ink-secondary font-semibold">
+                          <th className="py-3 px-4">Role / Job Family</th>
+                          <th className="py-3 px-4">Location</th>
+                          <th className="py-3 px-3 text-center">Open Reqs</th>
+                          <th className="py-3 px-3 text-center">Replacement Share</th>
+                          <th className="py-3 px-3 text-center">Beyond SLA Rate</th>
+                          <th className="py-3 px-3 text-center">Median TTF</th>
+                          <th className="py-3 px-4 text-center">Pressure Tier</th>
+                          <th className="py-3 px-4">Ready Pool</th>
+                          <th className="py-3 px-3 text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-surface-border">
+                        {filteredKpis.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} className="py-8 text-center text-ink-tertiary">
+                              No demand matrix records match the active location ({locationDisplay}) and role ({roleDisplay}) filters.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredKpis.map((kpi) => (
+                            <tr
+                              key={kpi.kpi_id}
+                              className={`hover:bg-surface-elevated/70 transition-colors ${
+                                kpi.pressure_level === "CRITICAL"
+                                  ? "bg-status-danger/5"
+                                  : kpi.pressure_level === "ATTENTION"
+                                  ? "bg-status-attention/5"
+                                  : ""
+                              }`}
+                            >
+                              <td className="py-3 px-4 font-semibold text-ink-primary">
+                                {kpi.role_name}
+                              </td>
+                              <td className="py-3 px-4 font-medium text-ink-secondary">
+                                {kpi.location_name}
+                              </td>
+                              <td className="py-3 px-3 text-center font-bold text-ink-primary">
+                                {kpi.open_requisitions}
+                              </td>
+                              <td className="py-3 px-3 text-center font-mono">
+                                <span className={kpi.replacement_share_pct > 75 ? "text-status-danger font-bold" : "text-ink-primary"}>
+                                  {kpi.replacement_share_pct}%
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-center font-mono">
+                                <span className={kpi.beyond_sla_pct > 30 ? "text-status-danger font-bold" : "text-ink-primary"}>
+                                  {kpi.beyond_sla_pct}%
+                                </span>
+                              </td>
+                              <td className="py-3 px-3 text-center font-mono font-medium">
+                                {kpi.median_ttf_days} days
+                              </td>
+                              <td className="py-3 px-4 text-center">
+                                {kpi.pressure_level === "CRITICAL" ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-status-danger/20 text-status-danger border border-status-danger/30">
+                                    CRITICAL
+                                  </span>
+                                ) : kpi.pressure_level === "ATTENTION" ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-attention/20 text-status-attention border border-status-attention/30">
+                                    ATTENTION
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-status-healthy/20 text-status-healthy border border-status-healthy/30">
+                                    NORMAL
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-brand-teal">{kpi.talent_pool_count} ready</span>
+                                  <span className="text-[10px] text-ink-tertiary">
+                                    ({Math.round((kpi.talent_pool_count / kpi.open_requisitions) * 100)}% cov)
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-3 px-3 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => setActiveTab("talent-pool")}
+                                  className="px-2.5 py-1 rounded-md bg-surface-ground border border-surface-border text-[11px] font-semibold text-brand-teal hover:bg-brand-teal hover:text-surface-ground transition-all cursor-pointer"
+                                >
+                                  View Pool
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Strategic Takeaway Box */}
+                  <div className="mt-4 p-4 rounded-xl bg-surface-ground border border-surface-border">
+                    <h4 className="text-xs font-bold text-ink-primary mb-1 flex items-center gap-1.5">
+                      <Info className="w-3.5 h-3.5 text-brand-teal" />
+                      <span>Cluster Demand Takeaway</span>
+                    </h4>
+                    <p className="text-xs text-ink-secondary leading-relaxed">
+                      Operational replacement crunch is concentrated in regional expansion hubs (Bali & Surabaya). TA capacity must prioritize local ready pool allocation over generic external postings.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-        </div>
-      )}
-
-      {/* 5. TAB CONTENT: Demand & SLA Heatmap */}
-      {activeTab === "matrix" && (
-        <div className="space-y-6">
-          <div className="p-4 rounded-xl bg-surface-card border border-surface-border">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-              <div>
-                <h2 className="text-base font-bold text-ink-primary font-display flex items-center gap-2">
-                  <Target className="w-4 h-4 text-brand-teal" />
-                  <span>Role x Location Hiring Demand & SLA Matrix</span>
-                </h2>
-                <p className="text-xs text-ink-secondary mt-0.5">
-                  Cross-tabulation of open requisitions, replacement pressure, and SLA breaches across key operational clusters.
-                </p>
-              </div>
-              <div className="flex items-center gap-2 text-xs">
-                <span className="flex items-center gap-1 text-status-danger font-medium">
-                  <span className="w-2.5 h-2.5 rounded bg-status-danger" /> Critical (&gt; 35% breach)
-                </span>
-                <span className="flex items-center gap-1 text-status-attention font-medium">
-                  <span className="w-2.5 h-2.5 rounded bg-status-attention" /> Attention (25-35%)
-                </span>
-                <span className="flex items-center gap-1 text-status-healthy font-medium">
-                  <span className="w-2.5 h-2.5 rounded bg-status-healthy" /> Normal (&lt; 25%)
-                </span>
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="bg-surface-ground border-b border-surface-border text-ink-secondary font-semibold">
-                    <th className="py-3 px-4">Role / Job Family</th>
-                    <th className="py-3 px-4">Location</th>
-                    <th className="py-3 px-3 text-center">Open Reqs</th>
-                    <th className="py-3 px-3 text-center">Replacement Share</th>
-                    <th className="py-3 px-3 text-center">Beyond SLA Rate</th>
-                    <th className="py-3 px-3 text-center">Median TTF</th>
-                    <th className="py-3 px-4 text-center">Pressure Tier</th>
-                    <th className="py-3 px-4">Ready Pool</th>
-                    <th className="py-3 px-3 text-center">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-border">
-                  {filteredKpis.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-8 text-center text-ink-tertiary">
-                        No demand matrix records match the active location ({locationDisplay}) and role ({roleDisplay}) filters.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredKpis.map((kpi) => (
-                    <tr
-                      key={kpi.kpi_id}
-                      className={`hover:bg-surface-elevated/70 transition-colors ${
-                        kpi.pressure_level === "CRITICAL"
-                          ? "bg-status-danger/5"
-                          : kpi.pressure_level === "ATTENTION"
-                          ? "bg-status-attention/5"
-                          : ""
-                      }`}
-                    >
-                      <td className="py-3 px-4 font-semibold text-ink-primary">
-                        {kpi.role_name}
-                      </td>
-                      <td className="py-3 px-4 font-medium text-ink-secondary">
-                        {kpi.location_name}
-                      </td>
-                      <td className="py-3 px-3 text-center font-bold text-ink-primary">
-                        {kpi.open_requisitions}
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono">
-                        <span className={kpi.replacement_share_pct > 75 ? "text-status-danger font-bold" : "text-ink-primary"}>
-                          {kpi.replacement_share_pct}%
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono">
-                        <span className={kpi.beyond_sla_pct > 30 ? "text-status-danger font-bold" : "text-ink-primary"}>
-                          {kpi.beyond_sla_pct}%
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono font-medium">
-                        {kpi.median_ttf_days} days
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        {kpi.pressure_level === "CRITICAL" ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-status-danger/20 text-status-danger border border-status-danger/30">
-                            CRITICAL
-                          </span>
-                        ) : kpi.pressure_level === "ATTENTION" ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-attention/20 text-status-attention border border-status-attention/30">
-                            ATTENTION
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-status-healthy/20 text-status-healthy border border-status-healthy/30">
-                            NORMAL
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-brand-teal">{kpi.talent_pool_count} ready</span>
-                          <span className="text-[10px] text-ink-tertiary">
-                            ({Math.round((kpi.talent_pool_count / kpi.open_requisitions) * 100)}% cov)
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <button
-                          onClick={() => setActiveTab("talent-pool")}
-                          className="px-2.5 py-1 rounded-md bg-surface-ground border border-surface-border text-[11px] font-semibold text-brand-teal hover:bg-brand-teal hover:text-surface-ground transition-all"
-                        >
-                          View Pool
-                        </button>
-                      </td>
-                    </tr>
-                  )))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Strategic Takeaway Box */}
-            <div className="mt-4 p-4 rounded-xl bg-surface-ground border border-surface-border">
-              <h4 className="text-xs font-bold text-ink-primary mb-1 flex items-center gap-1.5">
-                <Info className="w-3.5 h-3.5 text-brand-teal" />
-                <span>Executive Diagnostic & Recommendation 1 Alignment</span>
-              </h4>
-              <p className="text-xs text-ink-secondary leading-relaxed">
-                Hiring pressure is not distributed evenly. Bali experiences a dual crunch across both Customer Service (85.7% replacement, 34d TTF) and Personal Trainers (77.8% replacement, 31.5d TTF). Instead of launching generic national job portal ads, TA must concentrate talent pipelines and local sourcing bonuses directly in Bali and Surabaya.
-              </p>
-            </div>
-          </div>
         </div>
       )}
 
@@ -2530,706 +2560,591 @@ function VacancyContent() {
         </div>
       )}
 
-      {/* 9. Exit-to-Vacancy 3-Way Fulfillment Hub Drawer */}
-      {selectedRequisition && (
-        <div className="fixed inset-0 bg-ink-primary/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-fadeIn my-8">
-            {/* Modal Header */}
-            <div className="p-5 border-b border-surface-border flex items-start justify-between bg-surface-ground/50">
-              <div>
-                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-teal/20 text-brand-teal font-mono">
-                    {selectedRequisition.req_code}
-                  </span>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                    selectedRequisition.health === "Healthy"
-                      ? "bg-status-healthy/20 text-status-healthy"
-                      : selectedRequisition.health === "At Risk"
-                      ? "bg-status-attention/20 text-status-attention"
-                      : "bg-status-danger/20 text-status-danger"
-                  }`}>
-                    {selectedRequisition.health}
-                  </span>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-card border border-surface-border text-ink-secondary">
-                    {selectedRequisition.job_family || "Club Operations"}
-                  </span>
-                  {selectedRequisition.tier_number && (
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-brand-teal/10 text-brand-teal">
-                      Tier {selectedRequisition.tier_number}
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-xl font-bold font-display text-ink-primary">
-                  {selectedRequisition.role_name}
-                </h3>
-                <p className="text-xs text-ink-secondary mt-0.5">
-                  Location: <strong className="text-ink-primary">{selectedRequisition.location_name}</strong> &bull; Hiring Manager: {selectedRequisition.hiring_manager}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedRequisition(null)}
-                className="w-8 h-8 rounded-lg bg-surface-ground hover:bg-surface-elevated text-ink-secondary hover:text-ink-primary flex items-center justify-center text-sm font-bold transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+      {/* 10. Multi-Channel Sourcing & Candidate Pipeline Modal (100% English) */}
+      {detailModalReq && (() => {
+        const allCandidates = getCandidatesForRequisition(detailModalReq);
+        const activeCandidates = detailModalReq.assigned_candidates && detailModalReq.assigned_candidates.length > 0 
+          ? detailModalReq.assigned_candidates 
+          : allCandidates;
 
-            {/* Requisition Context Strip */}
-            <div className="px-5 py-3 bg-surface-ground border-b border-surface-border flex items-center justify-between text-xs flex-wrap gap-2">
-              <div className="flex items-center gap-4">
+        // Channel filter counts
+        const countBySource = (src: string) => {
+          if (src === "ALL") return activeCandidates.length;
+          if (src === "TALENT_POOL") {
+            return activeCandidates.filter(c => c.sourcing_metadata?.internal_type === "TALENT_POOL" || c.source_type === "TALENT_POOL").length;
+          }
+          if (src === "INTERNAL_MOBILITY") {
+            return activeCandidates.filter(c => c.sourcing_metadata?.internal_type === "INTERNAL_MOBILITY" || c.source_type === "INTERNAL_MOBILITY").length;
+          }
+          return activeCandidates.filter(c => c.sourcing_metadata?.channel === src || c.source_type === src).length;
+        };
+
+        const filteredCandidates = activeCandidates.filter(c => {
+          if (candidateSourceFilter === "ALL") return true;
+          if (candidateSourceFilter === "TALENT_POOL") {
+            return c.sourcing_metadata?.internal_type === "TALENT_POOL" || c.source_type === "TALENT_POOL";
+          }
+          if (candidateSourceFilter === "INTERNAL_MOBILITY") {
+            return c.sourcing_metadata?.internal_type === "INTERNAL_MOBILITY" || c.source_type === "INTERNAL_MOBILITY";
+          }
+          return c.sourcing_metadata?.channel === candidateSourceFilter || c.source_type === candidateSourceFilter;
+        });
+
+        const isFulfilled = detailModalReq.requisition_status === "FULFILLED" || detailModalReq.current_stage === "Hired";
+
+        return (
+          <div className="fixed inset-0 bg-ink-primary/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
+            <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-4xl shadow-2xl overflow-hidden animate-slideUp my-8 flex flex-col max-h-[92vh]">
+              {/* Modal Header */}
+              <div className="p-5 border-b border-surface-border flex items-start justify-between bg-surface-ground/70">
                 <div>
-                  <span className="text-ink-tertiary text-[11px] block">Demand Type:</span>
-                  <span className="font-semibold text-ink-primary">{selectedRequisition.hiring_type} ({selectedRequisition.openings} opening{selectedRequisition.openings > 1 ? 's' : ''})</span>
-                </div>
-                <div>
-                  <span className="text-ink-tertiary text-[11px] block">Days Open vs Target:</span>
-                  <span className={`font-mono font-bold ${(selectedRequisition.days_open ?? 0) > (selectedRequisition.sla_target_days ?? 28) ? 'text-status-danger' : 'text-ink-primary'}`}>
-                    {selectedRequisition.days_open}d / {selectedRequisition.sla_target_days}d SLA
-                  </span>
-                </div>
-              </div>
-
-              {selectedRequisition.linked_exit_code && (
-                <div className="flex items-center gap-2 bg-brand-teal/10 px-2.5 py-1 rounded-lg border border-brand-teal/30 text-[11px]">
-                  <Sparkles className="w-3.5 h-3.5 text-brand-teal" />
-                  <span>Linked to Exit: <strong className="font-mono">{selectedRequisition.linked_exit_code}</strong></span>
-                </div>
-              )}
-            </div>
-
-            {/* 3-Way Fulfillment Selector Tabs */}
-            <div className="p-5 space-y-4">
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-ink-primary uppercase tracking-wider">
-                    Exit-to-Vacancy 3-Way Fulfillment Hub
-                  </span>
-                  <span className="text-[11px] text-ink-tertiary">
-                    Choose the optimal talent pathway
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  {/* Channel 1: Talent Pool */}
-                  <button
-                    onClick={() => setFulfillmentTab("TALENT_POOL")}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between relative ${
-                      fulfillmentTab === "TALENT_POOL"
-                        ? "bg-brand-teal/10 border-brand-teal shadow-subtle ring-1 ring-brand-teal"
-                        : "bg-surface-ground border-surface-border hover:border-brand-teal/40"
-                    }`}
-                  >
-                    {selectedRequisition.tier_number === 1 && (
-                      <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded bg-brand-teal text-surface-ground text-[9px] font-bold">
-                        RECOMMENDED
-                      </span>
-                    )}
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1 text-brand-teal">
-                        <Zap className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">1. Frontline Ready Pool</span>
-                      </div>
-                      <p className="text-[11px] text-ink-secondary leading-tight">
-                        Pre-screened external talent bank. Compresses TTF from 34d to 9d.
-                      </p>
-                    </div>
-                    <span className="text-[10px] font-semibold text-brand-teal mt-2 block">
-                      Best for Staff (CS, PT, FC)
+                  <div className="flex items-center gap-2 mb-2 flex-wrap">
+                    <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded bg-brand-teal/20 text-brand-teal border border-brand-teal/30">
+                      {detailModalReq.req_code}
                     </span>
-                  </button>
-
-                  {/* Channel 2: Internal Mobility */}
-                  <button
-                    onClick={() => setFulfillmentTab("INTERNAL_MOBILITY")}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between relative ${
-                      fulfillmentTab === "INTERNAL_MOBILITY"
-                        ? "bg-purple-500/10 border-purple-500 shadow-subtle ring-1 ring-purple-500"
-                        : "bg-surface-ground border-surface-border hover:border-purple-500/40"
-                    }`}
-                  >
-                    {(selectedRequisition.tier_number ?? 1) >= 2 && (
-                      <span className="absolute -top-2 right-2 px-1.5 py-0.5 rounded bg-purple-500 text-surface-ground text-[9px] font-bold">
-                        RECOMMENDED
-                      </span>
-                    )}
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1 text-purple-400">
-                        <Sparkles className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">2. Internal Mobility</span>
-                      </div>
-                      <p className="text-[11px] text-ink-secondary leading-tight">
-                        Promote from within. Directly solves #1 Career Growth exit driver.
-                      </p>
-                    </div>
-                    <span className="text-[10px] font-semibold text-purple-400 mt-2 block">
-                      Best for Leads & GMs
-                    </span>
-                  </button>
-
-                  {/* Channel 3: Conventional ATS */}
-                  <button
-                    onClick={() => setFulfillmentTab("CONVENTIONAL_ATS")}
-                    className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                      fulfillmentTab === "CONVENTIONAL_ATS"
-                        ? "bg-surface-elevated border-ink-primary shadow-subtle ring-1 ring-ink-primary"
-                        : "bg-surface-ground border-surface-border hover:border-ink-secondary"
-                    }`}
-                  >
-                    <div>
-                      <div className="flex items-center gap-1.5 mb-1 text-ink-primary">
-                        <Building2 className="w-3.5 h-3.5" />
-                        <span className="text-xs font-bold">3. Conventional ATS</span>
-                      </div>
-                      <p className="text-[11px] text-ink-secondary leading-tight">
-                        Public job boards & agencies. Standard 28–45 day pipeline.
-                      </p>
-                    </div>
-                    <span className="text-[10px] font-semibold text-ink-tertiary mt-2 block">
-                      Fallback Channel
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Tab 1 Content: Frontline Ready Pool */}
-              {fulfillmentTab === "TALENT_POOL" && (
-                <div className="space-y-3 animate-fadeIn">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-ink-primary">
-                      Verified Candidates for {selectedRequisition.role_name} in {selectedRequisition.location_name}
-                    </span>
-                    <span className="text-brand-teal font-medium text-[11px]">
-                      ⚡ Fast-Track to Club GM Interview
-                    </span>
-                  </div>
-
-                  {(() => {
-                    const isRoleMatch = (candidateTarget: string, reqRole: string) => {
-                      const c = (candidateTarget || "").toLowerCase();
-                      const r = (reqRole || "").toLowerCase();
-                      if (c.includes(r) || r.includes(c)) return true;
-                      if ((r.includes("customer service") || r.includes("cs")) && (c.includes("operation") || c.includes("service") || c.includes("frontline") || c.includes("cs"))) return true;
-                      if (r.includes("trainer") && c.includes("trainer")) return true;
-                      if (r.includes("fitness consultant") && (c.includes("consultant") || c.includes("commercial") || c.includes("sales") || c.includes("fc"))) return true;
-                      return false;
-                    };
-
-                    const localCandidates = talentPool.filter(
-                      (c) =>
-                        isRoleMatch(c.role_target, selectedRequisition.role_name) &&
-                        (c.location_preference.toLowerCase().includes(selectedRequisition.location_name.toLowerCase()) ||
-                          selectedRequisition.location_name.toLowerCase().includes(c.location_preference.toLowerCase()) ||
-                          selectedRequisition.location_name === "All Locations")
-                    );
-
-                    const poolList = localCandidates.length > 0
-                      ? localCandidates
-                      : talentPool.filter((c) => isRoleMatch(c.role_target, selectedRequisition.role_name));
-
-                    if (poolList.length === 0) {
-                      return (
-                        <div className="p-4 rounded-xl bg-status-attention/10 border border-status-attention/30 text-xs text-status-attention space-y-1">
-                          <div className="flex items-center gap-2 font-bold">
-                            <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-                            <span>No Pre-Qualified Pool for this Role</span>
-                          </div>
-                          <p className="text-[11px] opacity-90">
-                            The frontline ready pool does not currently hold interview-ready profiles for {selectedRequisition.role_name}. We recommend checking <strong>Internal Mobility</strong> or escalating <strong>Conventional ATS</strong> sourcing.
-                          </p>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                        {localCandidates.length === 0 && (
-                          <div className="p-2.5 rounded-lg bg-status-attention/10 border border-status-attention/20 text-[11px] text-status-attention flex items-center gap-2">
-                            <Info className="w-4 h-4 flex-shrink-0" />
-                            <span>
-                              Local pool in {selectedRequisition.location_name} depleted. Showing cross-cluster relocatable candidates:
-                            </span>
-                          </div>
-                        )}
-                        {poolList.map((cand) => (
-                          <div
-                            key={cand.candidate_id}
-                            className="p-3 rounded-xl bg-surface-ground border border-surface-border flex items-center justify-between gap-3 hover:border-brand-teal/40 transition-colors"
-                          >
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <span className="font-bold text-xs text-ink-primary">
-                                  {cand.display_name}
-                                </span>
-                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-teal/15 text-brand-teal">
-                                  {cand.fit_score}% Fit
-                                </span>
-                                <span className="text-[10px] text-ink-tertiary">
-                                  Pref: {cand.location_preference}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-1.5 mt-1 flex-wrap">
-                                {cand.verified_competencies.slice(0, 3).map((comp) => (
-                                  <span
-                                    key={comp}
-                                    className="px-1.5 py-0.5 rounded text-[9px] bg-surface-card border border-surface-border text-ink-secondary"
-                                  >
-                                    {comp}
-                                  </span>
-                                ))}
-                                <span className="text-[10px] text-ink-tertiary italic">
-                                  Est. TTF: {cand.est_ttf_days} days (bypasses HR screening)
-                                </span>
-                              </div>
-                            </div>
-                            <button
-                              onClick={() => {
-                                setFastTrackSuccess(cand.display_name);
-                                setSelectedRequisition(null);
-                              }}
-                              className="px-3 py-1.5 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1"
-                            >
-                              <Zap className="w-3 h-3" />
-                              <span>Fast-Track</span>
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* Tab 2 Content: Internal Mobility Match */}
-              {fulfillmentTab === "INTERNAL_MOBILITY" && (
-                <div className="space-y-3 animate-fadeIn">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-ink-primary">
-                      Internal Succession Candidates for {selectedRequisition.role_name}
-                    </span>
-                    <span className="text-purple-400 font-medium text-[11px]">
-                      ✨ Solves Career Growth Turnover
-                    </span>
-                  </div>
-
-                  {(() => {
-                    const matches = fallbackMobilityMatches.filter(
-                      (m) =>
-                        m.target_role_name.toLowerCase().includes(selectedRequisition.role_name.toLowerCase()) ||
-                        selectedRequisition.role_name.toLowerCase().includes(m.target_role_name.toLowerCase())
-                    );
-
-                    const displayMatches = matches.length > 0 ? matches : fallbackMobilityMatches.slice(0, 3);
-
-                    return (
-                      <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                        {displayMatches.map((cand) => {
-                          const hasCriticalGap = (cand.critical_gap_count ?? 0) > 0;
-
-                          return (
-                            <div
-                              key={cand.match_id}
-                              className="p-3.5 rounded-xl bg-surface-ground border border-surface-border space-y-2 hover:border-purple-500/40 transition-colors"
-                            >
-                              <div className="flex items-center justify-between">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-bold text-xs text-ink-primary">
-                                      {cand.candidate_name}
-                                    </span>
-                                    <span className="font-mono text-[10px] text-ink-tertiary">
-                                      ({cand.employee_code})
-                                    </span>
-                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                      cand.readiness_status === "Ready"
-                                        ? "bg-status-healthy/15 text-status-healthy"
-                                        : "bg-status-attention/15 text-status-attention"
-                                    }`}>
-                                      {cand.readiness_status} ({cand.final_readiness_score}%)
-                                    </span>
-                                  </div>
-                                  <p className="text-[11px] text-ink-secondary mt-0.5">
-                                    Current: {cand.current_role_name} ({cand.current_location_name}) &bull; Perf: ⭐ {cand.performance_rating}
-                                  </p>
-                                </div>
-                                <button
-                                  onClick={() => {
-                                    setFastTrackSuccess(`${cand.candidate_name} (Internal Promotion to ${selectedRequisition.role_name})`);
-                                    setSelectedRequisition(null);
-                                  }}
-                                  className="px-3 py-1.5 rounded-lg bg-purple-500 text-surface-ground text-xs font-bold hover:bg-purple-500/90 transition-colors whitespace-nowrap cursor-pointer flex items-center gap-1"
-                                >
-                                  <Sparkles className="w-3 h-3" />
-                                  <span>Promote</span>
-                                </button>
-                              </div>
-
-                              {/* Edge-case Alert: Critical Gap >= 2 */}
-                              {hasCriticalGap ? (
-                                <div className="p-2 rounded-lg bg-status-danger/10 border border-status-danger/20 text-[11px] text-status-danger flex items-start gap-1.5">
-                                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                                  <span>
-                                    <strong>Critical Gap Detected ({cand.critical_gap_count}):</strong> Requires 30-Day L&D Onboarding Roadmap before sole shift handover. Action: {cand.priority_development_action}.
-                                  </span>
-                                </div>
-                              ) : (
-                                <div className="text-[11px] text-ink-tertiary flex items-center gap-1.5">
-                                  <CheckCircle2 className="w-3.5 h-3.5 text-status-healthy flex-shrink-0" />
-                                  <span>Top Strength: {cand.top_strength}</span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </div>
-              )}
-
-              {/* Tab 3 Content: Conventional ATS */}
-              {fulfillmentTab === "CONVENTIONAL_ATS" && (
-                <div className="space-y-3 animate-fadeIn">
-                  <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-bold text-ink-primary">Active Sourcing Pipeline</span>
-                      <span className="text-ink-tertiary">Job Boards & Inbound</span>
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                      <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                        <span className="text-[10px] text-ink-tertiary block">Active Pipeline</span>
-                        <span className="font-bold text-base text-ink-primary font-display">{selectedRequisition.pipeline_size}</span>
-                        <span className="text-[10px] text-ink-secondary block">Candidates</span>
-                      </div>
-                      <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                        <span className="text-[10px] text-ink-tertiary block">Bottleneck</span>
-                        <span className="font-bold text-xs text-status-attention block mt-1">{selectedRequisition.bottleneck_stage}</span>
-                        <span className="text-[10px] text-ink-tertiary block">Average 6.8d wait</span>
-                      </div>
-                      <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border">
-                        <span className="text-[10px] text-ink-tertiary block">Est. External TTF</span>
-                        <span className="font-bold text-base text-status-danger font-display">{selectedRequisition.sla_target_days}d</span>
-                        <span className="text-[10px] text-ink-secondary block">Full Stage SLA</span>
-                      </div>
-                    </div>
-
-                    <p className="text-[11px] text-ink-secondary leading-relaxed">
-                      Sourcing externally through JobStreet, Glints, and Careers portal. If urgent shift replacement is needed, consider fast-tracking from the <strong>Frontline Ready Pool</strong> to save up to 22 business days.
-                    </p>
-
-                    <button
-                      onClick={() => {
-                        setFastTrackSuccess(`ATS Pipeline Accelerated for ${selectedRequisition.req_code}. Multi-channel job posting prioritized.`);
-                        setSelectedRequisition(null);
-                      }}
-                      className="w-full py-2 rounded-lg bg-surface-card border border-surface-border text-xs font-bold text-ink-primary hover:bg-surface-elevated transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    <span
+                      className={`px-2.5 py-0.5 rounded text-[10px] font-bold border ${
+                        isFulfilled
+                          ? "bg-status-healthy/15 text-status-healthy border-status-healthy/30"
+                          : detailModalReq.sla_status === "WITHIN_SLA"
+                          ? "bg-status-healthy/15 text-status-healthy border-status-healthy/30"
+                          : detailModalReq.sla_status === "AT_RISK"
+                          ? "bg-status-attention/15 text-status-attention border-status-attention/30"
+                          : "bg-status-danger/15 text-status-danger border-status-danger/30"
+                      }`}
                     >
-                      <ArrowUpRight className="w-3.5 h-3.5 text-brand-teal" />
-                      <span>Boost ATS Channel Sourcing</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Modal Footer */}
-            <div className="p-4 bg-surface-ground border-t border-surface-border flex items-center justify-between">
-              <span className="text-[11px] text-ink-tertiary">
-                FIT HUB Operational Continuity &copy; People Intelligence
-              </span>
-              <button
-                onClick={() => setSelectedRequisition(null)}
-                className="px-4 py-2 rounded-lg border border-surface-border text-xs font-semibold text-ink-secondary hover:text-ink-primary transition-colors cursor-pointer"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 10. Interactive Requisition Detail Modal (Pop-up Detail - 100% English) */}
-      {detailModalReq && (
-        <div className="fixed inset-0 bg-ink-primary/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto animate-fadeIn">
-          <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-slideUp my-8 flex flex-col max-h-[90vh]">
-            {/* Modal Header */}
-            <div className="p-5 border-b border-surface-border flex items-start justify-between bg-surface-ground/60">
-              <div>
-                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                  <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-brand-teal/20 text-brand-teal border border-brand-teal/30">
-                    {detailModalReq.req_code}
-                  </span>
-                  <span
-                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ${
-                      detailModalReq.sla_status === "WITHIN_SLA"
-                        ? "bg-status-healthy/15 text-status-healthy border-status-healthy/30"
+                      {isFulfilled
+                        ? "FULFILLED"
+                        : detailModalReq.sla_status === "WITHIN_SLA"
+                        ? "Within SLA"
                         : detailModalReq.sla_status === "AT_RISK"
-                        ? "bg-status-attention/15 text-status-attention border-status-attention/30"
-                        : "bg-status-danger/15 text-status-danger border-status-danger/30"
-                    }`}
-                  >
-                    {detailModalReq.sla_status === "WITHIN_SLA"
-                      ? "Within SLA"
-                      : detailModalReq.sla_status === "AT_RISK"
-                      ? "At Risk"
-                      : "SLA Breached"}
-                  </span>
-                  <span className="text-[10px] font-semibold text-ink-tertiary">
-                    {detailModalReq.hiring_type} • {detailModalReq.days_open} Days Open (Target: {detailModalReq.sla_target_days}d)
-                  </span>
-                </div>
-                <h3 className="text-lg font-bold text-ink-primary">
-                  Requisition Details: {detailModalReq.role_name}
-                </h3>
-                <p className="text-xs text-ink-secondary mt-0.5">
-                  Club: <strong className="text-ink-primary">{detailModalReq.location_name} ({detailModalReq.club_name || "Central"})</strong> • Hiring Manager: {detailModalReq.hiring_manager}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setDetailModalReq(null)}
-                className="p-1.5 rounded-lg hover:bg-surface-ground text-ink-tertiary hover:text-ink-primary transition-colors cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Notification alert within modal */}
-            {stageActionMessage && (
-              <div className="px-5 py-2.5 bg-status-healthy/15 border-b border-status-healthy/30 text-xs font-semibold text-status-healthy flex items-center gap-2 animate-fadeIn">
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                <span>{stageActionMessage}</span>
-              </div>
-            )}
-
-            {/* Modal Body */}
-            <div className="flex-1 overflow-y-auto p-5 space-y-5">
-              {/* Urgency Context Banner */}
-              <div className="p-3.5 rounded-xl bg-surface-ground border border-surface-border flex items-start gap-3">
-                <AlertTriangle className="w-4 h-4 text-status-attention flex-shrink-0 mt-0.5" />
-                <div className="text-xs">
-                  <span className="font-bold text-ink-primary block mb-0.5">Demand Context & Turnover Reason:</span>
-                  <p className="text-ink-secondary leading-relaxed">{detailModalReq.urgency_reason}</p>
-                  {detailModalReq.linked_exit_code && (
-                    <span className="text-[10px] text-status-critical font-mono font-semibold block mt-1">
-                      Linked Turnover Exit: {detailModalReq.linked_exit_code}
+                        ? "At Risk"
+                        : "SLA Breached"}
                     </span>
+                    <span className="text-[11px] font-semibold text-ink-tertiary">
+                      {detailModalReq.hiring_type} • {detailModalReq.days_open} Days Open (Target: {detailModalReq.sla_target_days}d SLA)
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-ink-primary font-display">
+                    Multi-Channel Sourcing Pipeline: {detailModalReq.role_name}
+                  </h3>
+                  <p className="text-xs text-ink-secondary mt-1">
+                    Club Location: <strong className="text-ink-primary">{detailModalReq.location_name} ({detailModalReq.club_name || "Central"})</strong> • Hiring Manager: {detailModalReq.hiring_manager} • Openings: <strong className="text-ink-primary">{detailModalReq.openings}</strong>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDetailModalReq(null)}
+                  className="p-1.5 rounded-lg hover:bg-surface-ground text-ink-tertiary hover:text-ink-primary transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Toast / Notification inside modal */}
+              {stageActionMessage && (
+                <div className="px-5 py-2.5 bg-status-healthy/15 border-b border-status-healthy/30 text-xs font-semibold text-status-healthy flex items-center gap-2 animate-fadeIn">
+                  <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+                  <span>{stageActionMessage}</span>
+                </div>
+              )}
+
+              {/* Modal Body */}
+              <div className="flex-1 overflow-y-auto p-5 space-y-5">
+                {/* Demand & Operational Context */}
+                <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-ink-primary uppercase tracking-wider">
+                          Requisition Demand Context
+                        </span>
+                        {detailModalReq.linked_exit_code && (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-status-danger/15 text-status-danger border border-status-danger/30">
+                            Linked Turnover Exit: {detailModalReq.linked_exit_code}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-ink-secondary leading-relaxed">
+                        {detailModalReq.urgency_reason}
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 text-center">
+                      <div className="p-2 rounded-lg bg-surface-card border border-surface-border min-w-[80px]">
+                        <span className="text-[10px] text-ink-tertiary block">Openings</span>
+                        <span className="text-sm font-bold text-ink-primary">{detailModalReq.openings}</span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-surface-card border border-surface-border min-w-[90px]">
+                        <span className="text-[10px] text-ink-tertiary block">Bottleneck</span>
+                        <span className="text-xs font-bold text-status-attention truncate block mt-0.5">
+                          {detailModalReq.bottleneck_stage}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Connected Tracker Link */}
+                  {detailModalReq.external_tracker_url && (
+                    <div className="pt-2 border-t border-surface-border/60 flex items-center justify-between text-xs">
+                      <span className="text-ink-secondary flex items-center gap-1.5">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                        <span>Connected Operational Spreadsheet / ATS Tracker</span>
+                      </span>
+                      <a
+                        href={detailModalReq.external_tracker_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal border border-brand-teal/30 flex items-center gap-1 transition-colors"
+                      >
+                        <span>Open Live Sheet</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
                   )}
                 </div>
-              </div>
 
-              {/* 1. Sourcing Origin & Multi-Channel Breakdown */}
-              <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-ink-primary uppercase tracking-wider flex items-center gap-1.5">
-                    <Globe className="w-3.5 h-3.5 text-brand-teal" />
-                    <span>Active Sourcing Channels & Pathways</span>
-                  </span>
-                  <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-brand-teal/15 text-brand-teal border border-brand-teal/30">
-                    {detailModalReq.sourcing_channel || "⚡ Frontline Ready Pool"}
-                  </span>
-                </div>
-
-                {/* Multi-source details or channels */}
-                {detailModalReq.sourcing_details && detailModalReq.sourcing_details.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    {detailModalReq.sourcing_details.map((sd, i) => (
-                      <div key={i} className="p-2.5 rounded-lg bg-surface-card border border-surface-border space-y-1">
-                        <div className="flex items-center justify-between font-bold text-ink-primary">
-                          <span>{sd.channel}</span>
-                          <span className="text-brand-teal font-mono">{sd.applicants || 0} Applicants</span>
-                        </div>
-                        {sd.notes && <p className="text-[10px] text-ink-tertiary">{sd.notes}</p>}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-xs text-ink-secondary">
-                    This requisition is prioritized through <strong>{detailModalReq.sourcing_channel || "Frontline Ready Pool"}</strong> for SLA compression.
-                  </p>
-                )}
-
-                {/* External Tracker Link if present */}
-                {detailModalReq.external_tracker_url && (
-                  <div className="pt-2 border-t border-surface-border/60 flex items-center justify-between">
-                    <span className="text-xs text-ink-secondary flex items-center gap-1.5">
-                      <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-                      <span>Connected Google Sheet / ATS Tracker</span>
+                {/* Sourcing Channel Sub-Filters */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-xs font-bold text-ink-primary uppercase tracking-wider flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-brand-teal" />
+                        <span>Multi-Channel Sourcing Pipeline</span>
+                      </h4>
+                      <p className="text-[11px] text-ink-secondary mt-0.5">
+                        Candidates enter simultaneously across all 9 talent channels grounded in FIT HUB historical intelligence.
+                      </p>
+                    </div>
+                    <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-surface-ground border border-surface-border text-ink-primary">
+                      {activeCandidates.length} Candidates in Funnel
                     </span>
-                    <a
-                      href={detailModalReq.external_tracker_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="px-3 py-1 rounded-lg text-xs font-bold bg-brand-teal/10 hover:bg-brand-teal/20 text-brand-teal border border-brand-teal/30 flex items-center gap-1 transition-colors"
-                    >
-                      <span>Open Spreadsheet / Tracker</span>
-                      <ExternalLink className="w-3 h-3" />
-                    </a>
                   </div>
-                )}
-              </div>
 
-              {/* 2. Active Candidates in Process */}
-              <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-ink-primary uppercase tracking-wider flex items-center gap-1.5">
-                    <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Candidates in Process (Shortlist & Assignees)</span>
-                  </span>
-                  <span className="text-xs text-ink-tertiary font-mono">
-                    {(detailModalReq.assigned_candidates?.length || 0)} Assigned Candidates
-                  </span>
+                  {/* Sub-Filter Pills */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+                    {[
+                      { id: "ALL", label: "All Sources", count: countBySource("ALL"), icon: Layers },
+                      { id: "TALENT_POOL", label: "Talent Pool", count: countBySource("TALENT_POOL"), icon: Zap, color: "text-brand-teal" },
+                      { id: "INTERNAL_MOBILITY", label: "Internal Mobility", count: countBySource("INTERNAL_MOBILITY"), icon: ArrowUpRight, color: "text-purple-400" },
+                      { id: "EMPLOYEE_REFERRAL", label: "Employee Referral", count: countBySource("EMPLOYEE_REFERRAL"), icon: Users, color: "text-blue-400" },
+                      { id: "JOB_PORTAL", label: "Job Portal", count: countBySource("JOB_PORTAL"), icon: Globe, color: "text-emerald-400" },
+                      { id: "SOCIAL_MEDIA_ADS", label: "Social Media", count: countBySource("SOCIAL_MEDIA_ADS"), icon: Sparkles, color: "text-pink-400" },
+                      { id: "EMPLOYER_BRANDING", label: "Employer Branding", count: countBySource("EMPLOYER_BRANDING"), icon: GraduationCap, color: "text-amber-400" },
+                    ].map((tab) => {
+                      const IconComp = tab.icon;
+                      const isSelected = candidateSourceFilter === tab.id;
+                      return (
+                        <button
+                          key={tab.id}
+                          type="button"
+                          onClick={() => setCandidateSourceFilter(tab.id)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 border cursor-pointer ${
+                            isSelected
+                              ? "bg-brand-teal text-surface-ground border-brand-teal shadow-sm font-bold"
+                              : "bg-surface-ground text-ink-secondary border-surface-border hover:border-brand-teal/40 hover:text-ink-primary"
+                          }`}
+                        >
+                          <IconComp className={`w-3.5 h-3.5 ${isSelected ? "text-surface-ground" : (tab.color || "text-ink-tertiary")}`} />
+                          <span>{tab.label}</span>
+                          <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
+                            isSelected ? "bg-black/20 text-surface-ground" : "bg-surface-card text-ink-primary"
+                          }`}>
+                            {tab.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {detailModalReq.assigned_candidates && detailModalReq.assigned_candidates.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {detailModalReq.assigned_candidates.map((cand, idx) => {
-                      const currentStageName = cand.stage || detailModalReq.current_stage || "HR Screening";
+                {/* Candidate Pipeline Cards */}
+                <div className="space-y-3">
+                  {filteredCandidates.length === 0 ? (
+                    <div className="p-6 rounded-xl bg-surface-ground border border-surface-border text-center space-y-2">
+                      <p className="text-xs text-ink-secondary">
+                        No candidates currently active under this sourcing channel.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setCandidateSourceFilter("ALL")}
+                        className="text-xs font-bold text-brand-teal hover:underline cursor-pointer"
+                      >
+                        View All Sources ({activeCandidates.length})
+                      </button>
+                    </div>
+                  ) : (
+                    filteredCandidates.map((cand) => {
+                      const meta = cand.sourcing_metadata;
+                      const isPool = meta?.internal_type === "TALENT_POOL" || cand.source_type === "TALENT_POOL";
+                      const isMobility = meta?.internal_type === "INTERNAL_MOBILITY" || cand.source_type === "INTERNAL_MOBILITY";
+                      const isReferral = meta?.channel === "EMPLOYEE_REFERRAL" || cand.source_type === "EMPLOYEE_REFERRAL";
+                      const isJobPortal = meta?.channel === "JOB_PORTAL" || cand.source_type === "JOB_PORTAL";
+                      const isSocial = meta?.channel === "SOCIAL_MEDIA_ADS" || cand.source_type === "SOCIAL_MEDIA_ADS";
+                      const isBranding = meta?.channel === "EMPLOYER_BRANDING" || cand.source_type === "EMPLOYER_BRANDING";
+                      const isHired = cand.stage === "Hired";
+
                       return (
                         <div
-                          key={cand.id || idx}
-                          className="p-3.5 rounded-xl bg-surface-card border border-surface-border space-y-2.5 hover:border-brand-teal/40 transition-all"
+                          key={cand.id}
+                          className={`p-4 rounded-xl border transition-all space-y-3 ${
+                            isHired
+                              ? "bg-status-healthy/10 border-status-healthy/40"
+                              : "bg-surface-card border-surface-border hover:border-brand-teal/40"
+                          }`}
                         >
-                          <div className="flex items-center justify-between gap-3">
+                          {/* Top Row: Candidate Identity & Stage */}
+                          <div className="flex items-start justify-between gap-3 flex-wrap">
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-full bg-brand-teal/20 text-brand-teal font-bold text-xs flex items-center justify-center">
+                              <div className={`w-10 h-10 rounded-full font-bold text-xs flex items-center justify-center ${
+                                isHired
+                                  ? "bg-status-healthy text-surface-ground"
+                                  : isPool
+                                  ? "bg-brand-teal/20 text-brand-teal"
+                                  : isMobility
+                                  ? "bg-purple-500/20 text-purple-400"
+                                  : "bg-surface-elevated text-ink-primary"
+                              }`}>
                                 {cand.name.charAt(0)}
                               </div>
                               <div>
-                                <div className="font-bold text-xs text-ink-primary flex items-center gap-2">
-                                  <span>{cand.name}</span>
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-bold text-sm text-ink-primary">
+                                    {cand.name}
+                                  </span>
                                   {cand.fit_score && (
-                                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300">
-                                      {cand.fit_score}% Fit
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-teal/15 text-brand-teal border border-brand-teal/30">
+                                      {cand.fit_score}% Fit Benchmark
+                                    </span>
+                                  )}
+                                  {isHired && (
+                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-status-healthy text-surface-ground">
+                                      ✓ HIRED
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-[10px] text-ink-tertiary mt-0.5 flex items-center gap-2">
-                                  <span>Source: {cand.source_type}</span>
-                                  {cand.current_role && <span>• {cand.current_role}</span>}
+                                <div className="text-xs text-ink-tertiary mt-0.5 flex items-center gap-2 flex-wrap">
+                                  <span>Role: {cand.current_role || detailModalReq.role_name}</span>
                                   {cand.applied_at && <span>• Applied: {cand.applied_at}</span>}
+                                  {cand.contact && <span>• Contact: {cand.contact}</span>}
                                 </div>
                               </div>
                             </div>
 
-                            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-surface-ground border border-surface-border text-ink-primary whitespace-nowrap">
-                              Stage: {currentStageName}
-                            </span>
+                            {/* Current Stage Pill */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-[11px] text-ink-tertiary">Current Stage:</span>
+                              <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${
+                                isHired
+                                  ? "bg-status-healthy text-surface-ground border-status-healthy font-mono"
+                                  : cand.stage === "Offering Stage"
+                                  ? "bg-purple-500/15 text-purple-300 border-purple-500/30"
+                                  : cand.stage === "Manager Interview"
+                                  ? "bg-blue-500/15 text-blue-300 border-blue-500/30"
+                                  : "bg-surface-ground text-ink-primary border-surface-border"
+                              }`}>
+                                {cand.stage}
+                              </span>
+                            </div>
                           </div>
 
+                          {/* Sourcing Channel Hierarchy Card */}
+                          <div className="p-3 rounded-lg bg-surface-ground border border-surface-border text-xs space-y-1.5">
+                            {/* 1. Talent Pool */}
+                            {isPool && (
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-brand-teal flex items-center gap-1.5">
+                                    <Zap className="w-3.5 h-3.5" />
+                                    <span>Frontline Ready Pool (FIT HUB Academy Bank)</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveTab("talent-pool");
+                                      setDetailModalReq(null);
+                                    }}
+                                    className="text-[11px] font-bold text-brand-teal hover:underline flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <span>Deep-Dive in Talent Pool Tab</span>
+                                    <ArrowUpRight className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-ink-secondary">
+                                  <div>
+                                    <span className="text-ink-tertiary">Program: </span>
+                                    <span className="font-semibold text-ink-primary">
+                                      {meta?.talent_pool_program || "FIT HUB Academy Fast-Track Cohort"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-ink-tertiary">TTF Advantage: </span>
+                                    <span className="font-semibold text-brand-teal">
+                                      Compresses TTF from 34d to 9d (HR screening bypassed)
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 2. Internal Mobility */}
+                            {isMobility && (
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="font-bold text-purple-400 flex items-center gap-1.5">
+                                    <Sparkles className="w-3.5 h-3.5" />
+                                    <span>Internal Mobility / Succession Program</span>
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setActiveTab("talent-pool");
+                                      setDetailModalReq(null);
+                                    }}
+                                    className="text-[11px] font-bold text-purple-400 hover:underline flex items-center gap-1 cursor-pointer"
+                                  >
+                                    <span>View Mobility Matrix</span>
+                                    <ArrowUpRight className="w-3 h-3" />
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 text-[11px] text-ink-secondary">
+                                  <div>
+                                    <span className="text-ink-tertiary">Employee ID: </span>
+                                    <span className="font-mono font-semibold text-ink-primary">
+                                      {meta?.mobility_employee_id || "EMP-INT"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-ink-tertiary">Current Role: </span>
+                                    <span className="font-semibold text-ink-primary">
+                                      {meta?.mobility_current_role || "Associate"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-ink-tertiary">Current Branch: </span>
+                                    <span className="font-semibold text-ink-primary">
+                                      {meta?.mobility_current_branch || detailModalReq.location_name}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 3. Employee Referral */}
+                            {isReferral && (
+                              <div className="space-y-1">
+                                <span className="font-bold text-blue-400 flex items-center gap-1.5">
+                                  <Users className="w-3.5 h-3.5" />
+                                  <span>Employee Referral Channel</span>
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 text-[11px] text-ink-secondary">
+                                  <div>
+                                    <span className="text-ink-tertiary">Referrer Name: </span>
+                                    <strong className="text-ink-primary">
+                                      {meta?.referrer_name || "Budi Santoso"}
+                                    </strong>
+                                  </div>
+                                  <div>
+                                    <span className="text-ink-tertiary">Referrer ID: </span>
+                                    <span className="font-mono font-semibold text-ink-primary">
+                                      {meta?.referrer_employee_id || "EMP-1048"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-ink-tertiary">Designation: </span>
+                                    <span className="text-ink-primary">
+                                      {meta?.referrer_role || "Staff"}, {meta?.referrer_branch || detailModalReq.location_name}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 4. Job Portal */}
+                            {isJobPortal && (
+                              <div className="space-y-1">
+                                <span className="font-bold text-emerald-400 flex items-center gap-1.5">
+                                  <Globe className="w-3.5 h-3.5" />
+                                  <span>Public Job Portal Inbound</span>
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-ink-secondary">
+                                  <div>
+                                    <span className="text-ink-tertiary">Portal Platform: </span>
+                                    <strong className="text-ink-primary">
+                                      {meta?.portal_name || "JobStreet"}
+                                    </strong>
+                                  </div>
+                                  <div>
+                                    <span className="text-ink-tertiary">External Posting ID: </span>
+                                    <span className="font-mono font-semibold text-ink-primary">
+                                      {meta?.portal_posting_id || "JS-" + detailModalReq.req_code}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 5. Social Media Ads */}
+                            {isSocial && (
+                              <div className="space-y-1">
+                                <span className="font-bold text-pink-400 flex items-center gap-1.5">
+                                  <Sparkles className="w-3.5 h-3.5" />
+                                  <span>Social Media Recruitment Ads</span>
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 text-[11px] text-ink-secondary">
+                                  <div>
+                                    <span className="text-ink-tertiary">Platform: </span>
+                                    <strong className="text-ink-primary">
+                                      {meta?.social_platform || "Instagram"}
+                                    </strong>
+                                  </div>
+                                  <div>
+                                    <span className="text-ink-tertiary">Campaign: </span>
+                                    <span className="text-ink-primary">
+                                      {meta?.social_post_campaign || "Reels Sourcing Blitz"}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <span className="text-ink-tertiary">Ad Identifier: </span>
+                                    <span className="font-mono text-ink-primary">
+                                      {meta?.social_ad_id || "IG-AD-01"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 6. Employer Branding */}
+                            {isBranding && (
+                              <div className="space-y-1">
+                                <span className="font-bold text-amber-400 flex items-center gap-1.5">
+                                  <GraduationCap className="w-3.5 h-3.5" />
+                                  <span>Employer Branding & Campus Outreach</span>
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-ink-secondary">
+                                  <div>
+                                    <span className="text-ink-tertiary">Event Type: </span>
+                                    <strong className="text-ink-primary">
+                                      {meta?.branding_event_type || "Campus Career Fair"}
+                                    </strong>
+                                  </div>
+                                  <div>
+                                    <span className="text-ink-tertiary">Partner Institution: </span>
+                                    <span className="text-ink-primary">
+                                      {meta?.branding_institution || "Universitas Udayana Bali"}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Candidate Notes */}
                           {cand.notes && (
-                            <p className="text-[11px] text-ink-secondary bg-surface-ground/50 p-2 rounded-lg border border-surface-border/40">
+                            <p className="text-xs text-ink-secondary leading-relaxed bg-surface-ground/60 p-2.5 rounded-lg border border-surface-border/50">
                               {cand.notes}
                             </p>
                           )}
 
-                          {/* Stage Advancer Button Group */}
-                          <div className="pt-2 border-t border-surface-border/60 flex items-center justify-between text-xs">
-                            <span className="text-[10px] text-ink-tertiary">
-                              Recruitment Stage Progression:
+                          {/* Interactive Stage Advancer Actions */}
+                          <div className="pt-2 border-t border-surface-border flex items-center justify-between flex-wrap gap-2 text-xs">
+                            <span className="text-[11px] text-ink-tertiary">
+                              Recruitment Funnel Actions:
                             </span>
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              {currentStageName !== "Manager Interview" && (
+                              {cand.stage !== "Manager Interview" && cand.stage !== "Offering Stage" && !isHired && (
                                 <button
                                   type="button"
                                   disabled={advancingStage}
                                   onClick={() => handleAdvanceStage(detailModalReq.req_code, "Manager Interview", cand.id)}
-                                  className="px-2 py-1 rounded bg-surface-ground hover:bg-surface-border text-ink-primary text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                                  className="px-2.5 py-1.5 rounded-lg bg-surface-ground hover:bg-surface-elevated text-ink-primary text-xs font-semibold border border-surface-border transition-colors cursor-pointer disabled:opacity-50"
                                 >
                                   ➔ Advance to Manager Interview
                                 </button>
                               )}
-                              {currentStageName !== "Offering Stage" && (
+
+                              {cand.stage !== "Offering Stage" && !isHired && (
                                 <button
                                   type="button"
                                   disabled={advancingStage}
                                   onClick={() => handleAdvanceStage(detailModalReq.req_code, "Offering Stage", cand.id)}
-                                  className="px-2 py-1 rounded bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[11px] font-semibold transition-colors cursor-pointer disabled:opacity-50"
+                                  className="px-2.5 py-1.5 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 border border-purple-500/30 text-xs font-semibold transition-colors cursor-pointer disabled:opacity-50"
                                 >
                                   ➔ Advance to Offering Stage
                                 </button>
                               )}
-                              {currentStageName !== "Hired" && (
+
+                              {!isHired && (
                                 <button
                                   type="button"
                                   disabled={advancingStage}
                                   onClick={() => handleAdvanceStage(detailModalReq.req_code, "Hired", cand.id)}
-                                  className="px-2.5 py-1 rounded bg-status-healthy text-surface-ground text-[11px] font-bold hover:bg-status-healthy/90 transition-colors cursor-pointer disabled:opacity-50 shadow-sm"
+                                  className="px-3 py-1.5 rounded-lg bg-status-healthy text-surface-ground text-xs font-bold hover:bg-status-healthy/90 transition-colors cursor-pointer disabled:opacity-50 shadow-sm flex items-center gap-1"
                                 >
-                                  ✓ Confirm Hired
+                                  <Check className="w-3.5 h-3.5" />
+                                  <span>Confirm Hired</span>
                                 </button>
+                              )}
+
+                              {isHired && (
+                                <span className="text-xs font-bold text-status-healthy flex items-center gap-1 bg-status-healthy/10 px-3 py-1 rounded-lg border border-status-healthy/30">
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                  <span>Candidate Confirmed Hired</span>
+                                </span>
                               )}
                             </div>
                           </div>
                         </div>
                       );
-                    })}
-                  </div>
-                ) : (
-                  <div className="p-4 rounded-xl bg-surface-card border border-surface-border text-center space-y-2 text-xs">
-                    <p className="text-ink-secondary">
-                      No specific candidates assigned to this requisition yet.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const targetReq = detailModalReq;
-                        setDetailModalReq(null);
-                        handleOpenFulfillment(targetReq);
-                      }}
-                      className="px-3 py-1.5 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-colors inline-flex items-center gap-1.5 cursor-pointer shadow-sm"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      <span>Allocate Candidate via Sourcing Hub</span>
-                    </button>
-                  </div>
-                )}
-              </div>
+                    })
+                  )}
+                </div>
 
-              {/* 3. Interactive Pipeline Stage Stepper */}
-              <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-3">
-                <span className="text-xs font-bold text-ink-primary uppercase tracking-wider block">
-                  Pipeline Stage Progression
-                </span>
-                <div className="grid grid-cols-5 gap-1 text-center text-xs font-semibold">
-                  {[
-                    { label: "1. Intake", active: true },
-                    { label: "2. Screening", active: true },
-                    { label: "3. Audition / Interview", active: detailModalReq.current_stage !== "HR Screening" },
-                    { label: "4. Offering", active: ["Offering Stage", "IDP Transition", "Hired"].includes(detailModalReq.current_stage || "") },
-                    { label: "5. Hired / Onboarding", active: (detailModalReq.current_stage || "").includes("Hired") },
-                  ].map((st, i) => (
-                    <div
-                      key={i}
-                      className={`p-2 rounded-lg border transition-all ${
-                        st.active
-                          ? "bg-brand-teal/15 border-brand-teal/50 text-brand-teal"
-                          : "bg-surface-card border-surface-border text-ink-tertiary"
-                      }`}
-                    >
-                      <span className="text-[10px] block">{st.label}</span>
-                    </div>
-                  ))}
+                {/* 5-Stage Stepper */}
+                <div className="p-4 rounded-xl bg-surface-ground border border-surface-border space-y-2.5">
+                  <span className="text-xs font-bold text-ink-primary uppercase tracking-wider block">
+                    Requisition Lifecycle Stage Stepper
+                  </span>
+                  <div className="grid grid-cols-5 gap-1.5 text-center text-xs font-semibold">
+                    {[
+                      { label: "1. Intake Queued", active: true },
+                      { label: "2. Active Sourcing", active: true },
+                      { label: "3. Manager Interview", active: activeCandidates.some(c => ["Manager Interview", "Offering Stage", "Hired"].includes(c.stage)) },
+                      { label: "4. Offering Stage", active: activeCandidates.some(c => ["Offering Stage", "Hired"].includes(c.stage)) },
+                      { label: "5. Hired / Fulfilled", active: isFulfilled },
+                    ].map((st, i) => (
+                      <div
+                        key={i}
+                        className={`p-2 rounded-lg border transition-all ${
+                          st.active
+                            ? "bg-brand-teal/15 border-brand-teal/50 text-brand-teal"
+                            : "bg-surface-card border-surface-border text-ink-tertiary"
+                        }`}
+                      >
+                        <span className="text-[10px] block">{st.label}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Modal Footer */}
-            <div className="p-4 border-t border-surface-border bg-surface-ground/50 flex items-center justify-between">
-              <span className="text-[11px] text-ink-tertiary">
-                Stage changes are immediately synchronized with PostgreSQL Supabase.
-              </span>
-              <button
-                type="button"
-                onClick={() => setDetailModalReq(null)}
-                className="px-4 py-2 rounded-xl bg-surface-card border border-surface-border text-xs font-semibold text-ink-secondary hover:text-ink-primary transition-colors cursor-pointer"
-              >
-                Close Details
-              </button>
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-surface-border bg-surface-ground/70 flex items-center justify-between text-xs">
+                <span className="text-ink-tertiary">
+                  All candidate actions synchronized directly with FIT HUB People Analytics Mart.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setDetailModalReq(null)}
+                  className="px-4 py-2 rounded-xl bg-surface-card border border-surface-border font-semibold text-ink-secondary hover:text-ink-primary transition-colors cursor-pointer"
+                >
+                  Close Details
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* 11. Create New Requisition Modal (100% English, Supabase Sync) */}
       {isCreateModalOpen && (
