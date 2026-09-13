@@ -305,13 +305,30 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     setRoleFilter("ALL");
   };
 
-  // Available roles filtered by selected job family
+  // Cascade: when specific role is picked, automatically sync job family!
+  const handleRoleChange = (role: string) => {
+    if (role === "ALL") {
+      setRoleFilter("ALL");
+    } else {
+      const node = ROLE_HIERARCHY.find((n) => n.role.toLowerCase() === role.toLowerCase());
+      if (node) {
+        setJobFamilyFilterState(node.family);
+        setRoleFilter(node.role);
+      } else {
+        setRoleFilter(role);
+      }
+    }
+  };
+
+  // All available roles across all families
+  const allRoles = useMemo(() => {
+    return Array.from(new Set(ROLE_HIERARCHY.map((n) => n.role))).sort();
+  }, []);
+
+  // Available roles: all roles always available so picking any role auto-selects family
   const availableRoles = useMemo(() => {
-    const nodes = jobFamilyFilter === "ALL"
-      ? ROLE_HIERARCHY
-      : ROLE_HIERARCHY.filter((n) => n.family === jobFamilyFilter);
-    return Array.from(new Set(nodes.map((n) => n.role))).sort();
-  }, [jobFamilyFilter]);
+    return allRoles;
+  }, [allRoles]);
 
   // Cascade: when cluster changes, reset province & city
   const handleClusterChange = (cluster: string) => {
@@ -320,31 +337,56 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
     setCityFilter("ALL");
   };
 
-  // Cascade: when province changes, reset city
+  // Cascade: when province changes, automatically sync cluster!
   const handleProvinceChange = (province: string) => {
-    setProvinceFilter(province);
-    setCityFilter("ALL");
+    if (province === "ALL") {
+      setProvinceFilter("ALL");
+      setCityFilter("ALL");
+    } else {
+      const node = LOCATION_HIERARCHY.find((n) => n.province.toLowerCase() === province.toLowerCase());
+      if (node) {
+        setClusterFilter(node.cluster);
+      }
+      setProvinceFilter(province);
+      const validCitiesInProvince = LOCATION_HIERARCHY.filter(
+        (n) => n.province.toLowerCase() === province.toLowerCase()
+      ).map((n) => n.city.toLowerCase());
+      if (!validCitiesInProvince.includes(cityFilter.toLowerCase())) {
+        setCityFilter("ALL");
+      }
+    }
   };
 
-  // Available provinces filtered by selected cluster
-  const availableProvinces = useMemo(() => {
-    const nodes = clusterFilter === "ALL"
-      ? LOCATION_HIERARCHY
-      : LOCATION_HIERARCHY.filter((n) => n.cluster === clusterFilter);
-    return Array.from(new Set(nodes.map((n) => n.province))).sort();
-  }, [clusterFilter]);
+  // Cascade: when city changes, automatically sync province AND cluster!
+  const handleCityChange = (city: string) => {
+    if (city === "ALL") {
+      setCityFilter("ALL");
+    } else {
+      const node = LOCATION_HIERARCHY.find((n) => n.city.toLowerCase() === city.toLowerCase());
+      if (node) {
+        setClusterFilter(node.cluster);
+        setProvinceFilter(node.province);
+        setCityFilter(node.city);
+      } else {
+        setCityFilter(city);
+      }
+    }
+  };
 
-  // Available cities filtered by selected cluster + province
+  // All available provinces in Indonesia
+  const allProvinces = useMemo(() => {
+    return Array.from(new Set(LOCATION_HIERARCHY.map((n) => n.province))).sort();
+  }, []);
+
+  // Available provinces: show all so picking any province auto-syncs cluster
+  const availableProvinces = useMemo(() => {
+    return allProvinces;
+  }, [allProvinces]);
+
+  // All available cities in Indonesia so picking any city directly auto-syncs province & cluster
   const availableCities = useMemo(() => {
-    let nodes = LOCATION_HIERARCHY;
-    if (clusterFilter !== "ALL") {
-      nodes = nodes.filter((n) => n.cluster === clusterFilter);
-    }
-    if (provinceFilter !== "ALL") {
-      nodes = nodes.filter((n) => n.province === provinceFilter);
-    }
-    return Array.from(new Set(nodes.map((n) => n.city))).sort();
-  }, [clusterFilter, provinceFilter]);
+    return Array.from(new Set(LOCATION_HIERARCHY.map((n) => n.city))).sort();
+  }, []);
 
   // Backward-compatible derived locationFilter (most specific non-ALL wins)
   const locationFilter = useMemo(() => {
@@ -411,14 +453,14 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         jobFamilyFilter,
         setJobFamilyFilter,
         roleFilter,
-        setRoleFilter,
+        setRoleFilter: handleRoleChange,
         availableRoles,
         clusterFilter,
         setClusterFilter: handleClusterChange,
         provinceFilter,
         setProvinceFilter: handleProvinceChange,
         cityFilter,
-        setCityFilter,
+        setCityFilter: handleCityChange,
         locationFilter,
         setLocationFilter,
         availableProvinces,
