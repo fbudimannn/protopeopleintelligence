@@ -87,13 +87,6 @@ export default function TopHeader() {
         provenance: "HYBRID",
       };
     }
-    if (pathname.startsWith("/data-readiness")) {
-      return {
-        title: "Data Readiness Hub",
-        section: "Data Governance",
-        provenance: "DERIVED",
-      };
-    }
     return {
       title: "People Intelligence",
       section: "Analytics",

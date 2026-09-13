@@ -9,7 +9,6 @@ import {
   LayoutDashboard,
   Briefcase,
   Users,
-  Database,
   ChevronLeft,
   ChevronRight,
   TrendingUp,
@@ -147,16 +146,6 @@ function SidebarNavItems() {
           label: "Capability Framework",
           href: "/team/capability/framework",
           icon: <Award className="w-5 h-5 flex-shrink-0" />,
-        },
-      ],
-    },
-    {
-      title: "GOVERNANCE",
-      items: [
-        {
-          label: "Data Readiness Hub",
-          href: "/data-readiness",
-          icon: <Database className="w-5 h-5 flex-shrink-0" />,
         },
       ],
     },
