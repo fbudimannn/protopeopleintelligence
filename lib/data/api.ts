@@ -397,7 +397,7 @@ export async function getEngagementSummaries(): Promise<{ data: EngagementSummar
 }
 
 export async function getInternalMobilityMatches(
-  targetRole: string = "Assistant Club Manager",
+  targetRole: string = "Customer Service Leader",
   targetLocation: string = "ALL",
   benchmarkEmpIds: string[] = [],
   minPerformance: number = 3.5,

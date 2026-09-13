@@ -57,33 +57,36 @@ export const LOCATION_HIERARCHY: LocationNode[] = [
 ];
 
 // ─── Role Hierarchy (Job Family → Specific Role) ───────────────────────────
+// Aligned with the 11 Ground-Truth Operational Roles (+ Area General Manager executive)
 export interface RoleNode {
   family: string;
   role: string;
 }
 
 export const ROLE_HIERARCHY: RoleNode[] = [
-  // Club Management
-  { family: "Club Management", role: "Assistant Club Manager" },
-  { family: "Club Management", role: "Club Manager" },
-  // Customer Service
-  { family: "Customer Service", role: "Customer Service" },
-  // Fitness / Coaching
-  { family: "Fitness / Coaching", role: "Fitness Lead" },
-  { family: "Fitness / Coaching", role: "Personal Trainer" },
-  // Operations Support
-  { family: "Operations Support", role: "Housekeeping" },
-  // Sales / Membership
-  { family: "Sales / Membership", role: "Fitness Consultant" },
-  { family: "Sales / Membership", role: "Sales Lead" },
+  // Club Operations
+  { family: "Club Operations", role: "Customer Service" },
+  { family: "Club Operations", role: "Customer Service Leader" },
+  { family: "Club Operations", role: "Club Manager" },
+  { family: "Club Operations", role: "Operation Manager" },
+  { family: "Club Operations", role: "Area General Manager" },
+
+  // Fitness & Coaching
+  { family: "Fitness & Coaching", role: "Personal Trainer" },
+  { family: "Fitness & Coaching", role: "Personal Trainer Leader" },
+  { family: "Fitness & Coaching", role: "Personal Trainer Master" },
+  { family: "Fitness & Coaching", role: "Fitness Manager" },
+
+  // Commercial & Sales
+  { family: "Commercial & Sales", role: "Fitness Consultant" },
+  { family: "Commercial & Sales", role: "Fitness Consultant Leader" },
+  { family: "Commercial & Sales", role: "Sales Manager" },
 ];
 
 export const JOB_FAMILIES = [
-  "Club Management",
-  "Customer Service",
-  "Fitness / Coaching",
-  "Operations Support",
-  "Sales / Membership",
+  "Club Operations",
+  "Fitness & Coaching",
+  "Commercial & Sales",
 ];
 
 // ─── Filter Utilities ───────────────────────────────────────────────────────
@@ -174,33 +177,36 @@ export function matchRoleHierarchy(
   if (!isRoleAll) {
     const lowerRole = specificRole.toLowerCase().trim();
     if (lowerItem === lowerRole || lowerItem.includes(lowerRole)) return true;
-    if (lowerRole === "personal trainer" && (lowerItem.includes("trainer") || lowerItem === "pt")) return true;
-    if (lowerRole === "fitness consultant" && (lowerItem.includes("consultant") || lowerItem === "fc")) return true;
-    if (lowerRole === "customer service" && (lowerItem.includes("customer service") || lowerItem === "cs" || lowerItem.includes("front desk"))) return true;
-    if (lowerRole === "housekeeping" && lowerItem.includes("housekeeping")) return true;
-    if (lowerRole === "club manager" && (lowerItem.includes("club manager") || lowerItem === "gm" || lowerItem.includes("manajerial"))) return true;
-    if (lowerRole === "assistant club manager" && (lowerItem.includes("assistant") || lowerItem.includes("acm"))) return true;
-    if (lowerRole === "fitness lead" && lowerItem.includes("fitness lead")) return true;
-    if (lowerRole === "sales lead" && lowerItem.includes("sales lead")) return true;
+
+    // Smart aliases ensuring 100% data integration with existing and historical datasets
+    if (lowerRole === "personal trainer" && (lowerItem === "pt" || (lowerItem.includes("trainer") && !lowerItem.includes("lead") && !lowerItem.includes("master")))) return true;
+    if (lowerRole === "personal trainer leader" && (lowerItem.includes("pt lead") || lowerItem.includes("pt team leader") || lowerItem.includes("fitness lead"))) return true;
+    if (lowerRole === "personal trainer master" && lowerItem.includes("pt master")) return true;
+    if (lowerRole === "fitness manager" && lowerItem.includes("fitness manager")) return true;
+
+    if (lowerRole === "customer service" && (lowerItem === "cs" || lowerItem.includes("front desk") || (lowerItem.includes("customer service") && !lowerItem.includes("lead")))) return true;
+    if (lowerRole === "customer service leader" && (lowerItem.includes("cs lead") || lowerItem.includes("cs team leader") || lowerItem.includes("assistant club manager"))) return true;
+    if (lowerRole === "operation manager" && (lowerItem.includes("ops manager") || lowerItem.includes("operations manager") || lowerItem.includes("assistant club manager"))) return true;
+    if (lowerRole === "club manager" && (lowerItem === "gm" || (lowerItem.includes("club manager") && !lowerItem.includes("assistant")) || lowerItem.includes("manajerial club"))) return true;
+    if (lowerRole === "area general manager" && (lowerItem.includes("agm") || lowerItem.includes("area manager") || lowerItem.includes("area general manager"))) return true;
+
+    if (lowerRole === "fitness consultant" && (lowerItem === "fc" || (lowerItem.includes("consultant") && !lowerItem.includes("lead")))) return true;
+    if (lowerRole === "fitness consultant leader" && (lowerItem.includes("fc lead") || lowerItem.includes("sales lead") || lowerItem.includes("fc team leader"))) return true;
+    if (lowerRole === "sales manager" && lowerItem.includes("sales manager")) return true;
+
     return false;
   }
 
   // 2. If only job family selected
   if (!isFamilyAll) {
-    if (jobFamily === "Fitness / Coaching") {
-      return lowerItem.includes("trainer") || lowerItem.includes("fitness") || lowerItem === "pt";
+    if (jobFamily === "Fitness & Coaching" || jobFamily === "Fitness / Coaching") {
+      return lowerItem.includes("trainer") || lowerItem.includes("fitness") || lowerItem === "pt" || lowerItem.includes("coach");
     }
-    if (jobFamily === "Sales / Membership") {
-      return lowerItem.includes("consultant") || lowerItem.includes("sales") || lowerItem === "fc";
+    if (jobFamily === "Commercial & Sales" || jobFamily === "Sales / Membership") {
+      return lowerItem.includes("consultant") || lowerItem.includes("sales") || lowerItem === "fc" || lowerItem.includes("commercial");
     }
-    if (jobFamily === "Customer Service") {
-      return lowerItem.includes("customer service") || lowerItem.includes("front desk") || lowerItem === "cs";
-    }
-    if (jobFamily === "Operations Support") {
-      return lowerItem.includes("housekeeping");
-    }
-    if (jobFamily === "Club Management") {
-      return lowerItem.includes("manager") || lowerItem.includes("management") || lowerItem.includes("manajerial") || lowerItem.includes("acm");
+    if (jobFamily === "Club Operations" || jobFamily === "Customer Service" || jobFamily === "Club Management") {
+      return lowerItem.includes("customer service") || lowerItem.includes("front desk") || lowerItem === "cs" || lowerItem.includes("manager") || lowerItem.includes("operation") || lowerItem.includes("ops") || lowerItem.includes("assistant");
     }
   }
 

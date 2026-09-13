@@ -2467,11 +2467,11 @@ function VacancyContent() {
                               const health = req.health || (stat === "BREACHED" ? "Critical" : stat === "AT_RISK" ? "At Risk" : "Healthy");
                               const stageName = req.current_stage || req.bottleneck_stage || "HR Screening";
 
-                              const tier = req.tier_number || (["Customer Service", "Personal Trainer", "Fitness Consultant", "Housekeeping"].includes(role) ? 1 : 2);
+                              const tier = req.tier_number || (["Customer Service", "Personal Trainer", "Fitness Consultant"].includes(role) ? 1 : 2);
                               const isTier1 = tier === 1;
 
                               const jobFamily = req.job_family || (
-                                ["Customer Service", "Customer Service Leader", "Club Manager", "Operation Manager", "Area General Manager", "Housekeeping"].includes(role)
+                                ["Customer Service", "Customer Service Leader", "Club Manager", "Operation Manager", "Area General Manager"].includes(role)
                                   ? "Club Operations"
                                   : ["Personal Trainer", "Personal Trainer Leader", "PT Team Leader", "Fitness Lead", "Fitness Manager", "Personal Trainer Master"].includes(role)
                                   ? "Fitness & Coaching"
