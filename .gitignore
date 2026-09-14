@@ -41,4 +41,5 @@ Thumbs.db
 
 # Local scratch / test files
 *.tmp
+*.tsbuildinfo
 /scratch/

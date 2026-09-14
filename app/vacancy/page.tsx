@@ -15,6 +15,9 @@ import {
   getFunnelStages,
   getTalentPoolCandidates,
   getHiringOutcomes,
+  calculateTalentPoolFitScore,
+  assignTalentPoolToRequisition,
+  FitScoreBreakdown,
 } from "@/lib/data/api";
 import {
   VacancyKPI,
@@ -71,6 +74,9 @@ import {
   Phone,
   Link2,
   MapPin,
+  Calendar,
+  Award,
+  Mail,
 } from "lucide-react";
 
 export interface ClusterDemandBreakdown {
@@ -150,6 +156,16 @@ function VacancyContent() {
 
   // Fast-track notification
   const [fastTrackSuccess, setFastTrackSuccess] = useState<string | null>(null);
+
+  // Dedicated Talent Pool states
+  const [poolTargetReqCode, setPoolTargetReqCode] = useState<string>("ALL");
+  const [poolReadinessFilter, setPoolReadinessFilter] = useState<string>("ALL");
+  const [poolGymExpFilter, setPoolGymExpFilter] = useState<string>("ALL");
+  const [poolAvailabilityFilter, setPoolAvailabilityFilter] = useState<string>("ALL");
+  const [poolSortBy, setPoolSortBy] = useState<"MATCH_DESC" | "TTF_ASC" | "DATE_DESC" | "NAME_ASC">("MATCH_DESC");
+  const [selectedPoolCandidateDetail, setSelectedPoolCandidateDetail] = useState<TalentPoolCandidate | null>(null);
+  const [poolAssignModalCandidate, setPoolAssignModalCandidate] = useState<TalentPoolCandidate | null>(null);
+  const [poolAssignSuccess, setPoolAssignSuccess] = useState<{ candidateName: string; reqCode: string; roleName: string; location: string } | null>(null);
 
   // Stage Switcher State (1. Intake Assessment vs 2. Active Monitoring)
   const initialStage = (searchParams.get("stage") as "intake" | "active") || "active";
@@ -1446,14 +1462,116 @@ function VacancyContent() {
     });
   }, [filteredRequisitions, cityFilter, provinceFilter, clusterFilter, selectedLocation]);
 
-  // Dynamic Talent Pool filtered by active Location and Role
+  // Target requisition for Talent Pool matching (either from dedicated dropdown or allocation mode)
+  const effectivePoolTargetReq = useMemo(() => {
+    if (allocatingReq) return allocatingReq;
+    if (poolTargetReqCode && poolTargetReqCode !== "ALL") {
+      return requisitions.find((r) => r.req_code === poolTargetReqCode) || null;
+    }
+    return null;
+  }, [allocatingReq, poolTargetReqCode, requisitions]);
+
+  // Dynamic Talent Pool filtered by active Location, Role, Dedicated Filters, and sorted by Match Rate / TTF / Date
   const filteredTalentPool = useMemo(() => {
-    return talentPool.filter((c) => {
-      const locMatch = matchLocationHierarchy(c.location_preference, clusterFilter, provinceFilter, cityFilter);
-      const roleMatch = matchRoleHierarchy(c.role_target, jobFamilyFilter, roleFilter);
-      return locMatch && roleMatch;
+    const list = talentPool
+      .filter((c) => {
+        // If no explicit target requisition is selected, filter by global location & role hierarchy
+        if (!effectivePoolTargetReq) {
+          const locMatch = matchLocationHierarchy(c.location_preference, clusterFilter, provinceFilter, cityFilter);
+          const roleMatch = matchRoleHierarchy(c.role_target, jobFamilyFilter, roleFilter);
+          if (!locMatch || !roleMatch) return false;
+        }
+
+        // Dedicated Readiness Filter
+        if (poolReadinessFilter !== "ALL" && c.readiness_status !== poolReadinessFilter) {
+          return false;
+        }
+
+        // Dedicated Gym Experience Filter
+        if (poolGymExpFilter !== "ALL") {
+          const isGymExp = c.gym_experience_level === "Gym Experienced";
+          if (poolGymExpFilter === "Gym Experienced" && !isGymExp) return false;
+          if (poolGymExpFilter === "Non-Gym Frontline" && isGymExp) return false;
+        }
+
+        // Dedicated Availability Filter
+        if (poolAvailabilityFilter !== "ALL") {
+          const isImm = (c.availability_status || "").toLowerCase().includes("immediate");
+          if (poolAvailabilityFilter === "Immediate" && !isImm) return false;
+          if (poolAvailabilityFilter === "Notice Period" && isImm) return false;
+        }
+
+        return true;
+      })
+      .map((c) => {
+        const breakdown = calculateTalentPoolFitScore(c, effectivePoolTargetReq);
+        return {
+          ...c,
+          computedFitScore: breakdown.total,
+          fitBreakdown: breakdown,
+        };
+      });
+
+    // Multi-criteria Sorter
+    return list.sort((a, b) => {
+      if (poolSortBy === "MATCH_DESC") {
+        return (b.computedFitScore ?? b.fit_score) - (a.computedFitScore ?? a.fit_score);
+      }
+      if (poolSortBy === "TTF_ASC") {
+        return (a.est_ttf_days ?? 99) - (b.est_ttf_days ?? 99);
+      }
+      if (poolSortBy === "DATE_DESC") {
+        const dateA = new Date(a.application_date || a.last_activity_date || 0).getTime();
+        const dateB = new Date(b.application_date || b.last_activity_date || 0).getTime();
+        return dateB - dateA;
+      }
+      if (poolSortBy === "NAME_ASC") {
+        return a.display_name.localeCompare(b.display_name);
+      }
+      return 0;
     });
-  }, [talentPool, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter]);
+  }, [
+    talentPool,
+    clusterFilter,
+    provinceFilter,
+    cityFilter,
+    jobFamilyFilter,
+    roleFilter,
+    effectivePoolTargetReq,
+    poolReadinessFilter,
+    poolGymExpFilter,
+    poolAvailabilityFilter,
+    poolSortBy,
+  ]);
+
+  // Dynamic Talent Pool Header Metrics
+  const poolHeaderMetrics = useMemo(() => {
+    if (filteredTalentPool.length === 0) {
+      return {
+        avgTtf: 12,
+        readyCount: 0,
+        readyPct: 0,
+        avgFitScore: 85,
+        totalCandidates: 0,
+      };
+    }
+    const totalTtf = filteredTalentPool.reduce((sum, c) => sum + (c.est_ttf_days || 10), 0);
+    const avgTtf = Math.round((totalTtf / filteredTalentPool.length) * 10) / 10;
+
+    const readyCount = filteredTalentPool.filter((c) => c.readiness_status === "Interview Ready").length;
+    const readyPct = Math.round((readyCount / filteredTalentPool.length) * 100);
+
+    const totalFit = filteredTalentPool.reduce((sum, c) => sum + (c.computedFitScore || c.fit_score || 85), 0);
+    const avgFitScore = Math.round((totalFit / filteredTalentPool.length) * 10) / 10;
+
+    return {
+      avgTtf,
+      readyCount,
+      readyPct,
+      avgFitScore,
+      totalCandidates: filteredTalentPool.length,
+    };
+  }, [filteredTalentPool]);
 
   // Dynamic Location Beyond-SLA Friction Heat computed from active requisitions
   const dynamicLocationSlaFriction = useMemo(() => {
@@ -1512,6 +1630,76 @@ function VacancyContent() {
       return q;
     });
   }, [hiringOutcomes, filteredRequisitions, metrics.medianTTF, metrics.beyondSlaRate]);
+
+  // Handle Talent Pool candidate allocation directly to target requisition
+  const handleAssignCandidate = async (candidate: TalentPoolCandidate, overrideReq?: RequisitionItem | null) => {
+    const reqToAssign = overrideReq || effectivePoolTargetReq;
+    if (!reqToAssign) {
+      // If no target requisition is pre-selected, prompt user to select target requisition
+      setPoolAssignModalCandidate(candidate);
+      return;
+    }
+
+    try {
+      const res = await assignTalentPoolToRequisition(reqToAssign.req_code, candidate, "HR Screening");
+      if (res.success) {
+        // Update local requisitions state for instant responsive UI
+        setRequisitions((prev) =>
+          prev.map((r) => {
+            if (r.req_code === reqToAssign.req_code) {
+              const assigned = r.assigned_candidates || [];
+              const newItem: RequisitionCandidateItem = {
+                id: candidate.candidate_id,
+                name: candidate.display_name,
+                source_type: "TALENT_POOL",
+                stage: "HR Screening",
+                contact: candidate.phone || candidate.email || "+62 812-xxxx",
+                applied_at: candidate.application_date || new Date().toISOString().split("T")[0],
+                fit_score: candidate.fit_score,
+                notes: candidate.profile_summary || candidate.notes || "Assigned from Frontline Talent Pool",
+                sourcing_metadata: {
+                  channel: "TALENT_POOL",
+                  portal_name: candidate.source_channel || "Talent Pool",
+                  profile_url: candidate.email ? `mailto:${candidate.email}` : undefined,
+                },
+              };
+              return {
+                ...r,
+                assigned_candidates: [...assigned, newItem],
+                pipeline_size: (r.pipeline_size || 0) + 1,
+                requisition_status:
+                  r.requisition_status === "PENDING_SOURCING" ? "ACTIVE_MONITORING" : r.requisition_status,
+                current_stage: "HR Screening",
+              };
+            }
+            return r;
+          })
+        );
+
+        setPoolAssignSuccess({
+          candidateName: candidate.display_name,
+          reqCode: reqToAssign.req_code,
+          roleName: reqToAssign.role_name,
+          location: reqToAssign.location_name,
+        });
+
+        // Close any open modal
+        setPoolAssignModalCandidate(null);
+        setSelectedPoolCandidateDetail(null);
+        if (allocatingReq) {
+          setAllocatingReq(null);
+        }
+
+        setTimeout(() => {
+          setPoolAssignSuccess(null);
+        }, 6000);
+      } else {
+        alert(`Failed to assign: ${res.error}`);
+      }
+    } catch (err: any) {
+      alert(`Error assigning candidate: ${err?.message}`);
+    }
+  };
 
   // Handle Talent Pool fast track simulation
   const handleFastTrack = (candidateName: string) => {
@@ -3151,6 +3339,53 @@ function VacancyContent() {
       {/* 7. TAB CONTENT: Frontline Ready Pool */}
       {activeTab === "talent-pool" && (
         <div className="space-y-6">
+          {/* Allocation Success Floating Toast Banner */}
+          {poolAssignSuccess && (
+            <div className="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/20 text-emerald-400 shrink-0">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-ink-primary">
+                      Candidate Allocated Successfully!
+                    </span>
+                    <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      {poolAssignSuccess.reqCode}
+                    </span>
+                  </div>
+                  <p className="text-xs text-ink-secondary mt-0.5">
+                    <strong>{poolAssignSuccess.candidateName}</strong> has been assigned to <strong>{poolAssignSuccess.roleName}</strong> in {poolAssignSuccess.location} and moved into <strong>HR Screening</strong> pipeline.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const req = requisitions.find((r) => r.req_code === poolAssignSuccess.reqCode);
+                    if (req) {
+                      setDetailModalReq(req);
+                      setActiveTab("overview");
+                      setStage("active");
+                    }
+                  }}
+                  className="px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-surface-ground text-xs font-bold transition-all cursor-pointer shadow-sm"
+                >
+                  View in Active Monitoring &rarr;
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPoolAssignSuccess(null)}
+                  className="p-1.5 rounded-lg hover:bg-surface-elevated text-ink-tertiary hover:text-ink-primary transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Allocation Mode Banner if navigated from Stage 1 Intake Triage */}
           {allocatingReq && (
             <div className="p-4 rounded-xl bg-emerald-500/15 border border-emerald-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-fadeIn">
@@ -3164,11 +3399,11 @@ function VacancyContent() {
                       {allocatingReq.req_code}
                     </span>
                     <span className="text-xs font-bold text-ink-primary">
-                      Requisition Allocation Mode
+                      Requisition Allocation Mode Active
                     </span>
                   </div>
                   <p className="text-xs text-ink-secondary mt-0.5">
-                    Select any pre-screened candidate below to allocate directly to <strong>{allocatingReq.role_name}</strong> in {allocatingReq.location_name} ({allocatingReq.club_name || "Central"}).
+                    Targeting <strong>{allocatingReq.role_name}</strong> in {allocatingReq.location_name} ({allocatingReq.club_name || "Central"}). Match scores below are recalculated dynamically for this position.
                   </p>
                 </div>
               </div>
@@ -3188,149 +3423,375 @@ function VacancyContent() {
           )}
 
           <div className="p-6 rounded-xl bg-surface-card border border-surface-border">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+            {/* Audited Header */}
+            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-6">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-status-attention/20 text-status-attention uppercase">
-                    Recommendation 3 Enabler
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="px-2.5 py-1 rounded text-[11px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 uppercase flex items-center gap-1.5">
+                    <Zap className="w-3 h-3" />
+                    <span>Recommendation 3 Enabler</span>
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-surface-ground text-ink-tertiary border border-surface-border">
+                    {poolHeaderMetrics.totalCandidates} Candidates Evaluated
                   </span>
                   <DataProvenanceBadge
                     provenance="SYNTHETIC_ENABLER"
                     domain="Talent Pool"
                     metricOrEntity="Ready Frontline Roster"
-                    originalSource="010_internal_mobility_engine.sql"
-                    governanceRule="Illustrative verified candidates for agile backfilling"
-                    impactOnDecision="Cuts TTF from 34 days to under 14 days"
+                    originalSource="synthetic_talent_pool (PostgreSQL / Supabase)"
+                    governanceRule="Dynamic 5-component deterministic match rate against requisition specifications"
+                    impactOnDecision="Cuts TTF from 34.0 days to under 12 days across 5 core clusters"
                   />
                 </div>
-                <h2 className="text-base font-bold text-ink-primary font-display flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-status-attention" />
-                  <span>Proactive Frontline Talent Pool</span>
+                <h2 className="text-xl font-bold text-ink-primary font-display flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-amber-400" />
+                  <span>Proactive Frontline Talent Pool & Backfill Roster</span>
                 </h2>
-                <p className="text-xs text-ink-secondary mt-0.5">
-                  Pre-qualified candidates and previous high-score finalists ready for immediate deployment when vacancies occur.
+                <p className="text-xs text-ink-secondary mt-1 max-w-2xl">
+                  Pre-screened candidates from prior expansion waves, verified alumni networks, and direct pool submissions. Evaluated on a deterministic formula (Location 30%, Gym Exp 25%, Certification 25%, Availability 15%, Source 5%) for instant vacancy backfilling.
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <div className="text-right">
-                  <span className="text-xs text-ink-tertiary block">Average Time to Deploy:</span>
-                  <span className="text-sm font-bold text-status-healthy font-mono">&lt; 12 Days (vs 34d standard)</span>
+              {/* Dynamic Header Metrics */}
+              <div className="grid grid-cols-3 gap-3 shrink-0">
+                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border text-right min-w-[125px]">
+                  <span className="text-[10px] uppercase tracking-wider text-ink-tertiary block font-semibold">
+                    Deploy Velocity
+                  </span>
+                  <div className="flex items-baseline justify-end gap-1 mt-0.5">
+                    <span className="text-lg font-bold text-emerald-400 font-mono">
+                      ~{poolHeaderMetrics.avgTtf}d
+                    </span>
+                    <span className="text-[10px] text-ink-tertiary font-mono">vs 34d</span>
+                  </div>
+                  <span className="text-[10px] text-emerald-400 font-medium block">
+                    -65% TTF Reduction
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border text-right min-w-[125px]">
+                  <span className="text-[10px] uppercase tracking-wider text-ink-tertiary block font-semibold">
+                    Interview Ready
+                  </span>
+                  <div className="flex items-baseline justify-end gap-1 mt-0.5">
+                    <span className="text-lg font-bold text-brand-teal font-mono">
+                      {poolHeaderMetrics.readyCount}/{poolHeaderMetrics.totalCandidates}
+                    </span>
+                    <span className="text-[10px] text-ink-tertiary">({poolHeaderMetrics.readyPct}%)</span>
+                  </div>
+                  <span className="text-[10px] text-ink-secondary block">
+                    Immediate Outreach
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border text-right min-w-[125px]">
+                  <span className="text-[10px] uppercase tracking-wider text-ink-tertiary block font-semibold">
+                    Avg Match Score
+                  </span>
+                  <div className="flex items-baseline justify-end gap-1 mt-0.5">
+                    <span className="text-lg font-bold text-indigo-400 font-mono">
+                      {poolHeaderMetrics.avgFitScore}%
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-indigo-300 block truncate max-w-[120px]">
+                    {effectivePoolTargetReq ? effectivePoolTargetReq.req_code : "General Pool Fit"}
+                  </span>
                 </div>
               </div>
             </div>
 
-            {/* Talent Pool Candidates Grid / Table */}
+            {/* Dedicated Talent Pool Filter & Sorter Toolbar */}
+            <div className="p-3.5 mb-5 rounded-xl bg-surface-ground/90 border border-surface-border flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2.5">
+                {/* Target Requisition Selector */}
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-semibold text-ink-secondary flex items-center gap-1 shrink-0">
+                    <Target className="w-3.5 h-3.5 text-brand-teal" />
+                    <span>Target Requisition:</span>
+                  </label>
+                  <select
+                    value={effectivePoolTargetReq ? effectivePoolTargetReq.req_code : poolTargetReqCode}
+                    onChange={(e) => setPoolTargetReqCode(e.target.value)}
+                    className="px-2.5 py-1.5 rounded-lg bg-surface-card border border-surface-border text-xs font-medium text-ink-primary focus:outline-none focus:border-brand-teal max-w-[280px]"
+                  >
+                    <option value="ALL">All Requisitions (General Pool View)</option>
+                    {requisitions
+                      .filter((r) => r.requisition_status !== "FULFILLED")
+                      .map((r) => (
+                        <option key={r.req_code} value={r.req_code}>
+                          {r.req_code} &bull; {r.role_name} &bull; {r.location_name} ({r.requisition_status === "PENDING_SOURCING" ? "Intake" : "Active"})
+                        </option>
+                      ))}
+                  </select>
+                </div>
+
+                {/* Readiness Filter */}
+                <select
+                  value={poolReadinessFilter}
+                  onChange={(e) => setPoolReadinessFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg bg-surface-card border border-surface-border text-xs font-medium text-ink-secondary focus:outline-none focus:border-brand-teal"
+                >
+                  <option value="ALL">All Readiness Status</option>
+                  <option value="Interview Ready">⚡ Interview Ready Only</option>
+                  <option value="Pre-qualified">Pre-qualified</option>
+                  <option value="Previous Finalist">Previous Finalist</option>
+                </select>
+
+                {/* Gym Experience Filter */}
+                <select
+                  value={poolGymExpFilter}
+                  onChange={(e) => setPoolGymExpFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg bg-surface-card border border-surface-border text-xs font-medium text-ink-secondary focus:outline-none focus:border-brand-teal"
+                >
+                  <option value="ALL">All Experience Backgrounds</option>
+                  <option value="Gym Experienced">🏋️ Gym Experienced</option>
+                  <option value="Non-Gym Frontline">🏢 Non-Gym / Service Background</option>
+                </select>
+
+                {/* Availability Filter */}
+                <select
+                  value={poolAvailabilityFilter}
+                  onChange={(e) => setPoolAvailabilityFilter(e.target.value)}
+                  className="px-2.5 py-1.5 rounded-lg bg-surface-card border border-surface-border text-xs font-medium text-ink-secondary focus:outline-none focus:border-brand-teal"
+                >
+                  <option value="ALL">All Availability</option>
+                  <option value="Immediate">⚡ Immediate (&lt; 7 Days)</option>
+                  <option value="Notice Period">Notice Period (14-30 Days)</option>
+                </select>
+              </div>
+
+              {/* Sorter Selector */}
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-semibold text-ink-secondary flex items-center gap-1 shrink-0">
+                  <Filter className="w-3.5 h-3.5 text-ink-tertiary" />
+                  <span>Sort By:</span>
+                </label>
+                <select
+                  value={poolSortBy}
+                  onChange={(e) => setPoolSortBy(e.target.value as any)}
+                  className="px-2.5 py-1.5 rounded-lg bg-surface-card border border-surface-border text-xs font-bold text-ink-primary focus:outline-none focus:border-brand-teal"
+                >
+                  <option value="MATCH_DESC">🎯 Match Rate: Highest to Lowest</option>
+                  <option value="TTF_ASC">⚡ Deploy Velocity: Fastest TTF</option>
+                  <option value="DATE_DESC">📅 Joined Pool: Newest First</option>
+                  <option value="NAME_ASC">🔤 Candidate Name (A-Z)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Talent Pool Candidates Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 my-4">
               {filteredTalentPool.length === 0 ? (
                 <div className="col-span-full p-8 text-center text-ink-tertiary bg-surface-ground rounded-xl border border-surface-border">
-                  No pre-screened talent pool candidates match the selected location ({locationDisplay}) and role ({roleDisplay}) filters.
+                  No talent pool candidates match the selected filters. Try broadening your criteria.
                 </div>
               ) : (
-                filteredTalentPool.map((c) => (
-                <div
-                  key={c.candidate_id}
-                  className="p-4 rounded-xl bg-surface-ground border border-surface-border hover:border-brand-teal/40 transition-all shadow-subtle flex flex-col justify-between"
-                >
-                  <div>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="font-mono text-[10px] text-ink-tertiary">
-                        {c.candidate_id}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                        c.readiness_status === "Interview Ready"
-                          ? "bg-status-healthy/10 text-status-healthy border border-status-healthy/30"
-                          : c.readiness_status === "Pre-qualified"
-                          ? "bg-brand-teal/10 text-brand-teal border border-brand-teal/30"
-                          : "bg-status-attention/10 text-status-attention border border-status-attention/30"
-                      }`}>
-                        {c.readiness_status}
-                      </span>
-                    </div>
+                filteredTalentPool.map((c: any) => {
+                  const isTopMatch =
+                    effectivePoolTargetReq &&
+                    c.fitBreakdown?.roleMatch &&
+                    c.fitBreakdown?.locationScore >= 20;
 
-                    <h3 className="text-sm font-bold text-ink-primary">
-                      {c.display_name}
-                    </h3>
-                    <div className="text-xs text-brand-teal font-semibold mt-0.5">
-                      {c.role_target} &bull; {c.location_preference}
-                    </div>
-
-                    <div className="mt-3 p-2 rounded-lg bg-surface-card border border-surface-border space-y-1 text-[11px]">
-                      <div className="flex justify-between">
-                        <span className="text-ink-tertiary">Fit Score:</span>
-                        <span className="font-bold text-status-healthy">{c.fit_score}%</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-ink-tertiary">Source:</span>
-                        <span className="font-medium text-ink-primary">{c.source_channel}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-ink-tertiary">Est. Fill Time:</span>
-                        <span className="font-bold text-brand-teal">{c.est_ttf_days} days</span>
-                      </div>
-                    </div>
-
-                    {/* Competency Tags */}
-                    <div className="mt-3">
-                      <span className="text-[10px] font-semibold text-ink-tertiary block mb-1">
-                        Verified Core Competencies:
-                      </span>
-                      <div className="flex flex-wrap gap-1">
-                        {c.verified_competencies.map((skill) => (
+                  return (
+                    <div
+                      key={c.candidate_id}
+                      className={`p-4 rounded-xl bg-surface-ground border transition-all shadow-subtle flex flex-col justify-between ${
+                        isTopMatch
+                          ? "border-emerald-500/50 bg-emerald-500/[0.04] ring-1 ring-emerald-500/20"
+                          : "border-surface-border hover:border-brand-teal/40"
+                      }`}
+                    >
+                      <div>
+                        {/* Top row: ID, Application Date & Readiness */}
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[10px] text-ink-tertiary">
+                              {c.candidate_id}
+                            </span>
+                            {c.application_date && (
+                              <span className="text-[10px] text-ink-tertiary bg-surface-card px-1.5 py-0.5 rounded border border-surface-border">
+                                {c.application_date}
+                              </span>
+                            )}
+                          </div>
                           <span
-                            key={skill}
-                            className="px-1.5 py-0.5 rounded text-[10px] bg-surface-card border border-surface-border text-ink-secondary"
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              c.readiness_status === "Interview Ready"
+                                ? "bg-status-healthy/10 text-status-healthy border border-status-healthy/30"
+                                : c.readiness_status === "Pre-qualified"
+                                ? "bg-brand-teal/10 text-brand-teal border border-brand-teal/30"
+                                : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                            }`}
                           >
-                            {skill}
+                            {c.readiness_status}
                           </span>
-                        ))}
+                        </div>
+
+                        {/* Name & Target Role */}
+                        <div className="flex items-start justify-between gap-1">
+                          <h3 className="text-sm font-bold text-ink-primary">
+                            {c.display_name}
+                          </h3>
+                          {c.willing_to_relocate && (
+                            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-400 border border-blue-500/30 whitespace-nowrap shrink-0">
+                              Relocation OK
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-xs text-brand-teal font-semibold mt-0.5 flex items-center gap-1.5">
+                          <span>{c.role_target}</span>
+                          <span>&bull;</span>
+                          <span className="text-ink-secondary">{c.location_preference}</span>
+                        </div>
+
+                        {/* Tabsheet / Quick Profile Pills */}
+                        <div className="mt-2.5 flex flex-wrap gap-1 text-[10px]">
+                          <span
+                            className={`px-2 py-0.5 rounded font-medium ${
+                              c.gym_experience_level === "Gym Experienced"
+                                ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                                : "bg-surface-card text-ink-secondary border border-surface-border"
+                            }`}
+                          >
+                            {c.gym_experience_level || "Experienced"} ({c.experience_years ?? 1}y)
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-surface-card text-ink-secondary border border-surface-border font-medium">
+                            {c.availability_status || "Immediate"}
+                          </span>
+                          <span className="px-2 py-0.5 rounded bg-surface-card text-ink-tertiary border border-surface-border">
+                            {c.education_level || "Diploma"}
+                          </span>
+                        </div>
+
+                        {/* Match Score & TTF Metric Box */}
+                        <div className="mt-3 p-2.5 rounded-lg bg-surface-card border border-surface-border space-y-1.5 text-[11px]">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1">
+                              <span className="text-ink-tertiary">Match Rate:</span>
+                              {effectivePoolTargetReq && (
+                                <span className="text-[9px] font-mono text-ink-tertiary">
+                                  ({effectivePoolTargetReq.req_code})
+                                </span>
+                              )}
+                            </div>
+                            <span
+                              className={`font-mono font-bold text-sm ${
+                                (c.computedFitScore ?? c.fit_score) >= 90
+                                  ? "text-emerald-400"
+                                  : (c.computedFitScore ?? c.fit_score) >= 80
+                                  ? "text-brand-teal"
+                                  : "text-amber-400"
+                              }`}
+                            >
+                              {c.computedFitScore ?? c.fit_score}%
+                            </span>
+                          </div>
+
+                          {/* Multi-segment breakdown bar */}
+                          <div
+                            className="w-full bg-surface-ground h-1.5 rounded-full overflow-hidden flex"
+                            title={`Score Breakdown: Location ${c.fitBreakdown?.locationScore ?? 25}/30, Experience ${c.fitBreakdown?.experienceScore ?? 20}/25, Certs ${c.fitBreakdown?.certificationScore ?? 20}/25, Availability ${c.fitBreakdown?.availabilityScore ?? 15}/15`}
+                          >
+                            <div
+                              className="bg-emerald-400 h-full"
+                              style={{
+                                width: `${Math.round(((c.fitBreakdown?.locationScore ?? 25) / 30) * 30)}%`,
+                              }}
+                            />
+                            <div
+                              className="bg-brand-teal h-full"
+                              style={{
+                                width: `${Math.round(((c.fitBreakdown?.experienceScore ?? 20) / 25) * 25)}%`,
+                              }}
+                            />
+                            <div
+                              className="bg-blue-400 h-full"
+                              style={{
+                                width: `${Math.round(((c.fitBreakdown?.certificationScore ?? 20) / 25) * 25)}%`,
+                              }}
+                            />
+                            <div
+                              className="bg-amber-400 h-full"
+                              style={{
+                                width: `${Math.round(((c.fitBreakdown?.availabilityScore ?? 15) / 15) * 15)}%`,
+                              }}
+                            />
+                          </div>
+
+                          <div className="flex justify-between pt-0.5">
+                            <span className="text-ink-tertiary">Channel Source:</span>
+                            <span className="font-medium text-ink-primary">{c.source_channel}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-ink-tertiary">Est. Fill Velocity:</span>
+                            <span className="font-bold text-brand-teal font-mono">{c.est_ttf_days} days</span>
+                          </div>
+                        </div>
+
+                        {/* Verified Certifications */}
+                        <div className="mt-3">
+                          <span className="text-[10px] font-semibold text-ink-tertiary block mb-1">
+                            Verified Certifications & Skills:
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {(c.certifications && c.certifications.length > 0
+                              ? c.certifications
+                              : c.verified_competencies
+                            ).map((skill: string) => (
+                              <span
+                                key={skill}
+                                className="px-1.5 py-0.5 rounded text-[10px] bg-surface-card border border-surface-border text-ink-secondary"
+                              >
+                                {skill}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Profile Summary (Form Submission Objective Note) */}
+                        <p className="text-[11px] text-ink-secondary mt-2.5 line-clamp-2">
+                          {c.profile_summary || c.notes}
+                        </p>
+                      </div>
+
+                      {/* Card Action Buttons */}
+                      <div className="mt-4 pt-3 border-t border-surface-border space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPoolCandidateDetail(c)}
+                          className="w-full py-1.5 px-3 rounded-lg bg-surface-card hover:bg-surface-elevated border border-surface-border text-xs font-semibold text-ink-secondary hover:text-ink-primary transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                          <span>View Profile & Evidence</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAssignCandidate(c)}
+                          className="w-full py-2 px-3 rounded-lg bg-emerald-500 text-surface-ground text-xs font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer hover:scale-[1.01] active:scale-[0.99]"
+                        >
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>
+                            {effectivePoolTargetReq
+                              ? `Assign to ${effectivePoolTargetReq.req_code}`
+                              : "Assign & Proceed to Assessment"}
+                          </span>
+                        </button>
                       </div>
                     </div>
-
-                    <p className="text-[11px] text-ink-secondary mt-3 italic line-clamp-2">
-                      &ldquo;{c.notes}&rdquo;
-                    </p>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-surface-border">
-                    {allocatingReq ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIntakeSelectedCandidate(c);
-                          setSelectedIntakeReq(allocatingReq);
-                          setAllocatingReq(null);
-                          setActiveTab("overview");
-                          setStage("intake");
-                        }}
-                        className="w-full py-1.5 px-3 rounded-lg bg-emerald-500 text-surface-ground text-xs font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-1.5 shadow-sm cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Allocate to {allocatingReq.req_code}</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleFastTrack(c.display_name)}
-                        className="w-full py-1.5 px-3 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                      >
-                        <Zap className="w-3.5 h-3.5" />
-                        <span>Fast-Track to Interview</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )))}
+                  );
+                })
+              )}
             </div>
 
             {/* Talent Pool Business Value Box */}
-            <div className="p-4 rounded-xl bg-gradient-to-r from-status-attention/10 to-transparent border border-status-attention/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="p-4 rounded-xl bg-gradient-to-r from-amber-500/10 to-transparent border border-amber-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
                 <h4 className="text-xs font-bold text-ink-primary">
-                  Operational Impact of Frontline Talent Pools
+                  Operational Impact of Proactive Frontline Talent Pools
                 </h4>
                 <p className="text-[11px] text-ink-secondary mt-0.5">
-                  Maintaining a pre-screened pool of ex-finalists and referrals reduces median TTF from 34.0 days to 9.5 days in Bali, protecting club revenue continuity.
+                  Maintaining a verified roster across core roles reduces median TTF from 34.0 days down to 8-12 days, preventing club service disruption and protecting operational revenue.
                 </p>
               </div>
               <Link
@@ -5292,6 +5753,349 @@ function VacancyContent() {
                     <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 9. MODAL: Talent Pool Candidate Profile & Evidence Detail */}
+      {selectedPoolCandidateDetail && (() => {
+        const breakdown = calculateTalentPoolFitScore(selectedPoolCandidateDetail, effectivePoolTargetReq);
+        const cand = selectedPoolCandidateDetail;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+            <div className="bg-surface-card border border-surface-border rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-elevated flex flex-col">
+              {/* Modal Header */}
+              <div className="p-5 border-b border-surface-border flex items-start justify-between bg-surface-ground/50">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-brand-teal/20 border border-brand-teal/30 flex items-center justify-center text-brand-teal font-bold shrink-0">
+                    <UserCheck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-xs text-ink-tertiary">
+                        {cand.candidate_id}
+                      </span>
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                          cand.readiness_status === "Interview Ready"
+                            ? "bg-status-healthy/10 text-status-healthy border border-status-healthy/30"
+                            : cand.readiness_status === "Pre-qualified"
+                            ? "bg-brand-teal/10 text-brand-teal border border-brand-teal/30"
+                            : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
+                        }`}
+                      >
+                        {cand.readiness_status}
+                      </span>
+                    </div>
+                    <h3 className="text-lg font-bold text-ink-primary mt-0.5">
+                      {cand.display_name}
+                    </h3>
+                    <div className="text-xs text-brand-teal font-semibold mt-0.5 flex items-center gap-1.5">
+                      <span>{cand.role_target}</span>
+                      <span>&bull;</span>
+                      <span className="text-ink-secondary">{cand.location_preference}</span>
+                      {cand.application_date && (
+                        <>
+                          <span>&bull;</span>
+                          <span className="text-ink-tertiary">Applied {cand.application_date}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPoolCandidateDetail(null)}
+                  className="p-1.5 rounded-lg hover:bg-surface-elevated text-ink-tertiary hover:text-ink-primary transition-colors cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 space-y-5 text-xs">
+                {/* Contact & Availability Bar */}
+                <div className="p-3.5 rounded-xl bg-surface-ground border border-surface-border flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-4">
+                    {cand.phone && (
+                      <div className="flex items-center gap-1.5 text-ink-primary font-medium">
+                        <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>{cand.phone}</span>
+                      </div>
+                    )}
+                    {cand.email && (
+                      <div className="flex items-center gap-1.5 text-ink-primary font-medium">
+                        <Mail className="w-3.5 h-3.5 text-brand-teal" />
+                        <span>{cand.email}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-ink-tertiary font-semibold uppercase">Availability:</span>
+                    <span className="px-2 py-0.5 rounded font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                      {cand.availability_status || "Immediate"}
+                    </span>
+                    {cand.willing_to_relocate && (
+                      <span className="px-2 py-0.5 rounded font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                        Willing to Relocate
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Hiring Tabsheet / Excel Summary */}
+                <div>
+                  <h4 className="text-xs font-bold text-ink-primary uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-brand-teal" />
+                    <span>Hiring Profile &amp; Form Submission Overview</span>
+                  </h4>
+                  <div className="border border-surface-border rounded-xl overflow-hidden bg-surface-ground">
+                    <table className="w-full text-left">
+                      <tbody className="divide-y divide-surface-border">
+                        <tr>
+                          <td className="py-2.5 px-3.5 text-ink-tertiary font-medium bg-surface-card/60 w-1/3">
+                            Gym &amp; Frontline Experience
+                          </td>
+                          <td className="py-2.5 px-3.5 text-ink-primary font-semibold">
+                            {cand.gym_experience_level || "Experienced"} ({cand.experience_years ?? 1.5} years in field)
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-2.5 px-3.5 text-ink-tertiary font-medium bg-surface-card/60">
+                            Formal Education
+                          </td>
+                          <td className="py-2.5 px-3.5 text-ink-primary">
+                            {cand.education_level || "Bachelor Degree / Diploma"}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-2.5 px-3.5 text-ink-tertiary font-medium bg-surface-card/60">
+                            Source Channel &amp; Intake
+                          </td>
+                          <td className="py-2.5 px-3.5 text-ink-primary">
+                            {cand.source_channel} &bull; Form submission date: {cand.application_date || cand.last_activity_date}
+                          </td>
+                        </tr>
+                        <tr>
+                          <td className="py-2.5 px-3.5 text-ink-tertiary font-medium bg-surface-card/60">
+                            Objective Background Summary
+                          </td>
+                          <td className="py-2.5 px-3.5 text-ink-secondary leading-relaxed">
+                            {cand.profile_summary || cand.notes}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* Verified Competencies & Certifications */}
+                <div>
+                  <h4 className="text-xs font-bold text-ink-primary uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Award className="w-3.5 h-3.5 text-amber-400" />
+                    <span>Verified Certifications &amp; Assessed Competencies</span>
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {(cand.certifications && cand.certifications.length > 0
+                      ? cand.certifications
+                      : cand.verified_competencies
+                    ).map((cert) => (
+                      <span
+                        key={cert}
+                        className="px-2.5 py-1 rounded-lg bg-surface-ground border border-surface-border text-xs font-medium text-ink-primary flex items-center gap-1.5"
+                      >
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>{cert}</span>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Match Rate Deterministic Formula Breakdown */}
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-xs font-bold text-ink-primary uppercase tracking-wider flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>5-Dimension Match Rate Calculation</span>
+                    </h4>
+                    <span className="text-xs font-mono font-bold text-emerald-400">
+                      Total Score: {breakdown.total}%
+                    </span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-surface-ground border border-surface-border space-y-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                      <div className="p-2 rounded-lg bg-surface-card border border-surface-border">
+                        <span className="text-[10px] text-ink-tertiary block">Location (30)</span>
+                        <span className="font-mono font-bold text-sm text-emerald-400">
+                          {breakdown.locationScore}/{breakdown.locationMax}
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-surface-card border border-surface-border">
+                        <span className="text-[10px] text-ink-tertiary block">Gym Exp (25)</span>
+                        <span className="font-mono font-bold text-sm text-brand-teal">
+                          {breakdown.experienceScore}/{breakdown.experienceMax}
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-surface-card border border-surface-border">
+                        <span className="text-[10px] text-ink-tertiary block">Certs (25)</span>
+                        <span className="font-mono font-bold text-sm text-blue-400">
+                          {breakdown.certificationScore}/{breakdown.certificationMax}
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-surface-card border border-surface-border">
+                        <span className="text-[10px] text-ink-tertiary block">Availability (15)</span>
+                        <span className="font-mono font-bold text-sm text-amber-400">
+                          {breakdown.availabilityScore}/{breakdown.availabilityMax}
+                        </span>
+                      </div>
+                      <div className="p-2 rounded-lg bg-surface-card border border-surface-border col-span-2 sm:col-span-1">
+                        <span className="text-[10px] text-ink-tertiary block">Source (5)</span>
+                        <span className="font-mono font-bold text-sm text-purple-400">
+                          {breakdown.sourceBonusScore}/{breakdown.sourceBonusMax}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-surface-card border border-surface-border text-[11px] text-ink-secondary flex items-start gap-2">
+                      <Info className="w-3.5 h-3.5 text-brand-teal shrink-0 mt-0.5" />
+                      <span>
+                        {effectivePoolTargetReq ? (
+                          <>
+                            Evaluated against <strong>{effectivePoolTargetReq.req_code}</strong> ({effectivePoolTargetReq.role_name} in {effectivePoolTargetReq.location_name}): {breakdown.notes}
+                          </>
+                        ) : (
+                          <>
+                            Standard benchmark evaluation across {cand.location_preference} cluster. Selecting a specific Target Requisition recalculates these dimensions against that job specification.
+                          </>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t border-surface-border bg-surface-ground/70 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPoolCandidateDetail(null)}
+                  className="px-4 py-2 rounded-xl bg-surface-card hover:bg-surface-elevated border border-surface-border text-xs font-semibold text-ink-secondary hover:text-ink-primary transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleAssignCandidate(cand);
+                  }}
+                  className="px-5 py-2 rounded-xl bg-emerald-500 text-surface-ground text-xs font-bold hover:bg-emerald-600 transition-all shadow-subtle flex items-center gap-1.5 cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+                >
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>
+                    {effectivePoolTargetReq
+                      ? `Assign to ${effectivePoolTargetReq.req_code} (${effectivePoolTargetReq.role_name})`
+                      : "Assign to Requisition / Continue for Assessment"}
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 10. MODAL: Target Requisition Selector (When assigning without pre-selected requisition) */}
+      {poolAssignModalCandidate && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-surface-card border border-surface-border rounded-2xl max-w-lg w-full max-h-[85vh] overflow-y-auto shadow-elevated flex flex-col">
+            <div className="p-5 border-b border-surface-border flex items-start justify-between bg-surface-ground/50">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-brand-teal block">
+                  Select Requisition Destination
+                </span>
+                <h3 className="text-base font-bold text-ink-primary mt-0.5">
+                  Allocate {poolAssignModalCandidate.display_name}
+                </h3>
+                <p className="text-xs text-ink-secondary mt-0.5">
+                  Candidate preference: <strong>{poolAssignModalCandidate.role_target}</strong> in {poolAssignModalCandidate.location_preference}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPoolAssignModalCandidate(null)}
+                className="p-1.5 rounded-lg hover:bg-surface-elevated text-ink-tertiary hover:text-ink-primary transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-3">
+              <span className="text-xs font-semibold text-ink-secondary block">
+                Open Requisitions (Ranked by Role &amp; Location Match):
+              </span>
+              <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+                {requisitions
+                  .filter((r) => r.requisition_status !== "FULFILLED")
+                  .sort((a, b) => {
+                    const aScore = calculateTalentPoolFitScore(poolAssignModalCandidate, a).total;
+                    const bScore = calculateTalentPoolFitScore(poolAssignModalCandidate, b).total;
+                    return bScore - aScore;
+                  })
+                  .map((r) => {
+                    const matchBreakdown = calculateTalentPoolFitScore(poolAssignModalCandidate, r);
+                    return (
+                      <div
+                        key={r.req_code}
+                        className="p-3 rounded-xl bg-surface-ground border border-surface-border hover:border-brand-teal/40 transition-all flex items-center justify-between gap-3"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono text-xs font-bold text-brand-teal">
+                              {r.req_code}
+                            </span>
+                            <span className="text-xs font-bold text-ink-primary">
+                              {r.role_name}
+                            </span>
+                          </div>
+                          <div className="text-xs text-ink-secondary mt-0.5">
+                            {r.location_name} ({r.club_name || "Central"}) &bull; Days open: {r.days_open ?? 0}d
+                          </div>
+                          <div className="mt-1 flex items-center gap-2 text-[10px]">
+                            <span className="text-ink-tertiary">Match Rate:</span>
+                            <span className="font-mono font-bold text-emerald-400">
+                              {matchBreakdown.total}%
+                            </span>
+                            <span className="text-ink-tertiary">&bull;</span>
+                            <span className="text-ink-tertiary">
+                              Status: {r.requisition_status === "PENDING_SOURCING" ? "Intake Triage" : "Active"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAssignCandidate(poolAssignModalCandidate, r)}
+                          className="px-3 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-surface-ground text-xs font-bold transition-all whitespace-nowrap cursor-pointer shadow-sm"
+                        >
+                          Assign Here &rarr;
+                        </button>
+                      </div>
+                    );
+                  })}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-surface-border bg-surface-ground/70 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setPoolAssignModalCandidate(null)}
+                className="px-4 py-2 rounded-xl bg-surface-card hover:bg-surface-elevated border border-surface-border text-xs font-semibold text-ink-secondary hover:text-ink-primary transition-colors cursor-pointer"
+              >
+                Cancel
               </button>
             </div>
           </div>

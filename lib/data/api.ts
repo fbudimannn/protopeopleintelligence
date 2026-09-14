@@ -6,6 +6,7 @@ import {
   InternalMobilityMatch,
   ProvenanceRecord,
   RequisitionItem,
+  RequisitionCandidateItem,
   CreateRequisitionPayload,
   SourcingChannelMetric,
   FunnelStageMetric,
@@ -348,6 +349,237 @@ export async function getTalentPoolCandidates(): Promise<{ data: TalentPoolCandi
     return { data: data as TalentPoolCandidate[], isLive: true };
   } catch {
     return { data: fallbackTalentPool, isLive: false };
+  }
+}
+
+export interface FitScoreBreakdown {
+  total: number;
+  locationScore: number;
+  locationMax: number;
+  experienceScore: number;
+  experienceMax: number;
+  certificationScore: number;
+  certificationMax: number;
+  availabilityScore: number;
+  availabilityMax: number;
+  sourceBonusScore: number;
+  sourceBonusMax: number;
+  roleMatch: boolean;
+  notes: string;
+}
+
+export function calculateTalentPoolFitScore(
+  candidate: TalentPoolCandidate,
+  targetReq?: RequisitionItem | null
+): FitScoreBreakdown {
+  if (!targetReq) {
+    const baseline = candidate.fit_score ?? 85;
+    return {
+      total: baseline,
+      locationScore: 25,
+      locationMax: 30,
+      experienceScore: candidate.gym_experience_level === "Gym Experienced" ? 25 : 18,
+      experienceMax: 25,
+      certificationScore: candidate.certifications && candidate.certifications.length > 0 ? 22 : 15,
+      certificationMax: 25,
+      availabilityScore: candidate.availability_status === "Immediate" ? 15 : 10,
+      availabilityMax: 15,
+      sourceBonusScore: 5,
+      sourceBonusMax: 5,
+      roleMatch: true,
+      notes: "Baseline form qualification score across standard criteria",
+    };
+  }
+
+  // 1. Location Matching (Max 30 pts)
+  let locationScore = 0;
+  const candLoc = (candidate.location_preference || "").trim().toLowerCase();
+  const reqLoc = (targetReq.location_name || (targetReq as any).location || "").trim().toLowerCase();
+
+  if (candLoc && reqLoc && (candLoc === reqLoc || candLoc.includes(reqLoc) || reqLoc.includes(candLoc))) {
+    locationScore = 30; // Exact location match
+  } else if (
+    (candLoc.includes("jakarta") && reqLoc.includes("jakarta")) ||
+    (candLoc.includes("tangerang") && reqLoc.includes("jakarta")) ||
+    (candLoc.includes("jakarta") && reqLoc.includes("tangerang")) ||
+    (candLoc.includes("surabaya") && reqLoc.includes("jawa timur"))
+  ) {
+    locationScore = 20; // Same broader cluster
+  } else if (candidate.willing_to_relocate) {
+    locationScore = 12; // Cross-island willing to relocate
+  } else {
+    locationScore = 0; // Cross-island without relocation
+  }
+
+  // 2. Gym / Frontline Experience (Max 25 pts)
+  let experienceScore = 10;
+  const expLevel = candidate.gym_experience_level || "Gym Experienced";
+  const years = candidate.experience_years ?? 1.5;
+  if (expLevel === "Gym Experienced") {
+    experienceScore = years >= 2 ? 25 : 20;
+  } else if (expLevel === "Non-Gym Frontline") {
+    experienceScore = years >= 2 ? 18 : 14;
+  } else {
+    experienceScore = 10;
+  }
+
+  // 3. Certifications & Background (Max 25 pts)
+  let certScore = 8;
+  const certs = candidate.certifications || candidate.verified_competencies || [];
+  const reqRole = (targetReq.role_name || (targetReq as any).role || "").toLowerCase();
+
+  if (reqRole.includes("personal trainer") || reqRole.includes("fitness coach")) {
+    const hasPtCert = certs.some((c) =>
+      c.toLowerCase().includes("apki") ||
+      c.toLowerCase().includes("rai") ||
+      c.toLowerCase().includes("cscs") ||
+      c.toLowerCase().includes("sports science") ||
+      c.toLowerCase().includes("conditioning")
+    );
+    certScore = hasPtCert ? 25 : certs.length > 0 ? 15 : 5;
+  } else if (reqRole.includes("customer service") || reqRole.includes("operations")) {
+    const hasServiceCert = certs.some((c) =>
+      c.toLowerCase().includes("service") ||
+      c.toLowerCase().includes("pos") ||
+      c.toLowerCase().includes("cashier") ||
+      c.toLowerCase().includes("hospitality") ||
+      c.toLowerCase().includes("protocol")
+    );
+    certScore = hasServiceCert ? 25 : certs.length > 0 ? 18 : 8;
+  } else {
+    // Fitness Consultant / Sales
+    const hasSalesCert = certs.some((c) =>
+      c.toLowerCase().includes("sales") ||
+      c.toLowerCase().includes("negotiation") ||
+      c.toLowerCase().includes("crm") ||
+      c.toLowerCase().includes("b2c")
+    );
+    certScore = hasSalesCert ? 25 : certs.length > 0 ? 18 : 8;
+  }
+
+  // 4. Availability (Max 15 pts)
+  let availabilityScore = 5;
+  const avail = (candidate.availability_status || "").toLowerCase();
+  if (avail.includes("immediate")) {
+    availabilityScore = 15;
+  } else if (avail.includes("2 weeks") || avail.includes("14")) {
+    availabilityScore = 10;
+  } else {
+    availabilityScore = 5;
+  }
+
+  // 5. Source Channel Bonus (Max 5 pts)
+  let sourceBonus = 2;
+  const src = (candidate.source_channel || "").toLowerCase();
+  if (src.includes("ex-finalist") || src.includes("referral")) {
+    sourceBonus = 5;
+  } else if (src.includes("alumni") || src.includes("career")) {
+    sourceBonus = 3;
+  } else {
+    sourceBonus = 2;
+  }
+
+  // Role Match check
+  const candRole = (candidate.role_target || "").toLowerCase();
+  const isRoleMatch =
+    candRole === reqRole ||
+    reqRole.includes(candRole) ||
+    candRole.includes(reqRole) ||
+    (reqRole.includes("trainer") && candRole.includes("trainer")) ||
+    (reqRole.includes("service") && candRole.includes("service")) ||
+    (reqRole.includes("consultant") && candRole.includes("consultant"));
+
+  let rawTotal = locationScore + experienceScore + certScore + availabilityScore + sourceBonus;
+  if (!isRoleMatch) {
+    rawTotal = Math.max(30, rawTotal - 22); // Significant discount for different role target
+  }
+
+  const finalScore = Math.min(99, Math.max(15, Math.round(rawTotal)));
+
+  return {
+    total: finalScore,
+    locationScore,
+    locationMax: 30,
+    experienceScore,
+    experienceMax: 25,
+    certificationScore: certScore,
+    certificationMax: 25,
+    availabilityScore,
+    availabilityMax: 15,
+    sourceBonusScore: sourceBonus,
+    sourceBonusMax: 5,
+    roleMatch: isRoleMatch,
+    notes: isRoleMatch
+      ? `High-fidelity candidate match for ${targetReq.role_name} in ${targetReq.location_name}`
+      : `Cross-role candidate: targeted ${candidate.role_target} vs requisition ${targetReq.role_name}`,
+  };
+}
+
+export async function assignTalentPoolToRequisition(
+  reqCode: string,
+  candidate: TalentPoolCandidate,
+  targetStage: string = "HR Screening"
+): Promise<{ success: boolean; error?: string }> {
+  if (!supabase) {
+    return { success: true };
+  }
+  try {
+    const { data: existing, error: fetchErr } = await supabase
+      .from("mart_requisitions")
+      .select("*")
+      .eq("req_code", reqCode)
+      .single();
+
+    if (fetchErr || !existing) {
+      return { success: false, error: fetchErr?.message || "Requisition not found" };
+    }
+
+    const assigned = existing.assigned_candidates || [];
+    const newCandidateItem: RequisitionCandidateItem = {
+      id: candidate.candidate_id,
+      name: candidate.display_name,
+      source_type: "TALENT_POOL",
+      stage: targetStage as any,
+      contact: candidate.phone || candidate.email || "+62 812-xxxx",
+      applied_at: candidate.application_date || new Date().toISOString().split("T")[0],
+      fit_score: candidate.fit_score,
+      notes: candidate.profile_summary || candidate.notes || "Assigned from Frontline Talent Pool",
+      sourcing_metadata: {
+        channel: "TALENT_POOL",
+        portal_name: candidate.source_channel || "Talent Pool",
+        profile_url: candidate.email ? `mailto:${candidate.email}` : undefined,
+      },
+    };
+
+    const updatedAssigned = [...assigned, newCandidateItem];
+    const history = existing.stage_history || [];
+    history.push({
+      stage: targetStage,
+      timestamp: new Date().toISOString(),
+      note: `Candidate ${candidate.display_name} allocated from Talent Pool (${candidate.candidate_id})`,
+    });
+
+    const updatePayload: any = {
+      assigned_candidates: updatedAssigned,
+      pipeline_size: (existing.pipeline_size || 0) + 1,
+      requisition_status: existing.requisition_status === "PENDING_SOURCING" ? "ACTIVE_MONITORING" : existing.requisition_status,
+      current_stage: targetStage,
+      stage_history: history,
+      sourcing_channel: existing.sourcing_channel || "Talent Pool",
+    };
+
+    const { error: updateErr } = await supabase
+      .from("mart_requisitions")
+      .update(updatePayload)
+      .eq("req_code", reqCode);
+
+    if (updateErr) {
+      return { success: false, error: updateErr.message };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || "Failed to assign candidate" };
   }
 }
 
