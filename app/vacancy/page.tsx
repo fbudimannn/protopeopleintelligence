@@ -4023,14 +4023,27 @@ function VacancyContent() {
                   </span>
                 </div>
               </div>
-              <DataProvenanceBadge
-                provenance="DERIVED"
-                domain="Hiring Performance"
-                metricOrEntity="Quarterly Trajectory"
-                originalSource="Hiring sheet + Retention Mart"
-                governanceRule="Derived quarter-over-quarter trend"
-                impactOnDecision="Validates frontline talent pool velocity and downstream retention impact"
-              />
+              <div className="flex items-center gap-2 flex-wrap">
+                <a
+                  href="/cph_explainer.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-1.5 rounded-lg bg-surface-soft text-ink-primary border border-surface-border text-xs font-semibold hover:bg-surface-elevated hover:border-brand-teal/40 transition-all flex items-center gap-1.5 shadow-sm"
+                  title="Explore detailed step-by-step breakdown of SHRM Cost per Hire, Vacancy Cost, and Early Churn Economics"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-brand-teal" />
+                  <span>Cost-per-Hire &amp; Economics Guide</span>
+                  <ExternalLink className="w-3 h-3 text-ink-muted" />
+                </a>
+                <DataProvenanceBadge
+                  provenance="DERIVED"
+                  domain="Hiring Performance"
+                  metricOrEntity="Quarterly Trajectory"
+                  originalSource="Hiring sheet + Retention Mart"
+                  governanceRule="Derived quarter-over-quarter trend"
+                  impactOnDecision="Validates frontline talent pool velocity and downstream retention impact"
+                />
+              </div>
             </div>
 
             {/* Recharts Visual Trajectory Charts */}
