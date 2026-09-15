@@ -119,7 +119,7 @@ function TeamContent() {
   }, [jobFamilyFilter, roleFilter]);
 
   const selectedRole = roleFilter === "ALL" ? "All Roles" : roleFilter;
-  const [riskFilter, setRiskFilter] = useState<"ALL" | "HIGH" | "MEDIUM" | "LOW">("ALL");
+  const [enpsHealthFilter, setEnpsHealthFilter] = useState<"ALL" | "CRITICAL" | "ATTENTION" | "HEALTHY">("ALL");
   const [readinessFilter, setReadinessFilter] = useState<"ALL" | "Ready" | "Near Ready" | "Development Needed">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -237,20 +237,25 @@ function TeamContent() {
       if (!matchPeriod((c as any).period_year || (c as any).join_date, selectedPeriod, c.cohort_id)) {
         return false;
       }
-      if (riskFilter !== "ALL" && c.risk_level !== riskFilter) {
-        return false;
+      if (enpsHealthFilter !== "ALL") {
+        const enps = c.segment_enps ?? 50;
+        if (enpsHealthFilter === "CRITICAL" && enps >= 45) return false;
+        if (enpsHealthFilter === "ATTENTION" && (enps < 45 || enps > 55)) return false;
+        if (enpsHealthFilter === "HEALTHY" && enps <= 55) return false;
       }
       if (searchQuery.trim() !== "") {
         const q = searchQuery.toLowerCase();
         return (
           c.role_name.toLowerCase().includes(q) ||
           c.location_name.toLowerCase().includes(q) ||
-          c.primary_exit_driver.toLowerCase().includes(q)
+          (c.core_exit_driver || c.primary_exit_driver || "").toLowerCase().includes(q) ||
+          (c.role_specific_factor || "").toLowerCase().includes(q) ||
+          (c.location_specific_factor || "").toLowerCase().includes(q)
         );
       }
       return true;
     });
-  }, [cohorts, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter, selectedPeriod, riskFilter, searchQuery]);
+  }, [cohorts, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter, selectedPeriod, enpsHealthFilter, searchQuery]);
 
   // Filtered Exit Events based on active Location, Role, and Date
   const filteredExitEvents = useMemo(() => {
@@ -1249,19 +1254,27 @@ function TeamContent() {
                 />
               </div>
 
-              {/* Risk Level Filter */}
+              {/* Segment eNPS Health Filter */}
               <div className="flex items-center gap-1 bg-surface-ground p-1 rounded-lg border border-surface-border text-xs">
-                {(["ALL", "HIGH", "MEDIUM", "LOW"] as const).map((r) => (
+                <span className="text-[11px] text-ink-tertiary px-2 font-medium">Sentiment Filter:</span>
+                {(
+                  [
+                    { id: "ALL", label: "All Cohorts" },
+                    { id: "CRITICAL", label: "Critical (< +45 eNPS)" },
+                    { id: "ATTENTION", label: "Attention (+45 to +55)" },
+                    { id: "HEALTHY", label: "Healthy (> +55)" },
+                  ] as const
+                ).map((f) => (
                   <button
-                    key={r}
-                    onClick={() => setRiskFilter(r)}
+                    key={f.id}
+                    onClick={() => setEnpsHealthFilter(f.id)}
                     className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                      riskFilter === r
+                      enpsHealthFilter === f.id
                         ? "bg-surface-card text-brand-teal shadow-subtle font-semibold"
                         : "text-ink-secondary hover:text-ink-primary"
                     }`}
                   >
-                    {r === "ALL" ? "All Risk" : `${r} Risk`}
+                    {f.label}
                   </button>
                 ))}
               </div>
@@ -1272,194 +1285,171 @@ function TeamContent() {
             </div>
           </div>
 
-          {/* 12-Column Grid */}
-          <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-            {/* Left 8 Columns: Cohort Table */}
-            <div className="xl:col-span-8 space-y-4">
-              <div className="rounded-xl bg-surface-card border border-surface-border overflow-hidden shadow-subtle">
-                <div className="p-4 border-b border-surface-border flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <GitBranch className="w-4 h-4 text-brand-teal" />
-                    <h2 className="text-sm font-bold text-ink-primary font-display">
-                      Workforce Retention & Cohort Attrition Matrix
-                    </h2>
-                  </div>
-                  <span className="text-xs text-ink-tertiary">
-                    Empirical data from 889 historical exits
-                  </span>
+          {/* Full-Width Cohort Attrition Matrix (10 Informational Columns - Option A) */}
+          <div className="space-y-4">
+            <div className="rounded-xl bg-surface-card border border-surface-border overflow-hidden shadow-subtle">
+              <div className="p-4 border-b border-surface-border flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <GitBranch className="w-4 h-4 text-brand-teal" />
+                  <h2 className="text-sm font-bold text-ink-primary font-display">
+                    Workforce Retention &amp; Cohort Attrition Matrix
+                  </h2>
                 </div>
-
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs">
-                    <thead>
-                      <tr className="bg-surface-ground/70 border-b border-surface-border text-ink-secondary font-semibold">
-                        <th className="py-3 px-4">Role / Job Family</th>
-                        <th className="py-3 px-4">Location</th>
-                        <th className="py-3 px-3 text-center">Headcount</th>
-                        <th className="py-3 px-3 text-center">Turnover %</th>
-                        <th className="py-3 px-3 text-center">&lt; 12M Cliff</th>
-                        <th className="py-3 px-3 text-center">1Y to 1.5Y Dip</th>
-                        <th className="py-3 px-3 text-center">Regrettable %</th>
-                        <th className="py-3 px-4">Primary Exit Reason</th>
-                        <th className="py-3 px-3 text-center">Risk Tier</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-surface-border">
-                      {filteredCohorts.length === 0 ? (
-                        <tr>
-                          <td colSpan={9} className="py-8 text-center text-ink-tertiary">
-                            No cohorts match the selected filters.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredCohorts.map((cohort) => (
-                          <tr
-                            key={cohort.cohort_id}
-                            className={`hover:bg-surface-elevated/80 transition-colors ${
-                              cohort.risk_level === "HIGH" ? "bg-status-danger/5" : ""
-                            }`}
-                          >
-                            <td className="py-3 px-4 font-semibold text-ink-primary">
-                              {cohort.role_name}
-                            </td>
-                            <td className="py-3 px-4">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-surface-ground border border-surface-border text-ink-secondary">
-                                {cohort.location_name}
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 text-center font-bold text-ink-primary">
-                              {cohort.headcount}
-                            </td>
-                            <td className="py-3 px-3 text-center font-mono font-bold">
-                              <span className={cohort.annualized_turnover_pct > 50 ? "text-status-danger" : "text-ink-primary"}>
-                                {cohort.annualized_turnover_pct}%
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 text-center font-mono">
-                              <span className={cohort.early_attrition_pct > 60 ? "text-status-danger font-bold" : "text-status-attention"}>
-                                {cohort.early_attrition_pct}%
-                              </span>
-                            </td>
-                            <td className="py-3 px-3 text-center font-mono">
-                              {cohort.dip_tenure_pct}%
-                            </td>
-                            <td className="py-3 px-3 text-center font-mono">
-                              <span className={cohort.regrettable_loss_pct > 30 ? "text-status-danger font-semibold" : "text-ink-primary"}>
-                                {cohort.regrettable_loss_pct}%
-                              </span>
-                            </td>
-                            <td className="py-3 px-4 font-medium text-ink-secondary">
-                              {cohort.primary_exit_driver}
-                            </td>
-                            <td className="py-3 px-3 text-center">
-                              {cohort.risk_level === "HIGH" ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-status-danger/20 text-status-danger border border-status-danger/30">
-                                  HIGH RISK
-                                </span>
-                              ) : cohort.risk_level === "MEDIUM" ? (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-status-attention/20 text-status-attention border border-status-attention/30">
-                                  MEDIUM
-                                </span>
-                              ) : (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-status-healthy/20 text-status-healthy border border-status-healthy/30">
-                                  LOW
-                                </span>
-                              )}
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                <span className="text-xs text-ink-tertiary">
+                  Empirical data from 889 historical exits &bull; Role &times; Location Contextual Intelligence
+                </span>
               </div>
 
-              {/* Lifecycle Continuity Callout */}
-              <div className="p-4 rounded-xl bg-gradient-to-r from-brand-teal/5 to-transparent border border-brand-teal/20 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-brand-teal/10 flex items-center justify-center text-brand-teal">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-ink-primary">
-                      Solving #1 Exit Driver: Career Development
-                    </h4>
-                    <p className="text-[11px] text-ink-secondary">
-                      Customer Service and Personal Trainers cite lack of visible career tracks as their primary departure driver. Match top talent directly to open vacancies.
-                    </p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setActiveTab("mobility")}
-                  className="px-3 py-1.5 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-colors whitespace-nowrap"
-                >
-                  View Mobility Candidates
-                </button>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="bg-surface-ground/70 border-b border-surface-border text-ink-secondary font-semibold">
+                      <th className="py-3.5 px-4 whitespace-nowrap">Role / Job Family</th>
+                      <th className="py-3.5 px-4 whitespace-nowrap">Location</th>
+                      <th className="py-3.5 px-3 text-center whitespace-nowrap">Headcount</th>
+                      <th className="py-3.5 px-3 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 justify-center">
+                          <span>Turnover %</span>
+                          <MetricInfoTooltip
+                            title="Annualized Turnover Rate"
+                            description="Proportion of cohort workforce exiting on an annualized basis."
+                            formula="(Total Departures / Active Headcount Base) × 100%"
+                            benchmark="Target: < 30.0%. Critical (> 50.0%): Bali (62.5%), Surabaya FC (52.4%)"
+                            align="center"
+                          />
+                        </span>
+                      </th>
+                      <th className="py-3.5 px-3 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 justify-center">
+                          <span>&lt; 12M Cliff</span>
+                          <MetricInfoTooltip
+                            title="Early Attrition (<12M)"
+                            description="Proportion of exits occurring within the first year of employment (Onboarding Cliff)."
+                            formula="(Exits ≤ 12 Months / Total Exits) × 100%"
+                            benchmark="Target: < 35.0%. FIT HUB baseline is 57.4% (Highest: Bali CS at 68.4%)"
+                            align="center"
+                          />
+                        </span>
+                      </th>
+                      <th className="py-3.5 px-3 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 justify-center">
+                          <span>Regrettable %</span>
+                          <MetricInfoTooltip
+                            title="Regrettable Voluntary Losses"
+                            description="Proportion of voluntary exits identified as top high performers."
+                            formula="(High-Performer Exits / Total Voluntary Exits) × 100%"
+                            benchmark="Critical (> 30.0%): Bali PT (33.3%), Bali CS (31.6%)"
+                            align="center"
+                          />
+                        </span>
+                      </th>
+                      <th className="py-3.5 px-3 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 justify-center">
+                          <span>Segment eNPS</span>
+                          <MetricInfoTooltip
+                            title="Segment eNPS Pulse"
+                            description="Net Promoter Score measured specifically for this role and location segment."
+                            formula="% Promoters (9-10) - % Detractors (0-6)"
+                            benchmark="Company Average: +56.6 (Lowest: Bali CS at +37.8, PT at +42.0)"
+                            align="center"
+                          />
+                        </span>
+                      </th>
+                      <th className="py-3.5 px-4 whitespace-nowrap">Core Exit Driver (Excel)</th>
+                      <th className="py-3.5 px-4 min-w-[220px]">Role-Specific Factor</th>
+                      <th className="py-3.5 px-4 min-w-[220px]">Location-Specific Factor</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-surface-border">
+                    {filteredCohorts.length === 0 ? (
+                      <tr>
+                        <td colSpan={10} className="py-8 text-center text-ink-tertiary">
+                          No cohorts match the selected filters.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredCohorts.map((cohort) => (
+                        <tr
+                          key={cohort.cohort_id}
+                          className="hover:bg-surface-elevated/80 transition-colors"
+                        >
+                          <td className="py-3.5 px-4 font-semibold text-ink-primary whitespace-nowrap">
+                            {cohort.role_name}
+                          </td>
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-surface-ground border border-surface-border text-ink-secondary">
+                              {cohort.location_name}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-3 text-center font-bold text-ink-primary font-mono">
+                            {cohort.headcount}
+                          </td>
+                          <td className="py-3.5 px-3 text-center font-mono font-bold">
+                            <span className={cohort.annualized_turnover_pct > 50 ? "text-status-danger" : cohort.annualized_turnover_pct > 35 ? "text-status-attention" : "text-ink-primary"}>
+                              {cohort.annualized_turnover_pct}%
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-3 text-center font-mono">
+                            <span className={cohort.early_attrition_pct > 60 ? "text-status-danger font-bold" : "text-status-attention"}>
+                              {cohort.early_attrition_pct}%
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-3 text-center font-mono text-ink-secondary">
+                            <span className={cohort.regrettable_loss_pct > 30 ? "text-status-danger font-semibold" : "text-ink-primary"}>
+                              {cohort.regrettable_loss_pct}%
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-3 text-center font-mono font-bold whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[11px] ${
+                              (cohort.segment_enps ?? 50) < 45
+                                ? "bg-status-danger/15 text-status-danger border border-status-danger/30"
+                                : (cohort.segment_enps ?? 50) <= 55
+                                ? "bg-status-attention/15 text-status-attention border border-status-attention/30"
+                                : "bg-status-healthy/15 text-status-healthy border border-status-healthy/30"
+                            }`}>
+                              {(cohort.segment_enps ?? 50) > 0 ? `+${(cohort.segment_enps ?? 50).toFixed(1)}` : (cohort.segment_enps ?? 50).toFixed(1)}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-surface-ground border border-surface-border text-ink-primary">
+                              {cohort.core_exit_driver || cohort.primary_exit_driver}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-xs text-ink-secondary leading-relaxed">
+                            {cohort.role_specific_factor || "Absence of clear promotional pathway"}
+                          </td>
+                          <td className="py-3.5 px-4 text-xs text-ink-secondary leading-relaxed">
+                            {cohort.location_specific_factor || "Regional club operational conditions"}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            {/* Right 4 Columns: Systemic Diagnostics */}
-            <div className="xl:col-span-4 space-y-4">
-              <div className="p-4 rounded-xl bg-surface-card border border-surface-border">
-                <h3 className="text-xs font-bold uppercase tracking-wider text-ink-tertiary mb-3 flex items-center justify-between">
-                  <span>Executive Retention Signals</span>
-                  <span className="w-2 h-2 rounded-full bg-status-danger animate-pulse" />
-                </h3>
-
-                {/* Diagnostic 1: Early Attrition */}
-                <div className="p-4 rounded-xl bg-status-danger/5 border border-status-danger/20 mb-4 hover:border-status-danger/40 transition-all">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-status-danger/20 text-status-danger">
-                      SYSTEMIC CLIFF #1
-                    </span>
-                    <span className="text-[11px] text-ink-tertiary">Months 0 to 12</span>
-                  </div>
-                  <h4 className="text-sm font-bold text-ink-primary mb-1">
-                    Frontline 90-Day Ramp-Up Cliff
-                  </h4>
-                  <p className="text-xs text-ink-secondary leading-relaxed mb-3">
-                    57.4% of all departures occur before month 12. Customer Service in Bali reaches 68.4% early attrition, driven by intense shift rosters and lack of floor mentoring.
-                  </p>
-                  <div className="p-2.5 rounded-lg bg-surface-ground border border-surface-border mb-3 text-[11px]">
-                    <span className="font-semibold text-ink-primary block mb-0.5">
-                      Recommendation 4 Action:
-                    </span>
-                    <span className="text-ink-secondary">
-                      Deploy 30-day dedicated shift buddies and formalize 60-day check-in milestones with Area Managers.
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => setActiveTab("cliff")}
-                    className="w-full py-1.5 px-3 rounded-lg bg-surface-card border border-surface-border text-ink-primary text-xs font-bold hover:bg-surface-elevated transition-colors flex items-center justify-center gap-2"
-                  >
-                    <span>Inspect Tenure Survival Curve</span>
-                    <ArrowUpRight className="w-3.5 h-3.5 text-brand-teal" />
-                  </button>
+            {/* Lifecycle Continuity Callout */}
+            <div className="p-4 rounded-xl bg-gradient-to-r from-brand-teal/5 to-transparent border border-brand-teal/20 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-brand-teal/10 flex items-center justify-center text-brand-teal">
+                  <Sparkles className="w-4 h-4" />
                 </div>
-
-                {/* Diagnostic 2: Mid-Tenure Plateau */}
-                <div className="p-4 rounded-xl bg-status-attention/5 border border-status-attention/20 hover:border-status-attention/40 transition-all">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-status-attention/20 text-status-attention">
-                      RETENTION DIP #2
-                    </span>
-                    <span className="text-[11px] text-ink-tertiary">Months 13 to 18</span>
-                  </div>
-                  <h4 className="text-sm font-bold text-ink-primary mb-1">
-                    Mid-Tenure Seniority Plateau
+                <div>
+                  <h4 className="text-xs font-bold text-ink-primary">
+                    Solving #1 Exit Driver: Career Development
                   </h4>
-                  <p className="text-xs text-ink-secondary leading-relaxed mb-3">
-                    High performers who successfully survive Year 1 face a second attrition spike (21.9% dip) when external hires take managerial slots instead of internal staff.
+                  <p className="text-[11px] text-ink-secondary">
+                    Customer Service and Personal Trainers cite lack of visible career tracks as their primary departure driver. Match top talent directly to open vacancies.
                   </p>
-                  <button
-                    onClick={() => setActiveTab("mobility")}
-                    className="w-full py-1.5 px-3 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-colors flex items-center justify-center gap-2"
-                  >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Open Internal Mobility Engine</span>
-                  </button>
                 </div>
               </div>
+              <button
+                onClick={() => setActiveTab("mobility")}
+                className="px-3 py-1.5 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-colors whitespace-nowrap"
+              >
+                View Mobility Candidates
+              </button>
             </div>
           </div>
         </div>

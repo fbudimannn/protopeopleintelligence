@@ -26,7 +26,11 @@ export interface RetentionCohort {
   dip_tenure_pct: number; // 1Y to 1.5Y
   regrettable_loss_pct: number;
   primary_exit_driver: string;
-  risk_level: "HIGH" | "MEDIUM" | "LOW";
+  core_exit_driver?: string;
+  role_specific_factor?: string;
+  location_specific_factor?: string;
+  segment_enps?: number;
+  risk_level?: "HIGH" | "MEDIUM" | "LOW";
   data_provenance: "OBSERVED_CASE_STUDY" | "SYNTHETIC_ENABLER";
 }
 
@@ -223,7 +227,10 @@ export const fallbackRetentionCohorts: RetentionCohort[] = [
     dip_tenure_pct: 21.1,
     regrettable_loss_pct: 31.6,
     primary_exit_driver: "Career Development",
-    risk_level: "HIGH",
+    core_exit_driver: "Career Development",
+    role_specific_factor: "Absence of Senior CS or Shift Lead progression track",
+    location_specific_factor: "Peak tourist double-shift fatigue & high living costs",
+    segment_enps: 37.8,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
@@ -236,7 +243,10 @@ export const fallbackRetentionCohorts: RetentionCohort[] = [
     dip_tenure_pct: 25.0,
     regrettable_loss_pct: 33.3,
     primary_exit_driver: "Compensation & Commission Volatility",
-    risk_level: "HIGH",
+    core_exit_driver: "Compensation & Commission Volatility",
+    role_specific_factor: "PT session split uncompetitive vs freelance client demand",
+    location_specific_factor: "Private villa freelance market poaching top talent",
+    segment_enps: 42.0,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
@@ -249,7 +259,10 @@ export const fallbackRetentionCohorts: RetentionCohort[] = [
     dip_tenure_pct: 21.9,
     regrettable_loss_pct: 28.1,
     primary_exit_driver: "Career Development",
-    risk_level: "MEDIUM",
+    core_exit_driver: "Career Development",
+    role_specific_factor: "Front-desk POS SOP complexity and member dispute voids",
+    location_specific_factor: "Regional isolation from Jakarta Head Office career path",
+    segment_enps: 50.2,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
@@ -261,8 +274,11 @@ export const fallbackRetentionCohorts: RetentionCohort[] = [
     early_attrition_pct: 61.9,
     dip_tenure_pct: 19.0,
     regrettable_loss_pct: 23.8,
-    primary_exit_driver: "Target Pressure & Work Life Balance",
-    risk_level: "HIGH",
+    primary_exit_driver: "Sales Target Pressure",
+    core_exit_driver: "Sales Target Pressure",
+    role_specific_factor: "Unrealistic monthly sales quotas & no lead guarantee for new hires",
+    location_specific_factor: "Aggressive competitor price discounting across East Java",
+    segment_enps: 48.5,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
@@ -275,7 +291,10 @@ export const fallbackRetentionCohorts: RetentionCohort[] = [
     dip_tenure_pct: 24.4,
     regrettable_loss_pct: 24.4,
     primary_exit_driver: "Career Development",
-    risk_level: "MEDIUM",
+    core_exit_driver: "Career Development",
+    role_specific_factor: "Seniority plateau at 12 months with limited supervisor openings",
+    location_specific_factor: "High club member density and long evening floor coverage",
+    segment_enps: 52.0,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
@@ -288,7 +307,10 @@ export const fallbackRetentionCohorts: RetentionCohort[] = [
     dip_tenure_pct: 27.6,
     regrettable_loss_pct: 29.3,
     primary_exit_driver: "Career Development",
-    risk_level: "MEDIUM",
+    core_exit_driver: "Career Development",
+    role_specific_factor: "Lack of specialized Master Trainer or strength coach tier track",
+    location_specific_factor: "High lifestyle gym competition & poaching along Sudirman-Senopati",
+    segment_enps: 54.0,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
@@ -301,7 +323,10 @@ export const fallbackRetentionCohorts: RetentionCohort[] = [
     dip_tenure_pct: 22.2,
     regrettable_loss_pct: 25.9,
     primary_exit_driver: "Working Environment & Facilities",
-    risk_level: "HIGH",
+    core_exit_driver: "Working Environment & Facilities",
+    role_specific_factor: "Front-desk equipment downtime & roster swapping inflexibility",
+    location_specific_factor: "Industrial corridor commute transit times & HVAC/locker room issues",
+    segment_enps: 46.8,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
   {
@@ -314,7 +339,10 @@ export const fallbackRetentionCohorts: RetentionCohort[] = [
     dip_tenure_pct: 40.0,
     regrettable_loss_pct: 40.0,
     primary_exit_driver: "Relocation & Better Offer",
-    risk_level: "LOW",
+    core_exit_driver: "Relocation & Better Offer",
+    role_specific_factor: "Lateral AGM hiring from competitor gym chains blocking internal GMs",
+    location_specific_factor: "Multi-club area expansion workload without administrative relief",
+    segment_enps: 76.7,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
 ];
