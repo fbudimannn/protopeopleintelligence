@@ -1777,7 +1777,7 @@ function VacancyContent() {
 
     return [
       {
-        period_label: "Q4 Prev Year",
+        period_label: "Q4 Previous Year",
         beyond_sla_pct: q4Beyond,
         median_ttf_days: q4Ttf,
         six_month_retention_pct: q4Ret,
@@ -4005,21 +4005,21 @@ function VacancyContent() {
               <div>
                 <h2 className="text-base font-bold text-ink-primary font-display flex items-center gap-2">
                   <Layers className="w-4 h-4 text-brand-teal" />
-                  <span>Hiring Outcomes & Trajektori Kualitas Rekrutmen</span>
+                  <span>Hiring Outcomes &amp; Quality Trajectory</span>
                 </h2>
                 <p className="text-xs text-ink-secondary mt-0.5">
-                  Analisis komparatif kecepatan pemenuhan (TTF), friksi keterlambatan SLA, serta tingkat retensi dan evaluasi kerja pasca-probation.
+                  Quarterly tracking of Time-to-Fill (TTF) velocity, SLA compliance friction, and downstream 6-month retention.
                 </p>
                 <div className="flex items-center gap-2 mt-2 flex-wrap">
                   <span className="text-[11px] px-2.5 py-1 rounded-md bg-surface-ground text-ink-secondary border border-surface-border flex items-center gap-1.5">
                     <span className="w-1.5 h-1.5 rounded-full bg-brand-teal animate-pulse" />
-                    <span>Filter Aktif:</span>
+                    <span>Active Filters:</span>
                     <strong className="text-ink-primary font-bold">{roleDisplay}</strong>
                     <span className="text-ink-muted">•</span>
                     <strong className="text-ink-primary font-bold">{locationDisplay}</strong>
                   </span>
                   <span className="text-[11px] px-2 py-0.5 rounded-md bg-brand-teal/10 text-brand-teal font-semibold border border-brand-teal/20">
-                    Data Terkoneksi Real-time
+                    Connected Live Data
                   </span>
                 </div>
               </div>
@@ -4029,7 +4029,7 @@ function VacancyContent() {
                 metricOrEntity="Quarterly Trajectory"
                 originalSource="Hiring sheet + Retention Mart"
                 governanceRule="Derived quarter-over-quarter trend"
-                impactOnDecision="Membuktikan efektivitas talent pool proaktif dan buddy onboarding"
+                impactOnDecision="Validates frontline talent pool velocity and downstream retention impact"
               />
             </div>
 
@@ -4037,10 +4037,10 @@ function VacancyContent() {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 my-6">
               <div className="p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="label-xs text-ink-secondary block font-bold">Waktu Pemenuhan Posisi (Median TTF)</span>
-                  <span className="text-[11px] text-ink-muted">Satuan: Hari Kerja</span>
+                  <span className="label-xs text-ink-secondary block font-bold">Time-to-Fill (TTF) Trajectory</span>
+                  <span className="text-[11px] text-ink-muted">Unit: Days</span>
                 </div>
-                <p className="text-[11px] text-ink-tertiary mb-3">Tren kecepatan pengisian lowongan kuartalan untuk {roleDisplay} di {locationDisplay}</p>
+                <p className="text-[11px] text-ink-tertiary mb-3">Quarterly hiring velocity trend for {roleDisplay} in {locationDisplay}</p>
                 <SimpleLine
                   data={dynamicHiringOutcomes.map((q) => ({
                     label: q.period_label,
@@ -4055,11 +4055,11 @@ function VacancyContent() {
               <div className="p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
                 <div className="flex items-center justify-between mb-1">
                   <span className="label-xs text-ink-secondary block font-bold">
-                    Peta Friksi Keterlambatan SLA ({cityFilter !== "ALL" || (clusterFilter !== "ALL" && clusterFilter !== "National") ? "Per Cabang / Sub-Unit" : "Per Lokasi"})
+                    Beyond-SLA Friction Heatmap ({cityFilter !== "ALL" || (clusterFilter !== "ALL" && clusterFilter !== "National") ? "By Club / Branch" : "By Regional Hub"})
                   </span>
-                  <span className="text-[11px] text-ink-muted">% Melebihi SLA</span>
+                  <span className="text-[11px] text-ink-muted">% Beyond SLA</span>
                 </div>
-                <p className="text-[11px] text-ink-tertiary mb-3">Tingkat hambatan pemenuhan posisi {roleDisplay} di area {locationDisplay}</p>
+                <p className="text-[11px] text-ink-tertiary mb-3">Hiring bottleneck rate for {roleDisplay} across {locationDisplay}</p>
                 <ColoredBar
                   data={dynamicLocationSlaFriction}
                   dataKey="value"
@@ -4150,14 +4150,14 @@ function VacancyContent() {
                         )}
                       </div>
                       <span className="text-base font-display font-bold text-ink-primary">
-                        {q.median_ttf_days} hari
+                        {q.median_ttf_days} days
                       </span>
                     </div>
 
                     <div className="pt-2 border-t border-surface-border space-y-1.5 text-[11px]">
                       <div className="flex justify-between items-center text-ink-secondary">
                         <span className="flex items-center gap-1">
-                          Retensi 6 Bulan:
+                          6-Month Retention:
                           {idx > 0 && q.retention_delta_qoq !== undefined && q.retention_delta_qoq !== 0 && (
                             <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">
                               ({q.retention_delta_qoq > 0 ? `+${q.retention_delta_qoq}%` : `${q.retention_delta_qoq}%`})
@@ -4166,16 +4166,12 @@ function VacancyContent() {
                         </span>
                         <span className="font-bold text-emerald-600 dark:text-emerald-400">{q.six_month_retention_pct}%</span>
                       </div>
-                      <div className="flex justify-between items-center text-ink-secondary">
-                        <span>Kesiapan Mandiri (90d):</span>
-                        <span className="font-semibold text-ink-primary">{q.ramp_up_speed_pct}%</span>
-                      </div>
                       <div
                         className="flex justify-between items-center text-ink-secondary"
-                        title="Skor evaluasi kompetensi & culture alignment pasca-probation 90 hari oleh Club General Manager (Skala 1.0 - 5.0)"
+                        title="Average 90-day post-hire performance & culture alignment score by Club General Manager (1.0 - 5.0 scale)"
                       >
                         <span className="flex items-center gap-1 cursor-help underline decoration-dotted decoration-ink-muted">
-                          Evaluasi GM (90d):
+                          Manager Rating (90d):
                         </span>
                         <span className="font-bold text-amber-600 dark:text-amber-400">{q.manager_rating_avg} / 5.0</span>
                       </div>
@@ -4183,167 +4179,6 @@ function VacancyContent() {
                   </div>
                 </div>
               ))}
-            </div>
-
-            {/* 3. Sourcing Channel Retention & Longevity Matrix (Closing the Loop) */}
-            <div className="mt-8 pt-6 border-t border-surface-border">
-              <div className="flex items-start justify-between mb-4 flex-wrap gap-3">
-                <div>
-                  <h3 className="text-sm font-bold text-ink-primary font-display flex items-center gap-2">
-                    <Target className="w-4 h-4 text-brand-teal" />
-                    <span>Kualitas Retensi & Efisiensi Berdasarkan Sourcing Channel</span>
-                  </h3>
-                  <p className="text-xs text-ink-secondary mt-0.5">
-                    Evaluasi korelasi channel akuisisi terhadap ketahanan kerja pasca-probation untuk menekan 68% Replacement Trap di gym floor.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] px-2.5 py-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold border border-emerald-500/20 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" />
-                    <span>Talent Pool & Referral = Retensi Tertinggi</span>
-                  </span>
-                </div>
-              </div>
-
-              {/* Table List */}
-              <div className="overflow-x-auto rounded-xl border border-surface-border bg-surface-ground">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-surface-soft/80 border-b border-surface-border text-ink-secondary">
-                      <th className="py-3 px-4 font-bold">Channel Sourcing</th>
-                      <th className="py-3 px-4 font-bold">Kategori</th>
-                      <th className="py-3 px-4 font-bold text-center">Median TTF</th>
-                      <th className="py-3 px-4 font-bold">Retensi 6 Bulan</th>
-                      <th className="py-3 px-4 font-bold text-center">Lolos Probation</th>
-                      <th className="py-3 px-4 font-bold text-center">Evaluasi GM</th>
-                      <th className="py-3 px-4 font-bold text-center">Efisiensi Biaya</th>
-                      <th className="py-3 px-4 font-bold">Insight Operasional</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-surface-border">
-                    {sourcingQuality.map((ch) => (
-                      <tr
-                        key={ch.channel_key}
-                        className={`hover:bg-surface-elevated/50 transition-colors ${
-                          ch.is_recommended ? "bg-brand-teal/5" : ""
-                        }`}
-                      >
-                        <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-ink-primary">{ch.channel_name}</span>
-                            {ch.is_recommended && (
-                              <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500 text-surface-ground tracking-wider">
-                                Top Pick
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 px-4">
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                              ch.channel_category === "PROACTIVE_POOL"
-                                ? "bg-brand-teal/15 text-brand-teal border border-brand-teal/30"
-                                : ch.channel_category === "INTERNAL"
-                                ? "bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30"
-                                : ch.channel_category === "CONVENTIONAL"
-                                ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
-                                : "bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-500/30"
-                            }`}
-                          >
-                            {ch.channel_category.replace("_", " ")}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span className="font-display font-bold text-ink-primary">
-                            {ch.median_ttf_days} hari
-                          </span>
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="w-36">
-                            <div className="flex justify-between items-center text-[11px] mb-1">
-                              <span
-                                className={`font-bold ${
-                                  ch.six_month_retention_pct >= 80
-                                    ? "text-emerald-600 dark:text-emerald-400"
-                                    : ch.six_month_retention_pct >= 65
-                                    ? "text-amber-600 dark:text-amber-400"
-                                    : "text-rose-600 dark:text-rose-400"
-                                }`}
-                              >
-                                {ch.six_month_retention_pct}%
-                              </span>
-                              <span className="text-[10px] text-ink-muted">target 75%</span>
-                            </div>
-                            <div className="h-1.5 w-full rounded-full bg-surface-border overflow-hidden">
-                              <div
-                                className={`h-full rounded-full ${
-                                  ch.six_month_retention_pct >= 80
-                                    ? "bg-emerald-500"
-                                    : ch.six_month_retention_pct >= 65
-                                    ? "bg-amber-500"
-                                    : "bg-rose-500"
-                                }`}
-                                style={{ width: `${ch.six_month_retention_pct}%` }}
-                              />
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span className="font-semibold text-ink-primary">
-                            {ch.probation_pass_rate_pct}%
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span className="font-bold text-amber-600 dark:text-amber-400">
-                            {ch.avg_performance_rating} / 5.0
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center">
-                          <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                              ch.cost_efficiency === "HIGH"
-                                ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                : ch.cost_efficiency === "MEDIUM"
-                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                                : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
-                            }`}
-                          >
-                            {ch.cost_efficiency}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-[11px] text-ink-secondary max-w-xs">
-                          {ch.notes}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Bottom Strategic Summary Banner */}
-              <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-brand-teal/10 via-brand-teal/5 to-transparent border border-brand-teal/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <Sparkles className="w-5 h-5 text-brand-teal shrink-0 mt-0.5" />
-                  <div>
-                    <h4 className="text-xs font-bold text-ink-primary">
-                      People Intelligence Strategic Insight
-                    </h4>
-                    <p className="text-[11px] text-ink-secondary mt-0.5 leading-relaxed">
-                      Kombinasi <strong>Frontline Talent Pool</strong> dan <strong>Employee Referral</strong> memberikan retensi 6 bulan rata-rata <strong>83.0%</strong> (vs 65.4% di Job Portal umum), menghemat <strong>~Rp 180jt/kuartal</strong> biaya turnover dan menjaga kelancaran revenue di floor gym.
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleTabChange("talent-pool")}
-                    className="px-3 py-2 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
-                  >
-                    <span>Buka Supply Talent Pools</span>
-                    <ArrowUpRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              </div>
             </div>
           </div>
         </div>
