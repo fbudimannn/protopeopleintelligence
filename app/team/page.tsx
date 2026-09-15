@@ -385,7 +385,7 @@ function TeamContent() {
       ? (filteredCohorts.length > 0 ? filteredCohorts.reduce((acc, c) => acc + c.headcount, 0) : 31)
       : 408;
 
-    // 2. Annualized Turnover Rate (Average across filtered cohorts, jumps to 62.5% on Bali)
+    // 2. Annualized Turnover Rate (Average across filtered cohorts)
     const turnover = filteredCohorts.length > 0
       ? filteredCohorts.reduce((acc, c) => acc + c.annualized_turnover_pct, 0) / filteredCohorts.length
       : 44.8;
@@ -393,9 +393,9 @@ function TeamContent() {
     // 3. Early Attrition (<12 Months - First-year onboarding cliff)
     const totalExits = filteredExitEvents.length;
     const earlyExits = filteredExitEvents.filter((e) => e.tenure_months <= 12).length;
-    const earlyAttrition = totalExits > 0
+    const earlyAttrition = isFiltered && totalExits > 0
       ? Math.round((earlyExits / totalExits) * 1000) / 10
-      : (filteredCohorts.length > 0
+      : (isFiltered && filteredCohorts.length > 0
           ? Math.round((filteredCohorts.reduce((acc, c) => acc + c.early_attrition_pct, 0) / filteredCohorts.length) * 10) / 10
           : 57.4);
 
@@ -403,10 +403,10 @@ function TeamContent() {
     const backfilledCount = filteredExitEvents.filter(
       (e) => e.triggered_requisition_code && e.triggered_requisition_code.trim() !== ""
     ).length;
-    const backfillRate = totalExits > 0
+    const backfillRate = isFiltered && totalExits > 0
       ? Math.round((backfilledCount / totalExits) * 1000) / 10
       : 73.5;
-    const unfilledGap = Math.max(0, totalExits - backfilledCount);
+    const unfilledGap = isFiltered ? Math.max(0, totalExits - backfilledCount) : 236;
 
     // 5. Net eNPS Score (Dynamic from matched location/role engagement)
     const enps = dynamicEngagement.enps;
@@ -419,11 +419,11 @@ function TeamContent() {
       headcount,
       turnover: Math.round(turnover * 10) / 10,
       earlyAttrition: Math.round(earlyAttrition * 10) / 10,
-      earlyExitsCount: totalExits > 0 ? earlyExits : 510,
+      earlyExitsCount: isFiltered ? earlyExits : 510,
       backfillRate: Math.round(backfillRate * 10) / 10,
-      backfilledCount: totalExits > 0 ? backfilledCount : 653,
-      unfilledGap: totalExits > 0 ? unfilledGap : 236,
-      totalExits: totalExits > 0 ? totalExits : 889,
+      backfilledCount: isFiltered ? backfilledCount : 653,
+      unfilledGap,
+      totalExits: isFiltered ? totalExits : 889,
       enps,
       managerRating: isFiltered ? managerRating : 4.25,
       isFiltered,
@@ -438,6 +438,44 @@ function TeamContent() {
     jobFamilyFilter,
     roleFilter,
     selectedPeriod,
+  ]);
+
+  // Dynamic Real-time Club Count based on active cascading location and role filters
+  const dynamicClubLabel = useMemo(() => {
+    const clubSet = new Set<string>();
+    filteredCohorts.forEach((c) => {
+      if (c.location_name && c.location_name !== "National Total") {
+        clubSet.add(c.location_name);
+      }
+    });
+    filteredExitEvents.forEach((e) => {
+      if (e.location_name) {
+        clubSet.add(e.location_name);
+      }
+    });
+
+    const count = clubSet.size;
+
+    if (cityFilter !== "ALL") {
+      return `${cityFilter} • 1 Club`;
+    }
+    if (provinceFilter !== "ALL") {
+      return `${provinceFilter} • ${count} ${count === 1 ? "Club" : "Clubs"}`;
+    }
+    if (clusterFilter !== "ALL") {
+      return `${clusterFilter} • ${count} Clubs`;
+    }
+    if (teamKpis.isFiltered) {
+      return `${count} Clubs Monitored`;
+    }
+    return `${count > 0 ? count : 13} Clubs Active`;
+  }, [
+    filteredCohorts,
+    filteredExitEvents,
+    cityFilter,
+    provinceFilter,
+    clusterFilter,
+    teamKpis.isFiltered,
   ]);
 
   // Active Target Benchmark for Dynamic Mobility Engine
@@ -922,7 +960,7 @@ function TeamContent() {
                 title="Tracked Headcount"
                 description="Total frontline personnel actively deployed across operational gym clubs."
                 formula="Sum of active employee headcount across club cohorts"
-                benchmark="Baseline capacity: 408 frontline employees across 13 expansion clubs"
+                benchmark="Baseline capacity: 408 frontline employees across operational clubs"
                 align="left"
               />
             </span>
@@ -933,20 +971,12 @@ function TeamContent() {
               {teamKpis.headcount}
             </span>
             <span className="text-[11px] font-semibold text-brand-teal">
-              {teamKpis.isFiltered ? selectedLocation : "13 Clubs Active"}
+              {dynamicClubLabel}
             </span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>Active Frontline</span>
-            <DataProvenanceBadge
-              provenance="OBSERVED_CASE_STUDY"
-              domain="Headcount"
-              metricOrEntity="Club Employees"
-              originalSource="Turnover sheet"
-              governanceRule="Empirical club baseline"
-              impactOnDecision="Operational baseline"
-              showLabel={false}
-            />
+            <span className="text-ink-tertiary font-medium">Headcount Base</span>
           </div>
         </div>
 
@@ -959,7 +989,7 @@ function TeamContent() {
                 title="Annualized Turnover Rate"
                 description="Annualized turnover rate measuring the speed of frontline workforce departures."
                 formula="(Total Departures in Period / Active Headcount Base) × 100%"
-                benchmark="Target: < 30.0%. Critical (> 50%): High turnover hotspot (e.g., Bali at 62.5%)"
+                benchmark="Target: < 30.0%. Critical (> 50%): High turnover hotspot"
                 align="left"
               />
             </span>
@@ -969,25 +999,15 @@ function TeamContent() {
             <span className="text-2xl font-display font-black text-status-danger">
               {teamKpis.turnover}%
             </span>
-            {selectedLocation.toLowerCase().includes("bali") ? (
-              <span className="text-[11px] font-semibold text-status-danger">Critical Hotspot</span>
-            ) : teamKpis.isFiltered ? (
-              <span className="text-[11px] font-semibold text-brand-teal">vs Nat. 44.8%</span>
-            ) : (
-              <span className="text-[11px] font-semibold text-status-danger">Bali: 62.5%</span>
-            )}
+            <span className={`text-[11px] font-semibold ${teamKpis.turnover <= 30 ? 'text-status-healthy' : 'text-status-attention'}`}>
+              {teamKpis.isFiltered 
+                ? (teamKpis.turnover > 44.8 ? 'Above Nat. Avg' : 'Below Nat. Avg')
+                : 'Target: < 30.0%'}
+            </span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>Voluntary &amp; Involuntary</span>
-            <DataProvenanceBadge
-              provenance="OBSERVED_CASE_STUDY"
-              domain="Turnover"
-              metricOrEntity="Annualized Exits"
-              originalSource="Turnover sheet"
-              governanceRule="Empirical calculation"
-              impactOnDecision="Identifies hotspot clubs"
-              showLabel={false}
-            />
+            <span className="text-ink-tertiary font-medium">Annualized</span>
           </div>
         </div>
 
@@ -1010,21 +1030,13 @@ function TeamContent() {
             <span className="text-2xl font-display font-black text-status-attention">
               {teamKpis.earlyAttrition}%
             </span>
-            <span className="text-[11px] font-semibold text-status-danger">
+            <span className="text-[11px] font-semibold text-status-attention">
               &lt; 12M Tenured
             </span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>Onboarding Cliff</span>
-            <DataProvenanceBadge
-              provenance="OBSERVED_CASE_STUDY"
-              domain="Tenure"
-              metricOrEntity="First-Year Exits"
-              originalSource="Turnover sheet"
-              governanceRule="Empirical tenure cutoff"
-              impactOnDecision="Justifies buddy onboarding"
-              showLabel={false}
-            />
+            <span className="text-ink-tertiary font-medium">&lt; 12 Months</span>
           </div>
         </div>
 
@@ -1047,21 +1059,13 @@ function TeamContent() {
             <span className="text-2xl font-display font-black text-brand-teal">
               {teamKpis.backfillRate}%
             </span>
-            <span className="text-[11px] font-semibold text-status-healthy">
+            <span className="text-[11px] font-semibold text-brand-teal">
               {teamKpis.backfilledCount} Replaced
             </span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>Operational Coverage</span>
-            <DataProvenanceBadge
-              provenance="DERIVED_FROM_DATA_MART"
-              domain="Replacement"
-              metricOrEntity="Backfilled Vacancies"
-              originalSource="Requisitions & Exit Linkage"
-              governanceRule="Exit-to-Requisition Backfill Matching"
-              impactOnDecision="Prevents floor understaffing"
-              showLabel={false}
-            />
+            <span className="text-ink-tertiary font-medium">Turnover Backfill</span>
           </div>
         </div>
 
@@ -1074,7 +1078,7 @@ function TeamContent() {
                 title="Net eNPS (Advocacy Pulse)"
                 description="Employee Net Promoter Score measuring active frontline advocacy, trust, and organizational satisfaction."
                 formula="% Promoters (Score 9-10) - % Detractors (Score 0-6)"
-                benchmark="Good: > +40.0; Strong: > +50.0. National FIT HUB score is +56.6 (Bali is lowest at +37.8)"
+                benchmark="Good: > +40.0; Strong: > +50.0. National FIT HUB score is +56.6"
                 align="right"
               />
             </span>
@@ -1084,21 +1088,13 @@ function TeamContent() {
             <span className={`text-2xl font-display font-black ${teamKpis.enps >= 50 ? 'text-ink-primary' : 'text-status-danger'}`}>
               {teamKpis.enps > 0 ? `+${teamKpis.enps}` : teamKpis.enps}
             </span>
-            <span className={`text-[11px] font-semibold ${teamKpis.enps >= 50 ? 'text-status-healthy' : 'text-status-danger'}`}>
+            <span className={`text-[11px] font-semibold ${teamKpis.enps >= 50 ? 'text-status-healthy' : 'text-status-attention'}`}>
               {dynamicEngagement.active.promoter_pct}% Promoters
             </span>
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>Employee Voice</span>
-            <DataProvenanceBadge
-              provenance="OBSERVED_CASE_STUDY"
-              domain="Engagement"
-              metricOrEntity="Survey Advocacy"
-              originalSource="Engagement sheet"
-              governanceRule="Standard eNPS formula"
-              impactOnDecision="Early warning for retention dip"
-              showLabel={false}
-            />
+            <span className="text-ink-tertiary font-medium">Pulse Survey</span>
           </div>
         </div>
 
@@ -1127,15 +1123,7 @@ function TeamContent() {
           </div>
           <div className="mt-2 flex items-center justify-between text-[11px] text-ink-secondary">
             <span>Manager Review</span>
-            <DataProvenanceBadge
-              provenance="DERIVED_FROM_DATA_MART"
-              domain="Performance"
-              metricOrEntity="Supervisor Appraisal"
-              originalSource="Club Manager 90d Assessments"
-              governanceRule="Fit Hub Manager Review SOP"
-              impactOnDecision="Qualifies succession and training"
-              showLabel={false}
-            />
+            <span className="text-ink-tertiary font-medium">90d Appraisal</span>
           </div>
         </div>
       </div>

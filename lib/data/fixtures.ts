@@ -2689,7 +2689,7 @@ export interface ExitEvent {
   is_regrettable: boolean;
   primary_reason: string;
   secondary_reason: string;
-  triggered_requisition_code: string;
+  triggered_requisition_code: string | null;
   performance_rating: number;
   data_provenance: "OBSERVED_CASE_STUDY" | "SYNTHETIC_ENABLER";
 }
@@ -2832,6 +2832,66 @@ export const fallbackExitEvents: ExitEvent[] = [
     secondary_reason: "Shift Scheduling",
     triggered_requisition_code: "REQ-TNG-0502",
     performance_rating: 3.6,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    exit_code: "EXT-BLI-0118",
+    employee_code: "FH-EMP-0810",
+    role_name: "Customer Service",
+    location_name: "Bali",
+    exit_date: "2024-08-14",
+    tenure_months: 18,
+    resignation_type: "Voluntary",
+    is_regrettable: false,
+    primary_reason: "Relocation",
+    secondary_reason: "Family Relocation to Jawa",
+    triggered_requisition_code: null,
+    performance_rating: 3.9,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    exit_code: "EXT-SBY-0152",
+    employee_code: "FH-EMP-0761",
+    role_name: "Personal Trainer",
+    location_name: "Surabaya",
+    exit_date: "2024-08-19",
+    tenure_months: 14,
+    resignation_type: "Voluntary",
+    is_regrettable: true,
+    primary_reason: "Compensation & Commission Volatility",
+    secondary_reason: "Private Client Freelance",
+    triggered_requisition_code: null,
+    performance_rating: 4.1,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    exit_code: "EXT-JKS-0205",
+    employee_code: "FH-EMP-0455",
+    role_name: "Customer Service",
+    location_name: "Jakarta Selatan",
+    exit_date: "2024-08-25",
+    tenure_months: 7,
+    resignation_type: "Voluntary",
+    is_regrettable: false,
+    primary_reason: "Career Development",
+    secondary_reason: "Education Continuation",
+    triggered_requisition_code: "REQ-JKS-0411",
+    performance_rating: 4.0,
+    data_provenance: "OBSERVED_CASE_STUDY",
+  },
+  {
+    exit_code: "EXT-TNG-0120",
+    employee_code: "FH-EMP-0390",
+    role_name: "Fitness Consultant",
+    location_name: "Tangerang",
+    exit_date: "2024-09-02",
+    tenure_months: 20,
+    resignation_type: "Voluntary",
+    is_regrettable: false,
+    primary_reason: "Working Hours",
+    secondary_reason: "Evening Shift Fatigue",
+    triggered_requisition_code: null,
+    performance_rating: 3.7,
     data_provenance: "OBSERVED_CASE_STUDY",
   },
 ];
