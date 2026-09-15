@@ -4203,106 +4203,102 @@ function VacancyContent() {
                       <th className="py-3 px-4 font-bold">Sourcing Channel</th>
                       <th className="py-3 px-4 font-bold text-center">Category</th>
                       <th className="py-3 px-4 font-bold text-center">Median TTF</th>
+                      <th className="py-3 px-4 font-bold text-center">Hire Conversion</th>
                       <th className="py-3 px-4 font-bold">6-Month Retention</th>
                       <th className="py-3 px-4 font-bold text-center">Manager Rating (90d)</th>
-                      <th className="py-3 px-4 font-bold text-center">Cost Efficiency</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-surface-border">
-                    {dynamicSourcingChannels.map((ch) => {
-                      const costEfficiency =
-                        ch.channel_name === "Frontline Ready Pool" || ch.channel_name === "Employee Referral" || ch.channel_name === "Internal Mobility" || ch.channel_name === "Direct Career Site"
-                          ? "HIGH"
-                          : ch.channel_name === "Job Portal"
-                          ? "MEDIUM"
-                          : "LOW";
-
-                      return (
-                        <tr
-                          key={ch.channel_name}
-                          className={`hover:bg-surface-elevated/50 transition-colors ${
-                            ch.is_top_channel ? "bg-brand-teal/5" : ""
-                          }`}
-                        >
-                          <td className="py-3 px-4">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-ink-primary">{ch.channel_name}</span>
-                              {ch.is_top_channel && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-brand-teal text-surface-ground tracking-wider">
-                                  Top Pick
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-3 px-4 text-center">
+                    {dynamicSourcingChannels.map((ch) => (
+                      <tr
+                        key={ch.channel_name}
+                        className={`hover:bg-surface-elevated/50 transition-colors ${
+                          ch.is_top_channel ? "bg-brand-teal/5" : ""
+                        }`}
+                      >
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-ink-primary">{ch.channel_name}</span>
+                            {ch.is_top_channel && (
+                              <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-brand-teal text-surface-ground tracking-wider">
+                                Top Pick
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              ch.category === "Fast-Track"
+                                ? "bg-brand-teal/15 text-brand-teal border border-brand-teal/30"
+                                : ch.category === "Succession"
+                                ? "bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30"
+                                : "bg-surface-soft text-ink-secondary border border-surface-border"
+                            }`}
+                          >
+                            {ch.category}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="font-display font-bold text-ink-primary">
+                            {ch.median_ttf_days} days
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <div className="inline-flex flex-col items-center">
                             <span
-                              className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                                ch.category === "Fast-Track"
+                              className={`font-display font-bold px-2 py-0.5 rounded text-[11px] ${
+                                ch.conversion_rate_pct >= 40
+                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                  : ch.conversion_rate_pct >= 20
                                   ? "bg-brand-teal/15 text-brand-teal border border-brand-teal/30"
-                                  : ch.category === "Succession"
-                                  ? "bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30"
                                   : "bg-surface-soft text-ink-secondary border border-surface-border"
                               }`}
                             >
-                              {ch.category}
+                              {ch.conversion_rate_pct}%
                             </span>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className="font-display font-bold text-ink-primary">
-                              {ch.median_ttf_days} days
+                            <span className="text-[10px] text-ink-muted mt-0.5">
+                              {ch.hires} of {ch.applicants} hires
                             </span>
-                          </td>
-                          <td className="py-3 px-4">
-                            <div className="w-44">
-                              <div className="flex justify-between items-center text-[11px] mb-1">
-                                <span
-                                  className={`font-bold ${
-                                    ch.six_month_retention_pct >= 80
-                                      ? "text-emerald-600 dark:text-emerald-400"
-                                      : ch.six_month_retention_pct >= 65
-                                      ? "text-amber-600 dark:text-amber-400"
-                                      : "text-rose-600 dark:text-rose-400"
-                                  }`}
-                                >
-                                  {ch.six_month_retention_pct}%
-                                </span>
-                                <span className="text-[10px] text-ink-muted">target 75%</span>
-                              </div>
-                              <div className="h-1.5 w-full rounded-full bg-surface-border overflow-hidden">
-                                <div
-                                  className={`h-full rounded-full ${
-                                    ch.six_month_retention_pct >= 80
-                                      ? "bg-emerald-500"
-                                      : ch.six_month_retention_pct >= 65
-                                      ? "bg-amber-500"
-                                      : "bg-rose-500"
-                                  }`}
-                                  style={{ width: `${ch.six_month_retention_pct}%` }}
-                                />
-                              </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="w-44">
+                            <div className="flex justify-between items-center text-[11px] mb-1">
+                              <span
+                                className={`font-bold ${
+                                  ch.six_month_retention_pct >= 80
+                                    ? "text-emerald-600 dark:text-emerald-400"
+                                    : ch.six_month_retention_pct >= 65
+                                    ? "text-amber-600 dark:text-amber-400"
+                                    : "text-rose-600 dark:text-rose-400"
+                                }`}
+                              >
+                                {ch.six_month_retention_pct}%
+                              </span>
+                              <span className="text-[10px] text-ink-muted">target 75%</span>
                             </div>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span className="font-bold text-amber-600 dark:text-amber-400">
-                              {ch.quality_rating} / 5.0
-                            </span>
-                          </td>
-                          <td className="py-3 px-4 text-center">
-                            <span
-                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                                costEfficiency === "HIGH"
-                                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                                  : costEfficiency === "MEDIUM"
-                                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                                  : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20"
-                              }`}
-                            >
-                              {costEfficiency}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
+                            <div className="h-1.5 w-full rounded-full bg-surface-border overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${
+                                  ch.six_month_retention_pct >= 80
+                                    ? "bg-emerald-500"
+                                    : ch.six_month_retention_pct >= 65
+                                    ? "bg-amber-500"
+                                    : "bg-rose-500"
+                                }`}
+                                style={{ width: `${ch.six_month_retention_pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <span className="font-bold text-amber-600 dark:text-amber-400">
+                            {ch.quality_rating} / 5.0
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
