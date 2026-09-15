@@ -30,6 +30,19 @@ export interface RetentionCohort {
   data_provenance: "OBSERVED_CASE_STUDY" | "SYNTHETIC_ENABLER";
 }
 
+export interface TeamExecutiveKpis {
+  headcount: number;
+  turnover_rate_pct: number;
+  early_attrition_pct: number;
+  backfill_rate_pct: number;
+  enps_score: number;
+  avg_manager_rating: number;
+  total_exits: number;
+  replaced_count: number;
+  unfilled_gap_count: number;
+  is_filtered: boolean;
+}
+
 export interface EngagementSummary {
   summary_id: string;
   role_name: string;
