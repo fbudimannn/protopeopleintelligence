@@ -119,7 +119,7 @@ function TeamContent() {
   }, [jobFamilyFilter, roleFilter]);
 
   const selectedRole = roleFilter === "ALL" ? "All Roles" : roleFilter;
-  const [enpsHealthFilter, setEnpsHealthFilter] = useState<"ALL" | "CRITICAL" | "ATTENTION" | "HEALTHY">("ALL");
+
   const [readinessFilter, setReadinessFilter] = useState<"ALL" | "Ready" | "Near Ready" | "Development Needed">("ALL");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -225,6 +225,31 @@ function TeamContent() {
     return matchRoleHierarchy(itemRole, jobFamilyFilter, roleFilter);
   };
 
+  // Cohort qualitative factor lookup map (Role × Location → unique factors)
+  const cohortFactorMap: Record<string, { role: string; location: string; exitDriver: string }> = {
+    "Customer Service|Bali": { role: "No Senior CS or Shift Lead progression track available", location: "Peak tourist season double-shift fatigue & high Bali living costs", exitDriver: "Career Development" },
+    "Customer Service|Surabaya": { role: "Front-desk POS SOP complexity & member complaint resolution burden", location: "Regional isolation from Jakarta Head Office career path visibility", exitDriver: "Career Development" },
+    "Customer Service|Jakarta Barat": { role: "12-month seniority plateau with limited supervisor slot openings", location: "High club member density creates long evening floor coverage shifts", exitDriver: "Career Development" },
+    "Customer Service|Jakarta Selatan": { role: "Evening shift end times conflict with childcare arrangements", location: "South Jakarta traffic congestion extends commute beyond 90 min one-way", exitDriver: "Family Reason" },
+    "Customer Service|Tangerang": { role: "Front-desk equipment downtime & inflexible roster swap policy", location: "Industrial zone commute distances & aging club HVAC/locker conditions", exitDriver: "Working Environment" },
+    "Personal Trainer|Bali": { role: "PT session split uncompetitive vs freelance client demand", location: "Private villa freelance market poaching certified trainers", exitDriver: "Compensation & Benefits" },
+    "Personal Trainer|Jakarta Selatan": { role: "No Master Trainer or strength coach specialization tier available", location: "Lifestyle gym competition & talent poaching along Sudirman-Senopati corridor", exitDriver: "Career Development" },
+    "Personal Trainer|Surabaya": { role: "Weekend-heavy schedule conflicts with family commitments", location: "East Java cultural expectation for weekend family time clashes with peak hours", exitDriver: "Family Reason" },
+    "Personal Trainer|Tangerang": { role: "Session revenue split lower than competing boutique studios in area", location: "Tangerang boutique fitness boom gives certified PTs better earning alternatives", exitDriver: "Compensation & Benefits" },
+    "Personal Trainer|Jakarta Barat": { role: "Early morning 6AM slot requirement conflicts with family school runs", location: "West Jakarta residential spread means long commute from affordable housing areas", exitDriver: "Family Reason" },
+    "Fitness Consultant|Surabaya": { role: "Unrealistic monthly sales quotas & no lead guarantee for new FC hires", location: "Aggressive competitor price discounting across East Java market", exitDriver: "Performance Issue" },
+    "Fitness Consultant|Jakarta Selatan": { role: "Commission structure penalizes trial-to-paid conversion lag", location: "Premium market members expect bespoke consultations but quotas remain fixed", exitDriver: "Compensation & Benefits" },
+    "Fitness Consultant|Tangerang": { role: "Cold-call lead conversion targets misaligned with walk-in club traffic", location: "Newer Tangerang clubs have lower brand recognition reducing inbound leads", exitDriver: "Performance Issue" },
+    "Fitness Consultant|Bali": { role: "Tourist-focused memberships require bilingual upselling not in job description", location: "Seasonal occupancy swings make monthly quota targets inconsistent", exitDriver: "Working Environment" },
+    "Fitness Consultant|Jakarta Barat": { role: "FC Leader slots capped at 1 per club limiting vertical mobility", location: "Jakarta Barat dense competition with 3 competitor gyms within 2km radius", exitDriver: "Career Development" },
+    "Club Manager|Jabodetabek Area": { role: "Lateral AGM hiring from competitor chains blocks internal GM promotion", location: "Multi-club area expansion workload without additional administrative relief", exitDriver: "Career Development" },
+  };
+
+  const getCohortFactor = (roleName: string, locationName: string, field: "role" | "location" | "exitDriver") => {
+    const key = `${roleName}|${locationName}`;
+    return cohortFactorMap[key]?.[field] || null;
+  };
+
   // Filtered Cohorts
   const filteredCohorts = useMemo(() => {
     return cohorts.filter((c) => {
@@ -237,12 +262,7 @@ function TeamContent() {
       if (!matchPeriod((c as any).period_year || (c as any).join_date, selectedPeriod, c.cohort_id)) {
         return false;
       }
-      if (enpsHealthFilter !== "ALL") {
-        const enps = c.segment_enps ?? 50;
-        if (enpsHealthFilter === "CRITICAL" && enps >= 45) return false;
-        if (enpsHealthFilter === "ATTENTION" && (enps < 45 || enps > 55)) return false;
-        if (enpsHealthFilter === "HEALTHY" && enps <= 55) return false;
-      }
+
       if (searchQuery.trim() !== "") {
         const q = searchQuery.toLowerCase();
         return (
@@ -255,7 +275,7 @@ function TeamContent() {
       }
       return true;
     });
-  }, [cohorts, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter, selectedPeriod, enpsHealthFilter, searchQuery]);
+  }, [cohorts, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter, selectedPeriod, searchQuery]);
 
   // Filtered Exit Events based on active Location, Role, and Date
   const filteredExitEvents = useMemo(() => {
@@ -1254,30 +1274,7 @@ function TeamContent() {
                 />
               </div>
 
-              {/* Segment eNPS Health Filter */}
-              <div className="flex items-center gap-1 bg-surface-ground p-1 rounded-lg border border-surface-border text-xs">
-                <span className="text-[11px] text-ink-tertiary px-2 font-medium">Sentiment Filter:</span>
-                {(
-                  [
-                    { id: "ALL", label: "All Cohorts" },
-                    { id: "CRITICAL", label: "Critical (< +45 eNPS)" },
-                    { id: "ATTENTION", label: "Attention (+45 to +55)" },
-                    { id: "HEALTHY", label: "Healthy (> +55)" },
-                  ] as const
-                ).map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setEnpsHealthFilter(f.id)}
-                    className={`px-2.5 py-1 rounded-md font-medium transition-all ${
-                      enpsHealthFilter === f.id
-                        ? "bg-surface-card text-brand-teal shadow-subtle font-semibold"
-                        : "text-ink-secondary hover:text-ink-primary"
-                    }`}
-                  >
-                    {f.label}
-                  </button>
-                ))}
-              </div>
+
             </div>
 
             <div className="text-xs text-ink-tertiary">
@@ -1355,7 +1352,7 @@ function TeamContent() {
                           />
                         </span>
                       </th>
-                      <th className="py-3.5 px-4 whitespace-nowrap">Core Exit Driver (Excel)</th>
+                      <th className="py-3.5 px-4 whitespace-nowrap">Primary Exit Reason</th>
                       <th className="py-3.5 px-4 min-w-[220px]">Role-Specific Factor</th>
                       <th className="py-3.5 px-4 min-w-[220px]">Location-Specific Factor</th>
                     </tr>
@@ -1412,14 +1409,14 @@ function TeamContent() {
                           </td>
                           <td className="py-3.5 px-4 whitespace-nowrap">
                             <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold bg-surface-ground border border-surface-border text-ink-primary">
-                              {cohort.core_exit_driver || cohort.primary_exit_driver}
+                              {cohort.core_exit_driver || cohort.primary_exit_driver || getCohortFactor(cohort.role_name, cohort.location_name, "exitDriver") || "Career Development"}
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-xs text-ink-secondary leading-relaxed">
-                            {cohort.role_specific_factor || "Absence of clear promotional pathway"}
+                            {cohort.role_specific_factor || getCohortFactor(cohort.role_name, cohort.location_name, "role") || `${cohort.role_name} operational role demands`}
                           </td>
                           <td className="py-3.5 px-4 text-xs text-ink-secondary leading-relaxed">
-                            {cohort.location_specific_factor || "Regional club operational conditions"}
+                            {cohort.location_specific_factor || getCohortFactor(cohort.role_name, cohort.location_name, "location") || `${cohort.location_name} regional market conditions`}
                           </td>
                         </tr>
                       ))

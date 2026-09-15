@@ -623,9 +623,14 @@ export async function getRetentionCohorts(): Promise<{ data: RetentionCohort[]; 
     return { data: fallbackRetentionCohorts, isLive: false };
   }
   try {
-    const { data, error } = await supabase.from("mart_retention_cohort").select("*");
+    const { data, error } = await supabase.from("mart_retention_cohort_intelligence").select("*");
     if (error || !data || data.length === 0) {
-      return { data: fallbackRetentionCohorts, isLive: false };
+      // Fallback to base table if view doesn't exist yet
+      const { data: baseData, error: baseError } = await supabase.from("mart_retention_cohort").select("*");
+      if (baseError || !baseData || baseData.length === 0) {
+        return { data: fallbackRetentionCohorts, isLive: false };
+      }
+      return { data: baseData as RetentionCohort[], isLive: true };
     }
     return { data: data as RetentionCohort[], isLive: true };
   } catch {
