@@ -86,39 +86,88 @@ export function ColoredBar({
   unit = '',
 }: ColoredBarProps) {
   if (!data || data.length === 0) {
-    return <div className="h-[200px] flex items-center justify-center text-xs text-ink-muted">No data available</div>;
+    return (
+      <div className="h-[200px] flex items-center justify-center text-xs text-ink-muted bg-surface-ground/30 rounded-xl border border-dashed border-surface-border">
+        Belum ada data friksi untuk kombinasi filter ini
+      </div>
+    );
   }
 
-  const defaultColors = ['#23C9D3', '#1D3557', '#C99400', '#2E8B57', '#C65353', '#8C9B9D'];
+  const defaultColors = ['#23C9D3', '#00ADB5', '#C99400', '#2E8B57', '#C65353', '#8C9B9D'];
 
   return (
     <div style={{ width: '100%', height }}>
       <ResponsiveContainer width="100%" height="100%">
         {horizontal ? (
-          <BarChart data={data} layout="vertical" margin={{ top: 10, right: 30, left: 40, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#EDF2F2" />
-            <XAxis type="number" tick={{ fill: '#5F6B6D', fontSize: 11 }} />
-            <YAxis type="category" dataKey={categoryKey} tick={{ fill: '#111111', fontSize: 11 }} width={120} />
-            <Tooltip
-              formatter={(val: any) => [`${val ?? 0} ${unit}`, 'Value']}
-              contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #DDE5E6', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+          <BarChart data={data} layout="vertical" margin={{ top: 8, right: 28, left: 10, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E2E8F0" strokeOpacity={0.6} />
+            <XAxis
+              type="number"
+              axisLine={false}
+              tickLine={false}
+              domain={[0, (dataMax: number) => Math.max(35, Math.ceil(dataMax / 10) * 10)]}
+              tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+              tickFormatter={(v) => `${v}${unit}`}
             />
-            <Bar dataKey={dataKey} radius={[0, 6, 6, 0]}>
+            <YAxis
+              type="category"
+              dataKey={categoryKey}
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#334155', fontSize: 11, fontWeight: 600 }}
+              width={125}
+            />
+            <Tooltip
+              formatter={(val: any) => [`${val ?? 0}${unit}`, 'Friction Rate']}
+              contentStyle={{
+                backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+                color: '#F8FAFC',
+                padding: '8px 12px',
+                fontSize: '12px',
+              }}
+              itemStyle={{ color: '#38BDF8', fontWeight: 600 }}
+              labelStyle={{ color: '#94A3B8', fontWeight: 500, marginBottom: '2px' }}
+            />
+            <Bar dataKey={dataKey} radius={[0, 6, 6, 0]} barSize={18}>
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color || defaultColors[index % defaultColors.length]} />
               ))}
             </Bar>
           </BarChart>
         ) : (
-          <BarChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDF2F2" />
-            <XAxis dataKey={categoryKey} tick={{ fill: '#5F6B6D', fontSize: 11 }} />
-            <YAxis tick={{ fill: '#5F6B6D', fontSize: 11 }} />
-            <Tooltip
-              formatter={(val: any) => [`${val ?? 0} ${unit}`, 'Value']}
-              contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #DDE5E6', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+          <BarChart data={data} margin={{ top: 12, right: 12, left: -16, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" strokeOpacity={0.6} />
+            <XAxis
+              dataKey={categoryKey}
+              axisLine={false}
+              tickLine={false}
+              interval={0}
+              tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
             />
-            <Bar dataKey={dataKey} radius={[6, 6, 0, 0]}>
+            <YAxis
+              axisLine={false}
+              tickLine={false}
+              tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+              tickFormatter={(v) => `${v}${unit}`}
+            />
+            <Tooltip
+              formatter={(val: any) => [`${val ?? 0}${unit}`, 'Friction Rate']}
+              contentStyle={{
+                backgroundColor: 'rgba(15, 23, 42, 0.94)',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+                color: '#F8FAFC',
+                padding: '8px 12px',
+                fontSize: '12px',
+              }}
+              itemStyle={{ color: '#38BDF8', fontWeight: 600 }}
+              labelStyle={{ color: '#94A3B8', fontWeight: 500, marginBottom: '2px' }}
+            />
+            <Bar dataKey={dataKey} radius={[6, 6, 0, 0]} barSize={26}>
               {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color || defaultColors[index % defaultColors.length]} />
               ))}
@@ -143,20 +192,59 @@ export function SimpleLine({
   data,
   dataKey = 'value',
   categoryKey = 'label',
-  strokeColor = '#23C9D3',
+  strokeColor = '#00ADB5',
   height = 240,
   unit = '',
 }: SimpleLineProps) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-[200px] flex items-center justify-center text-xs text-ink-muted bg-surface-ground/30 rounded-xl border border-dashed border-surface-border">
+        Belum ada data tren untuk filter ini
+      </div>
+    );
+  }
+
+  const gradientId = `line-gradient-${Math.random().toString(36).substr(2, 9)}`;
+
   return (
     <div style={{ width: '100%', height }}>
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 10, right: 20, left: -20, bottom: 5 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDF2F2" />
-          <XAxis dataKey={categoryKey} tick={{ fill: '#5F6B6D', fontSize: 11 }} />
-          <YAxis tick={{ fill: '#5F6B6D', fontSize: 11 }} />
+        <LineChart data={data} margin={{ top: 12, right: 18, left: -16, bottom: 4 }}>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor={strokeColor} stopOpacity={0.25} />
+              <stop offset="95%" stopColor={strokeColor} stopOpacity={0.0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" strokeOpacity={0.6} />
+          <XAxis
+            dataKey={categoryKey}
+            axisLine={false}
+            tickLine={false}
+            interval={0}
+            tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+            dy={6}
+          />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            tick={{ fill: '#64748B', fontSize: 11, fontWeight: 500 }}
+            tickFormatter={(v) => `${v}${unit ? (unit === 'days' ? 'd' : unit === '%' ? '%' : ` ${unit}`) : ''}`}
+            domain={['auto', 'auto']}
+          />
           <Tooltip
-            formatter={(val: any) => [`${val ?? 0} ${unit}`, 'Value']}
-            contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', border: '1px solid #DDE5E6', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+            formatter={(val: any) => [`${val ?? 0} ${unit}`, 'Median TTF']}
+            contentStyle={{
+              backgroundColor: 'rgba(15, 23, 42, 0.94)',
+              borderRadius: '10px',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.3)',
+              color: '#F8FAFC',
+              padding: '8px 12px',
+              fontSize: '12px',
+            }}
+            itemStyle={{ color: '#2DD4BF', fontWeight: 600 }}
+            labelStyle={{ color: '#94A3B8', fontWeight: 500, marginBottom: '2px' }}
           />
           <Line
             type="monotone"
@@ -164,7 +252,7 @@ export function SimpleLine({
             stroke={strokeColor}
             strokeWidth={3}
             dot={{ r: 4, fill: strokeColor, stroke: '#ffffff', strokeWidth: 2 }}
-            activeDot={{ r: 6 }}
+            activeDot={{ r: 6, stroke: '#ffffff', strokeWidth: 3, fill: strokeColor }}
           />
         </LineChart>
       </ResponsiveContainer>
