@@ -130,7 +130,7 @@ INSERT INTO public.synthetic_talent_pool (
 VALUES
 (
     'CAN-JKB-105', 'Ferry Sanjaya', 'Personal Trainer', 'Jakarta Barat',
-    'Interview Ready', 'Referral Pipeline', 92.00,
+    'Active Pool', 'Referral Pipeline', 92.00,
     '["Strength Conditioning", "Biomechanics Analysis", "APKI Certified Trainer"]'::jsonb,
     8, '2024-08-22', 'Recommended by Kebon Jeruk Head Coach, competitive powerlifting background with APKI cert.', 'SYNTHETIC_ENABLER',
     '+62 812-9900-1122', 'ferry.sanjaya@email.com', 'Gym Experienced', 3.5, 'Bachelor in Physical Education',
@@ -139,7 +139,7 @@ VALUES
 ),
 (
     'CAN-JKB-108', 'Cindy Claudia', 'Fitness Consultant', 'Jakarta Barat',
-    'Interview Ready', 'Direct Career Site', 89.00,
+    'Active Pool', 'Direct Career Site', 89.00,
     '["B2C Direct Sales", "Consultative Negotiation", "Sales Target Discipline"]'::jsonb,
     9, '2024-08-23', 'Ex-telecom premium package consultant, high closing rate in Tanjung Duren area.', 'SYNTHETIC_ENABLER',
     '+62 813-2211-9988', 'cindy.claudia@email.com', 'Non-Gym Frontline', 2.0, 'Bachelor in Marketing',
@@ -148,7 +148,7 @@ VALUES
 ),
 (
     'CAN-TNG-120', 'Galih Pratama', 'Personal Trainer', 'Tangerang',
-    'Pre-qualified', 'Alumni Network', 88.00,
+    'Active Pool', 'Alumni Network', 88.00,
     '["Functional Movement", "Client Motivation", "Nutrition Guidance"]'::jsonb,
     11, '2024-08-24', 'Sports coaching alumni with strong nutrition advisory and client onboarding skills.', 'SYNTHETIC_ENABLER',
     '+62 817-4455-6677', 'galih.pratama@email.com', 'Gym Experienced', 2.0, 'Bachelor in Sports Science',
@@ -157,7 +157,7 @@ VALUES
 ),
 (
     'CAN-BDG-132', 'Farhan Fauzi', 'Personal Trainer', 'Bandung',
-    'Interview Ready', 'Ex-Finalist Pool', 91.00,
+    'Active Pool', 'Ex-Finalist Pool', 91.00,
     '["Strength Conditioning", "Client Assessment", "First Aid Protocol"]'::jsonb,
     9, '2024-08-25', 'Runner up candidate from July Bandung expansion wave, ready for immediate deployment in Riau or Buah Batu.', 'SYNTHETIC_ENABLER',
     '+62 818-3322-1100', 'farhan.fauzi@email.com', 'Gym Experienced', 2.5, 'Bachelor in Sports Education',

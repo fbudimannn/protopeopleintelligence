@@ -163,7 +163,6 @@ function VacancyContent() {
 
   // Dedicated Talent Pool states
   const [poolTargetReqCode, setPoolTargetReqCode] = useState<string>("ALL");
-  const [poolReadinessFilter, setPoolReadinessFilter] = useState<string>("ALL");
   const [poolGymExpFilter, setPoolGymExpFilter] = useState<string>("ALL");
   const [poolAvailabilityFilter, setPoolAvailabilityFilter] = useState<string>("ALL");
   const [poolSortBy, setPoolSortBy] = useState<"MATCH_DESC" | "TTF_ASC" | "DATE_DESC" | "NAME_ASC">("MATCH_DESC");
@@ -1488,11 +1487,6 @@ function VacancyContent() {
           if (!locMatch || !roleMatch) return false;
         }
 
-        // Dedicated Readiness Filter
-        if (poolReadinessFilter !== "ALL" && c.readiness_status !== poolReadinessFilter) {
-          return false;
-        }
-
         // Dedicated Gym Experience Filter
         if (poolGymExpFilter !== "ALL") {
           const isGymExp = c.gym_experience_level === "Gym Experienced";
@@ -1544,40 +1538,12 @@ function VacancyContent() {
     jobFamilyFilter,
     roleFilter,
     effectivePoolTargetReq,
-    poolReadinessFilter,
     poolGymExpFilter,
     poolAvailabilityFilter,
     poolSortBy,
   ]);
 
-  // Dynamic Talent Pool Header Metrics
-  const poolHeaderMetrics = useMemo(() => {
-    if (filteredTalentPool.length === 0) {
-      return {
-        avgTtf: 12,
-        readyCount: 0,
-        readyPct: 0,
-        avgFitScore: 85,
-        totalCandidates: 0,
-      };
-    }
-    const totalTtf = filteredTalentPool.reduce((sum, c) => sum + (c.est_ttf_days || 10), 0);
-    const avgTtf = Math.round((totalTtf / filteredTalentPool.length) * 10) / 10;
 
-    const readyCount = filteredTalentPool.filter((c) => c.readiness_status === "Interview Ready").length;
-    const readyPct = Math.round((readyCount / filteredTalentPool.length) * 100);
-
-    const totalFit = filteredTalentPool.reduce((sum, c) => sum + (c.computedFitScore || c.fit_score || 85), 0);
-    const avgFitScore = Math.round((totalFit / filteredTalentPool.length) * 10) / 10;
-
-    return {
-      avgTtf,
-      readyCount,
-      readyPct,
-      avgFitScore,
-      totalCandidates: filteredTalentPool.length,
-    };
-  }, [filteredTalentPool]);
 
   // Dynamic Location Beyond-SLA Friction Heat computed from active requisitions and active filters
   const dynamicLocationSlaFriction = useMemo(() => {
@@ -3624,7 +3590,7 @@ function VacancyContent() {
                     <span>Recommendation 3 Enabler</span>
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-surface-ground text-ink-tertiary border border-surface-border">
-                    {poolHeaderMetrics.totalCandidates} Candidates Evaluated
+                    {filteredTalentPool.length} Verified Candidates Available
                   </span>
                   <DataProvenanceBadge
                     provenance="SYNTHETIC_ENABLER"
@@ -3637,58 +3603,11 @@ function VacancyContent() {
                 </div>
                 <h2 className="text-xl font-bold text-ink-primary font-display flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-amber-400" />
-                  <span>Proactive Frontline Talent Pool & Backfill Roster</span>
+                  <span>Proactive Frontline Talent Pool &amp; Backfill Roster</span>
                 </h2>
                 <p className="text-xs text-ink-secondary mt-1 max-w-2xl">
-                  Pre-screened candidates from prior expansion waves, verified alumni networks, and direct pool submissions. Evaluated on a deterministic formula (Location 30%, Gym Exp 25%, Certification 25%, Availability 15%, Source 5%) for instant vacancy backfilling.
+                  Pre-screened candidates from prior expansion waves, verified alumni networks, and direct pool submissions for instant vacancy backfilling.
                 </p>
-              </div>
-
-              {/* Dynamic Header Metrics */}
-              <div className="grid grid-cols-3 gap-3 shrink-0">
-                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border text-right min-w-[125px]">
-                  <span className="text-[10px] uppercase tracking-wider text-ink-tertiary block font-semibold">
-                    Deploy Velocity
-                  </span>
-                  <div className="flex items-baseline justify-end gap-1 mt-0.5">
-                    <span className="text-lg font-bold text-emerald-400 font-mono">
-                      ~{poolHeaderMetrics.avgTtf}d
-                    </span>
-                    <span className="text-[10px] text-ink-tertiary font-mono">vs 34d</span>
-                  </div>
-                  <span className="text-[10px] text-emerald-400 font-medium block">
-                    -65% TTF Reduction
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border text-right min-w-[125px]">
-                  <span className="text-[10px] uppercase tracking-wider text-ink-tertiary block font-semibold">
-                    Interview Ready
-                  </span>
-                  <div className="flex items-baseline justify-end gap-1 mt-0.5">
-                    <span className="text-lg font-bold text-brand-teal font-mono">
-                      {poolHeaderMetrics.readyCount}/{poolHeaderMetrics.totalCandidates}
-                    </span>
-                    <span className="text-[10px] text-ink-tertiary">({poolHeaderMetrics.readyPct}%)</span>
-                  </div>
-                  <span className="text-[10px] text-ink-secondary block">
-                    Immediate Outreach
-                  </span>
-                </div>
-
-                <div className="p-3 rounded-xl bg-surface-ground border border-surface-border text-right min-w-[125px]">
-                  <span className="text-[10px] uppercase tracking-wider text-ink-tertiary block font-semibold">
-                    Avg Match Score
-                  </span>
-                  <div className="flex items-baseline justify-end gap-1 mt-0.5">
-                    <span className="text-lg font-bold text-indigo-400 font-mono">
-                      {poolHeaderMetrics.avgFitScore}%
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-indigo-300 block truncate max-w-[120px]">
-                    {effectivePoolTargetReq ? effectivePoolTargetReq.req_code : "General Pool Fit"}
-                  </span>
-                </div>
               </div>
             </div>
 
@@ -3716,18 +3635,6 @@ function VacancyContent() {
                       ))}
                   </select>
                 </div>
-
-                {/* Readiness Filter */}
-                <select
-                  value={poolReadinessFilter}
-                  onChange={(e) => setPoolReadinessFilter(e.target.value)}
-                  className="px-2.5 py-1.5 rounded-lg bg-surface-card border border-surface-border text-xs font-medium text-ink-secondary focus:outline-none focus:border-brand-teal"
-                >
-                  <option value="ALL">All Readiness Status</option>
-                  <option value="Interview Ready">⚡ Interview Ready Only</option>
-                  <option value="Pre-qualified">Pre-qualified</option>
-                  <option value="Previous Finalist">Previous Finalist</option>
-                </select>
 
                 {/* Gym Experience Filter */}
                 <select
@@ -3806,16 +3713,8 @@ function VacancyContent() {
                               </span>
                             )}
                           </div>
-                          <span
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                              c.readiness_status === "Interview Ready"
-                                ? "bg-status-healthy/10 text-status-healthy border border-status-healthy/30"
-                                : c.readiness_status === "Pre-qualified"
-                                ? "bg-brand-teal/10 text-brand-teal border border-brand-teal/30"
-                                : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
-                            }`}
-                          >
-                            {c.readiness_status}
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-teal/10 text-brand-teal border border-brand-teal/30">
+                            Active Talent Pool
                           </span>
                         </div>
 
@@ -6153,16 +6052,8 @@ function VacancyContent() {
                       <span className="font-mono text-xs text-ink-tertiary">
                         {cand.candidate_id}
                       </span>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                          cand.readiness_status === "Interview Ready"
-                            ? "bg-status-healthy/10 text-status-healthy border border-status-healthy/30"
-                            : cand.readiness_status === "Pre-qualified"
-                            ? "bg-brand-teal/10 text-brand-teal border border-brand-teal/30"
-                            : "bg-amber-500/10 text-amber-400 border border-amber-500/30"
-                        }`}
-                      >
-                        {cand.readiness_status}
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-brand-teal/10 text-brand-teal border border-brand-teal/30">
+                        Active Talent Pool
                       </span>
                     </div>
                     <h3 className="text-lg font-bold text-ink-primary mt-0.5">
