@@ -12,6 +12,7 @@ import {
   FunnelStageMetric,
   TalentPoolCandidate,
   HiringOutcomeMetric,
+  SourcingChannelQualityMetric,
   ExitEvent,
   TenureBand,
   VoiceTheme,
@@ -36,6 +37,7 @@ import {
   fallbackFunnelStages,
   fallbackTalentPool,
   fallbackHiringOutcomes,
+  fallbackSourcingChannelQuality,
   fallbackExitEvents,
   fallbackTenureBands,
   fallbackVoiceThemes,
@@ -595,6 +597,24 @@ export async function getHiringOutcomes(): Promise<{ data: HiringOutcomeMetric[]
     return { data: data as HiringOutcomeMetric[], isLive: true };
   } catch {
     return { data: fallbackHiringOutcomes, isLive: false };
+  }
+}
+
+export async function getSourcingChannelQuality(): Promise<{ data: SourcingChannelQualityMetric[]; isLive: boolean }> {
+  if (!supabase) {
+    return { data: fallbackSourcingChannelQuality, isLive: false };
+  }
+  try {
+    const { data, error } = await withTimeout(
+      supabase.from("mart_sourcing_channel_retention_quality").select("*").order("six_month_retention_pct", { ascending: false }),
+      1500
+    );
+    if (error || !data || data.length === 0) {
+      return { data: fallbackSourcingChannelQuality, isLive: false };
+    }
+    return { data: data as SourcingChannelQualityMetric[], isLive: true };
+  } catch {
+    return { data: fallbackSourcingChannelQuality, isLive: false };
   }
 }
 

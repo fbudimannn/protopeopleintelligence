@@ -914,7 +914,105 @@ export interface HiringOutcomeMetric {
   six_month_retention_pct: number;
   ramp_up_speed_pct: number;
   manager_rating_avg: number;
+  ttf_delta_qoq?: number;
+  beyond_sla_delta_qoq?: number;
+  retention_delta_qoq?: number;
 }
+
+export interface SourcingChannelQualityMetric {
+  channel_key: string;
+  channel_name: string;
+  channel_category: 'PROACTIVE_POOL' | 'INTERNAL' | 'CONVENTIONAL' | 'EXTERNAL';
+  median_ttf_days: number;
+  six_month_retention_pct: number;
+  probation_pass_rate_pct: number;
+  cost_efficiency: 'HIGH' | 'MEDIUM' | 'LOW';
+  sample_size: number;
+  avg_performance_rating: number;
+  is_recommended: boolean;
+  notes?: string;
+}
+
+export const fallbackSourcingChannelQuality: SourcingChannelQualityMetric[] = [
+  {
+    channel_key: 'PROACTIVE_TALENT_POOL',
+    channel_name: 'Frontline Ready Pool (Enabler)',
+    channel_category: 'PROACTIVE_POOL',
+    median_ttf_days: 10.5,
+    six_month_retention_pct: 84.2,
+    probation_pass_rate_pct: 91.5,
+    cost_efficiency: 'HIGH',
+    sample_size: 340,
+    avg_performance_rating: 4.35,
+    is_recommended: true,
+    notes: 'Kandidat pra-kualifikasi memangkas TTF dari 34 ke 10 hari dengan retensi 6 bulan tertinggi.',
+  },
+  {
+    channel_key: 'EMPLOYEE_REFERRAL',
+    channel_name: 'Employee Referral Network',
+    channel_category: 'INTERNAL',
+    median_ttf_days: 14.0,
+    six_month_retention_pct: 81.8,
+    probation_pass_rate_pct: 88.0,
+    cost_efficiency: 'HIGH',
+    sample_size: 712,
+    avg_performance_rating: 4.28,
+    is_recommended: true,
+    notes: 'Channel #1 di case study (35.6%). Culture fit tinggi karena didampingi buddy onboarding.',
+  },
+  {
+    channel_key: 'INTERNAL_MOBILITY',
+    channel_name: 'Internal Staff Mobility (IDP)',
+    channel_category: 'INTERNAL',
+    median_ttf_days: 8.0,
+    six_month_retention_pct: 92.0,
+    probation_pass_rate_pct: 96.0,
+    cost_efficiency: 'HIGH',
+    sample_size: 115,
+    avg_performance_rating: 4.55,
+    is_recommended: true,
+    notes: 'Nol biaya akuisisi, rekam jejak terverifikasi, dan langsung siap kerja di floor.',
+  },
+  {
+    channel_key: 'JOB_PORTAL_EXTERNAL',
+    channel_name: 'Job Portals (JobStreet / Glints)',
+    channel_category: 'CONVENTIONAL',
+    median_ttf_days: 28.5,
+    six_month_retention_pct: 65.4,
+    probation_pass_rate_pct: 74.2,
+    cost_efficiency: 'MEDIUM',
+    sample_size: 520,
+    avg_performance_rating: 3.95,
+    is_recommended: false,
+    notes: 'Volume pelamar banyak tapi churn tinggi akibat ketidaksesuaian ekspektasi jam kerja gym.',
+  },
+  {
+    channel_key: 'SOCIAL_MEDIA_CAMPAIGN',
+    channel_name: 'Social Media Ads (IG / TikTok)',
+    channel_category: 'CONVENTIONAL',
+    median_ttf_days: 22.0,
+    six_month_retention_pct: 61.0,
+    probation_pass_rate_pct: 71.5,
+    cost_efficiency: 'LOW',
+    sample_size: 240,
+    avg_performance_rating: 3.88,
+    is_recommended: false,
+    notes: 'Bagus untuk awareness pembukaan cabang baru, namun butuh proses pre-screening ketat.',
+  },
+  {
+    channel_key: 'WALK_IN_OFFLINE',
+    channel_name: 'Club Walk-In / QR Drop',
+    channel_category: 'EXTERNAL',
+    median_ttf_days: 19.0,
+    six_month_retention_pct: 58.5,
+    probation_pass_rate_pct: 69.0,
+    cost_efficiency: 'MEDIUM',
+    sample_size: 73,
+    avg_performance_rating: 3.82,
+    is_recommended: false,
+    notes: 'Kandidat lokal di sekitar club, namun rentan turnover terhadap tawaran ritel perhotelan.',
+  },
+];
 
 export const fallbackIncomingRequisitions: RequisitionItem[] = [
   {

@@ -93,7 +93,7 @@ export function ColoredBar({
     );
   }
 
-  const defaultColors = ['#23C9D3', '#00ADB5', '#C99400', '#2E8B57', '#C65353', '#8C9B9D'];
+  const defaultColors = ['#00ADB5', '#23C9D3', '#10B981', '#F59E0B', '#EF4444', '#64748B'];
 
   return (
     <div style={{ width: '100%', height }}>
