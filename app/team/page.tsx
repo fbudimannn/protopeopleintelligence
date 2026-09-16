@@ -78,6 +78,8 @@ import {
   GraduationCap,
   Target,
   ShieldCheck,
+  Building2,
+  BarChart3,
 } from "lucide-react";
 
 type TeamTab = "overview" | "cliff" | "engagement" | "mobility";
@@ -2491,7 +2493,7 @@ function TeamContent() {
                     Annual Engagement Pulse
                   </span>
                   <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-brand-teal/15 text-brand-teal uppercase font-mono">
-                    Executive 3-Layer View
+                    Single-Question Benchmark + 6 Drivers
                   </span>
                 </div>
                 <h2 className="text-base font-bold text-ink-primary font-display flex items-center gap-2">
@@ -2499,40 +2501,40 @@ function TeamContent() {
                   <span>Voice of Employee Sentiment &amp; eNPS Explorer</span>
                 </h2>
                 <p className="text-xs text-ink-secondary mt-1">
-                  {dynamicEngagement.totalRespondents} respondents across {locationDisplay} evaluated FIT HUB across 6 core operational dimensions.
+                  Core Benchmark: <strong className="text-ink-primary font-medium">&ldquo;On a scale of 0–10, how likely are you to recommend FIT HUB as a place to work?&rdquo;</strong> &bull; Evaluated alongside 6 operational workplace drivers ({dynamicEngagement.totalRespondents} respondents across {locationDisplay}).
                 </p>
               </div>
 
               {/* Dynamic eNPS Score Pill */}
               <div className="flex items-center gap-4 p-3 rounded-xl bg-surface-ground border border-surface-border">
                 <div className="text-right">
-                  <span className="text-[11px] text-ink-tertiary block">Filtered Net eNPS</span>
+                  <span className="text-[11px] text-ink-tertiary block">Net eNPS Score</span>
                   <span className={`text-2xl font-display font-black ${dynamicEngagement.enps >= 50 ? "text-status-healthy" : dynamicEngagement.enps >= 30 ? "text-brand-teal" : "text-status-attention"}`}>
                     {dynamicEngagement.enps >= 0 ? `+${dynamicEngagement.enps.toFixed(1)}` : dynamicEngagement.enps.toFixed(1)}
                   </span>
                 </div>
                 <div className="text-xs text-ink-secondary border-l border-surface-border pl-3">
-                  <div>Promoters: <strong className="text-status-healthy">{dynamicEngagement.active.promoter_pct.toFixed(1)}%</strong></div>
-                  <div>Passives: <strong>{dynamicEngagement.active.passive_pct.toFixed(1)}%</strong></div>
-                  <div>Detractors: <strong className="text-status-danger">{dynamicEngagement.active.detractor_pct.toFixed(1)}%</strong></div>
+                  <div>Promoters (9-10): <strong className="text-status-healthy">{dynamicEngagement.active.promoter_pct.toFixed(1)}%</strong></div>
+                  <div>Passives (7-8): <strong>{dynamicEngagement.active.passive_pct.toFixed(1)}%</strong></div>
+                  <div>Detractors (0-6): <strong className="text-status-danger">{dynamicEngagement.active.detractor_pct.toFixed(1)}%</strong></div>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* LAYER 1: General Organization Pulse */}
+          {/* Section 1: Company-Wide Sentiment & 6 Core Dimensions */}
           <div className="p-6 rounded-xl bg-surface-card border border-surface-border space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-surface-border pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-brand-teal/20 flex items-center justify-center text-brand-teal text-xs font-bold font-mono">
-                  1
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-brand-teal/15 border border-brand-teal/30 flex items-center justify-center text-brand-teal">
+                  <BarChart3 className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-ink-primary font-display">
-                    Layer 1: Organization-Wide Sentiment &amp; 6 Dimensions Pulse
+                    Company-Wide Sentiment &amp; 6 Core Dimensions Pulse
                   </h3>
                   <p className="text-[11px] text-ink-secondary">
-                    Company-wide eNPS voter distribution and benchmark rating out of 6.00 scale
+                    Macro-level eNPS voter distribution and benchmark rating out of 6.00 scale across all evaluated operational dimensions
                   </p>
                 </div>
               </div>
@@ -2669,19 +2671,19 @@ function TeamContent() {
             </div>
           </div>
 
-          {/* LAYER 2: Frontline Role Sentiment Divergence */}
+          {/* Section 2: Sentiment Divergence by Operational Role */}
           <div className="p-6 rounded-xl bg-surface-card border border-surface-border space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-border pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-md bg-brand-teal/20 flex items-center justify-center text-brand-teal text-xs font-bold font-mono">
-                  2
+                <div className="w-8 h-8 rounded-lg bg-brand-teal/15 border border-brand-teal/30 flex items-center justify-center text-brand-teal">
+                  <Users className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-ink-primary font-display">
-                    Layer 2: Frontline Role Sentiment Divergence
+                    Sentiment Divergence by Operational Role
                   </h3>
                   <p className="text-[11px] text-ink-secondary">
-                    Role-specific eNPS, headcount sample, and primary friction drivers across all 12 operational roles
+                    Role-specific eNPS, headcount sample, and primary friction drivers across all 12 operational roles (Simpson&rsquo;s Paradox drilldown)
                   </p>
                 </div>
               </div>
@@ -2817,16 +2819,16 @@ function TeamContent() {
             </div>
           </div>
 
-          {/* LAYER 3: Regional Club Sentiment & Location Matrix */}
+          {/* Section 3: Club Sentiment & Geographic Friction Matrix */}
           <div className="p-6 rounded-xl bg-surface-card border border-surface-border space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-surface-border pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded-md bg-brand-teal/20 flex items-center justify-center text-brand-teal text-xs font-bold font-mono">
-                  3
+                <div className="w-8 h-8 rounded-lg bg-brand-teal/15 border border-brand-teal/30 flex items-center justify-center text-brand-teal">
+                  <Building2 className="w-4 h-4" />
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-ink-primary font-display">
-                    Layer 3: Regional Club Sentiment &amp; Location Matrix
+                    Club Sentiment &amp; Geographic Friction Matrix
                   </h3>
                   <p className="text-[11px] text-ink-secondary">
                     Geographic sentiment distribution correlated with localized turnover and the primary workplace exit driver (1 of 6 core dimensions)
