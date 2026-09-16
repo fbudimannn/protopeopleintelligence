@@ -20,7 +20,7 @@ function SidebarNavItems() {
 
   const navItems = [
     {
-      label: "Executive Dashboard",
+      label: "Home",
       href: "/",
       icon: <LayoutDashboard className="w-5 h-5 flex-shrink-0" />,
       isActive: pathname === "/",

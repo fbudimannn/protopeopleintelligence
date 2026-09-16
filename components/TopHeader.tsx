@@ -38,7 +38,7 @@ export default function TopHeader() {
   // Determine current page title
   const getPageMeta = (): { title: string; section: string } => {
     if (pathname === "/") {
-      return { title: "Executive Dashboard", section: "Overview" };
+      return { title: "Home", section: "Enterprise Lifecycle" };
     }
     if (pathname.startsWith("/vacancy")) {
       return { title: "Vacancy Intelligence", section: "Pre-Hire" };
@@ -54,7 +54,7 @@ export default function TopHeader() {
 
   const meta = getPageMeta();
   const isHomePage = pathname === "/";
-  const shouldHideFilters = hideGlobalFilters;
+  const shouldHideFilters = isHomePage || hideGlobalFilters;
 
   const selectClass = "appearance-none pl-7 pr-7 py-1.5 rounded-xl border border-border-default bg-surface-soft hover:border-brand-teal text-xs font-medium text-ink-primary focus:outline-none focus:ring-1 focus:ring-brand-teal transition-all cursor-pointer truncate";
   const iconClass = "w-3.5 h-3.5 text-ink-muted absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none";
