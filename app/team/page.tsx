@@ -340,7 +340,6 @@ function TeamContent() {
       {
         label: "0 to 3 Months",
         shortLabel: "0-3 mos",
-        stage: "Stage 1",
         cliff: "Early Onboarding Shock",
         base: 24.5 * Math.max(0.7, earlyRateWeight),
         color: "#EF4444",
@@ -348,7 +347,6 @@ function TeamContent() {
       {
         label: "3 to 6 Months",
         shortLabel: "3-6 mos",
-        stage: "Stage 2",
         cliff: "Ramp-Up & Solo Shift Cliff",
         base: 18.2 * Math.max(0.7, earlyRateWeight),
         color: "#F97316",
@@ -356,7 +354,6 @@ function TeamContent() {
       {
         label: "6 to 12 Months",
         shortLabel: "6-12 mos",
-        stage: "Stage 3",
         cliff: "1st Year Confirmation / Plateau",
         base: 14.6,
         color: "#F59E0B",
@@ -364,7 +361,6 @@ function TeamContent() {
       {
         label: "1 to 2 Years",
         shortLabel: "1-2 yrs",
-        stage: "Stage 4",
         cliff: "Mid-Tenure Growth Plateau",
         base: 27.0 * Math.max(0.7, midRateWeight),
         color: "#0D9488",
@@ -372,7 +368,6 @@ function TeamContent() {
       {
         label: "> 2 Years",
         shortLabel: "> 2 yrs",
-        stage: "Stage 5",
         cliff: "Mature Staff Transition",
         base: 15.7,
         color: "#3B82F6",
@@ -393,7 +388,6 @@ function TeamContent() {
       allocatedExits += exitCount;
 
       return {
-        stage_name: band.stage,
         band_label: band.label,
         short_label: band.shortLabel,
         exit_count: exitCount,
@@ -1925,7 +1919,7 @@ function TeamContent() {
               </div>
             </div>
 
-            {/* Stepped Tenure Band Cards: 5 Standard Stages */}
+            {/* Stepped Tenure Band Cards: 5 Intervals */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3 my-6">
               {dynamicTenureBands.map((band, idx) => (
                 <div
@@ -1938,10 +1932,7 @@ function TeamContent() {
                       : "bg-surface-ground border-surface-border"
                   }`}
                 >
-                  <span className="text-[10px] font-bold text-ink-tertiary uppercase">
-                    Stage {idx + 1}
-                  </span>
-                  <h4 className="text-sm font-bold text-ink-primary mt-0.5 mb-1">
+                  <h4 className="text-sm font-bold text-ink-primary mb-1">
                     {band.band_label}
                   </h4>
                   <div className="text-2xl font-display font-black text-ink-primary mb-1">
@@ -1974,7 +1965,7 @@ function TeamContent() {
                     Tenure Interval Distribution (% of Departures)
                   </span>
                   <span className="text-[11px] text-ink-tertiary">
-                    Visual comparison of turnover friction across the 5 career milestone stages
+                    Visual comparison of turnover friction across milestone tenure intervals
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -2044,10 +2035,7 @@ function TeamContent() {
                         <span className="font-spartan font-bold text-xs text-ink-primary block truncate">
                           {band.band_label}
                         </span>
-                        <span className="text-[10px] text-ink-tertiary block uppercase tracking-wider font-semibold">
-                          {band.stage_name}
-                        </span>
-                        <span className="text-[10px] text-ink-secondary block font-mono mt-0.5">
+                        <span className="text-[11px] text-ink-secondary block font-mono mt-0.5">
                           {band.exit_count} exits
                         </span>
                       </div>
