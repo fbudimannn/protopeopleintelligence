@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, Suspense } from "react";
+import React, { useState, useEffect, useMemo, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useFilters, matchLocationHierarchy, matchRoleHierarchy, matchPeriod, formatPeriodLabel } from "@/lib/context/FilterContext";
@@ -57,6 +57,7 @@ import {
   HeartHandshake,
   AlertTriangle,
   CheckCircle2,
+  ChevronLeft,
   ChevronRight,
   ArrowUpRight,
   Filter,
@@ -87,6 +88,18 @@ function TeamContent() {
 
   const [activeTab, setActiveTab] = useState<TeamTab>(initialTab);
   const [loading, setLoading] = useState(true);
+
+  // Role carousel ref & scroll handler for Layer 2
+  const roleCarouselRef = useRef<HTMLDivElement>(null);
+  const scrollRoleCarousel = (direction: "left" | "right") => {
+    if (roleCarouselRef.current) {
+      const scrollAmount = 320;
+      roleCarouselRef.current.scrollBy({
+        left: direction === "left" ? -scrollAmount : scrollAmount,
+        behavior: "smooth",
+      });
+    }
+  };
 
   // Data states
   const [cohorts, setCohorts] = useState<RetentionCohort[]>([]);
@@ -588,40 +601,199 @@ function TeamContent() {
     };
   }, [engagements, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter]);
 
-  // Dynamic Role Sentiments for Layer 2 (100% Dynamic & Filter-Aware)
+  // Dynamic Role Sentiments for Layer 2 (100% Dynamic & Filter-Aware - All 12 Roles)
   const dynamicRoleSentiments = useMemo(() => {
     const rolesConfig = [
       {
         id: "pt",
         name: "Personal Trainer",
-        jobFamily: "Club Frontline",
+        jobFamily: "Fitness & Coaching",
         icon: Award,
+        baseEnps: 54.5,
+        basePromoter: 62.3,
+        baseDetractor: 7.2,
+        baseHeadcount: 420,
+        lowestDimName: "Compensation & Benefit",
+        lowestDimScore: 4.76,
+        highestDimName: "Organisation Alignment",
+        highestDimScore: 5.62,
         defaultQuote: "PT session revenue splits drop uncomfortably during seasonal lulls, creating take-home pay anxiety relative to living costs.",
+      },
+      {
+        id: "ptl",
+        name: "Personal Trainer Leader",
+        jobFamily: "Fitness & Coaching",
+        icon: Award,
+        baseEnps: 61.2,
+        basePromoter: 66.5,
+        baseDetractor: 5.3,
+        baseHeadcount: 52,
+        lowestDimName: "Compensation & Benefit",
+        lowestDimScore: 5.10,
+        highestDimName: "Organisation Alignment",
+        highestDimScore: 5.65,
+        defaultQuote: "Mentoring junior trainers is rewarding, but balancing client delivery hours with coaching administration is challenging.",
+      },
+      {
+        id: "ptm",
+        name: "Personal Trainer Master",
+        jobFamily: "Fitness & Coaching",
+        icon: Award,
+        baseEnps: 64.8,
+        basePromoter: 70.0,
+        baseDetractor: 5.2,
+        baseHeadcount: 24,
+        lowestDimName: "Career Growth",
+        lowestDimScore: 5.35,
+        highestDimName: "Organisation Alignment",
+        highestDimScore: 5.70,
+        defaultQuote: "High client retention and specialization autonomy give great job pride, though master certification benchmarks need wider rollouts.",
+      },
+      {
+        id: "fm",
+        name: "Fitness Manager",
+        jobFamily: "Fitness & Coaching",
+        icon: Award,
+        baseEnps: 68.5,
+        basePromoter: 72.0,
+        baseDetractor: 3.5,
+        baseHeadcount: 18,
+        lowestDimName: "Compensation & Benefit",
+        lowestDimScore: 5.25,
+        highestDimName: "Organisation Alignment",
+        highestDimScore: 5.75,
+        defaultQuote: "Fitness delivery across our trainer cadre meets high satisfaction, but onboarding ramp speed for new PT cohorts needs support.",
       },
       {
         id: "cs",
         name: "Customer Service",
-        jobFamily: "Club Frontline",
+        jobFamily: "Club Operations",
         icon: Users,
+        baseEnps: 49.0,
+        basePromoter: 56.8,
+        baseDetractor: 7.8,
+        baseHeadcount: 310,
+        lowestDimName: "Career Growth",
+        lowestDimScore: 4.80,
+        highestDimName: "Supportive Workplace",
+        highestDimScore: 5.50,
         defaultQuote: "We operate front desk and member onboarding with high ratings, but clear advancement tracks beyond 12-18 months remain opaque.",
       },
       {
-        id: "fc",
-        name: "Fitness Consultant",
-        jobFamily: "Sales & Commercial",
-        icon: Target,
-        defaultQuote: "Monthly trial-to-paid sales quotas are aggressive without enough pre-qualified leads, putting pressure on fair evaluation.",
+        id: "csl",
+        name: "Customer Service Leader",
+        jobFamily: "Club Operations",
+        icon: ShieldCheck,
+        baseEnps: 58.4,
+        basePromoter: 64.0,
+        baseDetractor: 5.6,
+        baseHeadcount: 46,
+        lowestDimName: "Supportive Workplace",
+        lowestDimScore: 5.15,
+        highestDimName: "Organisation Alignment",
+        highestDimScore: 5.65,
+        defaultQuote: "Managing floor coverage and shift swaps can be intense during peak hours, but team camaraderie remains strong.",
       },
       {
         id: "cm",
         name: "Club Manager",
-        jobFamily: "Club Leadership",
+        jobFamily: "Club Operations",
         icon: ShieldCheck,
+        baseEnps: 56.7,
+        basePromoter: 59.6,
+        baseDetractor: 2.9,
+        baseHeadcount: 85,
+        lowestDimName: "Work Clarity",
+        lowestDimScore: 5.12,
+        highestDimName: "Organisation Alignment",
+        highestDimScore: 5.62,
         defaultQuote: "Club managers carry extensive cross-functional facility responsibilities, but lateral hiring occasionally slows upward area GM paths.",
+      },
+      {
+        id: "om",
+        name: "Operation Manager",
+        jobFamily: "Club Operations",
+        icon: ShieldCheck,
+        baseEnps: 73.6,
+        basePromoter: 76.2,
+        baseDetractor: 2.6,
+        baseHeadcount: 22,
+        lowestDimName: "Fair Performance",
+        lowestDimScore: 5.14,
+        highestDimName: "Organisation Alignment",
+        highestDimScore: 5.72,
+        defaultQuote: "Multi-club standardizations are taking shape well, though rapid new club openings stretch initial audit coverage.",
+      },
+      {
+        id: "agm",
+        name: "Area General Manager",
+        jobFamily: "Club Operations",
+        icon: ShieldCheck,
+        baseEnps: 78.2,
+        basePromoter: 80.0,
+        baseDetractor: 1.8,
+        baseHeadcount: 10,
+        lowestDimName: "Supportive Workplace",
+        lowestDimScore: 5.45,
+        highestDimName: "Organisation Alignment",
+        highestDimScore: 5.80,
+        defaultQuote: "Strategic alignment between regional club clusters and HQ targets is robust, with focus on regional talent retention.",
+      },
+      {
+        id: "fc",
+        name: "Fitness Consultant",
+        jobFamily: "Commercial & Sales",
+        icon: Target,
+        baseEnps: 52.9,
+        basePromoter: 58.2,
+        baseDetractor: 5.4,
+        baseHeadcount: 280,
+        lowestDimName: "Fair Performance",
+        lowestDimScore: 4.90,
+        highestDimName: "Organisation Alignment",
+        highestDimScore: 5.60,
+        defaultQuote: "Monthly trial-to-paid sales quotas are aggressive without enough pre-qualified leads, putting pressure on fair evaluation.",
+      },
+      {
+        id: "fcl",
+        name: "Fitness Consultant Leader",
+        jobFamily: "Commercial & Sales",
+        icon: Target,
+        baseEnps: 57.0,
+        basePromoter: 62.0,
+        baseDetractor: 5.0,
+        baseHeadcount: 36,
+        lowestDimName: "Compensation & Benefit",
+        lowestDimScore: 5.00,
+        highestDimName: "Organisation Alignment",
+        highestDimScore: 5.65,
+        defaultQuote: "Coaching consultants through closing conversations improves performance, but quota target setting needs club-tier calibration.",
+      },
+      {
+        id: "sm",
+        name: "Sales Manager",
+        jobFamily: "Commercial & Sales",
+        icon: Target,
+        baseEnps: 66.0,
+        basePromoter: 70.5,
+        baseDetractor: 4.5,
+        baseHeadcount: 14,
+        lowestDimName: "Compensation & Benefit",
+        lowestDimScore: 5.30,
+        highestDimName: "Organisation Alignment",
+        highestDimScore: 5.70,
+        defaultQuote: "Commercial pipelines are healthy across core metro clubs, with ongoing refinement in localized pricing and corporate B2B.",
       },
     ];
 
-    return rolesConfig.map((r) => {
+    // Filter roles if jobFamilyFilter or roleFilter is selected
+    const filteredRolesConfig = rolesConfig.filter((r) => {
+      if (jobFamilyFilter !== "ALL" && r.jobFamily !== jobFamilyFilter) return false;
+      if (roleFilter !== "ALL" && r.name !== roleFilter) return false;
+      return true;
+    });
+
+    return filteredRolesConfig.map((r) => {
       // Find cohorts matching this role and active location filter
       const matchingCohorts = cohorts.filter((c) => {
         const matchesThisRole = matchRoleHierarchy(c.role_name, "ALL", r.name);
@@ -636,39 +808,28 @@ function TeamContent() {
           const matchesLoc = matchLocationHierarchy(e.location_name, clusterFilter, provinceFilter, cityFilter);
           return matchesThisRole && matchesLoc;
         }) ||
-        engagements.find((e) => matchRoleHierarchy(e.role_name, "ALL", r.name)) ||
-        fallbackEngagementSummaries.find((e) => matchRoleHierarchy(e.role_name, "ALL", r.name));
-
-      const roleHeadcount =
-        matchingCohorts.reduce((acc, c) => acc + c.headcount, 0) ||
-        (r.name === "Personal Trainer" ? 420 : r.name === "Customer Service" ? 310 : r.name === "Fitness Consultant" ? 280 : 85);
+        engagements.find((e) => matchRoleHierarchy(e.role_name, "ALL", r.name));
 
       const totalCohortHeadcount = matchingCohorts.reduce((acc, c) => acc + c.headcount, 0);
+      const roleHeadcount = totalCohortHeadcount || r.baseHeadcount;
 
-      const weightedEnps =
-        totalCohortHeadcount > 0
-          ? Math.round(
-              (matchingCohorts.reduce((acc, c) => acc + (c.segment_enps ?? 50) * c.headcount, 0) / totalCohortHeadcount) * 10
-            ) / 10
-          : (engMatch?.enps_score ?? 52.0);
+      // Role-specific eNPS calculation:
+      let weightedEnps = r.baseEnps;
+      if (totalCohortHeadcount > 0) {
+        weightedEnps = Math.round(
+          (matchingCohorts.reduce((acc, c) => acc + (c.segment_enps ?? r.baseEnps) * c.headcount, 0) / totalCohortHeadcount) * 10
+        ) / 10;
+      } else if (engMatch?.enps_score != null) {
+        weightedEnps = engMatch.enps_score;
+      } else if (clusterFilter === "Bali") {
+        weightedEnps = Math.max(25, r.baseEnps - 15.0);
+      } else if (clusterFilter === "Surabaya") {
+        weightedEnps = Math.max(35, r.baseEnps - 4.0);
+      }
 
-      const promoterPct = engMatch?.promoter_pct ?? 62.0;
-      const detractorPct = engMatch?.detractor_pct ?? 8.0;
-      const passivePct = engMatch?.passive_pct ?? 30.0;
-
-      const dimScores = [
-        { name: "Compensation & Benefit", score: engMatch?.compensation_benefit_score ?? 4.88 },
-        { name: "Career Growth", score: engMatch?.career_growth_score ?? 5.18 },
-        { name: "Supportive Workplace", score: engMatch?.supportive_workplace_score ?? 5.30 },
-        { name: "Work Clarity", score: engMatch?.work_clarity_score ?? 5.40 },
-        { name: "Organisation Alignment", score: engMatch?.organisation_alignment_score ?? 5.60 },
-        { name: "Fair Performance", score: engMatch?.fair_performance_score ?? 5.05 },
-      ];
-
-      // Sort dimensions to find lowest and highest
-      const sortedDims = [...dimScores].sort((a, b) => a.score - b.score);
-      const lowestDim = sortedDims[0];
-      const highestDim = sortedDims[sortedDims.length - 1];
+      const promoterPct = engMatch?.promoter_pct ?? r.basePromoter;
+      const detractorPct = engMatch?.detractor_pct ?? r.baseDetractor;
+      const passivePct = Math.max(0, 100 - promoterPct - detractorPct);
 
       return {
         ...r,
@@ -677,93 +838,110 @@ function TeamContent() {
         promoterPct,
         detractorPct,
         passivePct,
-        lowestDim,
-        highestDim,
-        dimensions: dimScores,
+        lowestDim: {
+          name: r.lowestDimName,
+          score: engMatch?.compensation_benefit_score && r.lowestDimName === "Compensation & Benefit"
+            ? engMatch.compensation_benefit_score
+            : r.lowestDimScore,
+        },
+        highestDim: {
+          name: r.highestDimName,
+          score: engMatch?.organisation_alignment_score && r.highestDimName === "Organisation Alignment"
+            ? engMatch.organisation_alignment_score
+            : r.highestDimScore,
+        },
       };
     });
   }, [cohorts, engagements, clusterFilter, provinceFilter, cityFilter, jobFamilyFilter, roleFilter, matchesLocation]);
 
-  // Dynamic Location Sentiments for Layer 3 (100% Dynamic & Filter-Aware)
+  // Dynamic Location Sentiments for Layer 3 (100% Dynamic & Filter-Aware - All 27 Club Locations)
   const dynamicLocationSentiments = useMemo(() => {
-    const locationsConfig = [
-      {
-        id: "bali",
-        name: "Bali",
-        cluster: "Bali",
-        province: "Bali",
-        city: "Denpasar / Badung",
-        defaultFriction: "Compensation & Benefit",
-        frictionDetail: "Tourism seasonality impacts PT session volumes & high local cost of living.",
-      },
-      {
-        id: "surabaya",
-        name: "Surabaya",
-        cluster: "Surabaya",
-        province: "Jawa Timur",
-        city: "Surabaya",
-        defaultFriction: "Career Growth",
-        frictionDetail: "Regional distance from Jakarta HO reduces promotion visibility for frontline staff.",
-      },
-      {
-        id: "jaksel",
-        name: "Jakarta Selatan",
-        cluster: "Jabodetabek",
-        province: "DKI Jakarta",
-        city: "Jakarta Selatan",
-        defaultFriction: "Supportive Workplace",
-        frictionDetail: "Long commute times and late shift schedules create family coordination friction.",
-      },
-      {
-        id: "jakbar",
-        name: "Jakarta Barat",
-        cluster: "Jabodetabek",
-        province: "DKI Jakarta",
-        city: "Jakarta Barat",
-        defaultFriction: "Career Growth",
-        frictionDetail: "High club density and capped supervisor slots create 12-18M career plateaus.",
-      },
-      {
-        id: "tgr",
-        name: "Tangerang",
-        cluster: "Jabodetabek",
-        province: "Banten",
-        city: "Tangerang",
-        defaultFriction: "Supportive Workplace",
-        frictionDetail: "Equipment maintenance turnaround and inflexible shift swap policies.",
-      },
-    ];
+    // City contextual factors and baseline exit drivers mapped strictly to 6 Core Dimensions
+    const cityContextMap: Record<string, { driver: string; context: string; baseEnps: number; baseTurnover: number; baseEarlyExit: number; baseHeadcount: number }> = {
+      "Bali": { driver: "Compensation & Benefit", context: "High local living costs & PT session volume seasonality during off-peak tourist months.", baseEnps: 37.8, baseTurnover: 62.5, baseEarlyExit: 68.4, baseHeadcount: 140 },
+      "Surabaya": { driver: "Career Growth", context: "Distance from Jakarta HO limits promotion pipeline visibility for frontline staff.", baseEnps: 48.2, baseTurnover: 48.2, baseEarlyExit: 56.2, baseHeadcount: 185 },
+      "Jakarta Selatan": { driver: "Supportive Workplace", context: "Late club closing shifts conflict with long public transit commute & family logistics.", baseEnps: 62.4, baseTurnover: 34.0, baseEarlyExit: 46.0, baseHeadcount: 320 },
+      "Jakarta Barat": { driver: "Career Growth", context: "High club member density and supervisor slot caps create 12-18M career plateaus.", baseEnps: 52.5, baseTurnover: 41.5, baseEarlyExit: 50.8, baseHeadcount: 275 },
+      "Tangerang": { driver: "Supportive Workplace", context: "Industrial commute distances, equipment maintenance turnaround & shift swap friction.", baseEnps: 54.0, baseTurnover: 44.0, baseEarlyExit: 56.0, baseHeadcount: 210 },
+      "Jakarta Pusat": { driver: "Supportive Workplace", context: "Peak lunchtime & after-work rush hours create high operational pressure on floor staff.", baseEnps: 58.0, baseTurnover: 36.5, baseEarlyExit: 44.2, baseHeadcount: 195 },
+      "Jakarta Timur": { driver: "Compensation & Benefit", context: "Base pay competitiveness vs commercial boutique studios along border zones.", baseEnps: 53.5, baseTurnover: 42.0, baseEarlyExit: 49.0, baseHeadcount: 165 },
+      "Jakarta Utara": { driver: "Work Clarity", context: "High premium club facility maintenance handover SOPs require clearer cross-shift logs.", baseEnps: 55.0, baseTurnover: 39.0, baseEarlyExit: 47.5, baseHeadcount: 170 },
+      "Bandung": { driver: "Career Growth", context: "Fast-growing student & young professional membership base with limited senior coach tiers.", baseEnps: 51.0, baseTurnover: 45.0, baseEarlyExit: 52.0, baseHeadcount: 155 },
+      "Bekasi": { driver: "Supportive Workplace", context: "Suburban transit congestion extends daily commute times for opening shift team.", baseEnps: 53.0, baseTurnover: 43.5, baseEarlyExit: 51.0, baseHeadcount: 160 },
+      "Depok": { driver: "Fair Performance", context: "College student schedule fluctuations affect trial-to-paid conversion predictability.", baseEnps: 52.0, baseTurnover: 44.0, baseEarlyExit: 53.0, baseHeadcount: 135 },
+      "Bogor": { driver: "Supportive Workplace", context: "Weather and rainy season transit delays impact punctual morning shift coverage.", baseEnps: 54.5, baseTurnover: 41.0, baseEarlyExit: 48.0, baseHeadcount: 120 },
+      "Semarang": { driver: "Career Growth", context: "Central Java flagship clubs lack regional lateral mobility pathways.", baseEnps: 50.5, baseTurnover: 46.0, baseEarlyExit: 54.0, baseHeadcount: 110 },
+      "Yogyakarta": { driver: "Compensation & Benefit", context: "Local regional UMK wage benchmark vs high cost of professional fitness certifications.", baseEnps: 49.0, baseTurnover: 47.5, baseEarlyExit: 55.0, baseHeadcount: 105 },
+      "Malang": { driver: "Career Growth", context: "Youthful frontline trainer cohort seeking accelerated technical mentorship tracks.", baseEnps: 51.5, baseTurnover: 44.5, baseEarlyExit: 51.5, baseHeadcount: 95 },
+      "Sidoarjo": { driver: "Work Clarity", context: "Facility equipment servicing turnaround times between East Java regional clubs.", baseEnps: 52.0, baseTurnover: 43.0, baseEarlyExit: 50.0, baseHeadcount: 90 },
+      "Gresik": { driver: "Supportive Workplace", context: "Industrial zone shift rosters require greater flexibility for weekend coverage.", baseEnps: 51.0, baseTurnover: 45.0, baseEarlyExit: 53.0, baseHeadcount: 85 },
+      "Palembang": { driver: "Career Growth", context: "Sumatra regional expansion hub with high demand for structured leadership feeder lines.", baseEnps: 50.0, baseTurnover: 47.0, baseEarlyExit: 55.0, baseHeadcount: 90 },
+      "Batam": { driver: "Compensation & Benefit", context: "Proximity to Singapore cross-border job market influences frontline wage expectations.", baseEnps: 46.5, baseTurnover: 51.0, baseEarlyExit: 59.0, baseHeadcount: 80 },
+      "Balikpapan": { driver: "Compensation & Benefit", context: "IKN corridor economic boom drives up living expenses and alternate sector wage offers.", baseEnps: 47.0, baseTurnover: 50.0, baseEarlyExit: 58.0, baseHeadcount: 85 },
+      "Samarinda": { driver: "Work Clarity", context: "New market club operational SOP rollout and localized vendor coordination.", baseEnps: 48.5, baseTurnover: 48.0, baseEarlyExit: 56.0, baseHeadcount: 75 },
+      "Makassar": { driver: "Career Growth", context: "Eastern Indonesia hub requiring faster fast-track supervisory promotions.", baseEnps: 49.5, baseTurnover: 47.0, baseEarlyExit: 54.0, baseHeadcount: 100 },
+      "Cilegon": { driver: "Supportive Workplace", context: "Industrial shift patterns require customized roster balancing.", baseEnps: 52.5, baseTurnover: 43.0, baseEarlyExit: 50.0, baseHeadcount: 70 },
+      "Cirebon": { driver: "Career Growth", context: "Regional frontline staff seeking promotion visibility into West Java area pool.", baseEnps: 51.0, baseTurnover: 45.0, baseEarlyExit: 52.0, baseHeadcount: 75 },
+      "Karawang": { driver: "Supportive Workplace", context: "Industrial zone shift scheduling and commute logistics.", baseEnps: 53.0, baseTurnover: 42.5, baseEarlyExit: 49.0, baseHeadcount: 80 },
+      "Surakarta": { driver: "Compensation & Benefit", context: "Competitive studio offerings in Solo area for certified fitness coaches.", baseEnps: 50.0, baseTurnover: 46.0, baseEarlyExit: 53.0, baseHeadcount: 75 },
+      "Cileungsi": { driver: "Supportive Workplace", context: "Transit distance and roster swap flexibility during peak shift hours.", baseEnps: 52.0, baseTurnover: 44.0, baseEarlyExit: 51.0, baseHeadcount: 70 },
+    };
 
-    return locationsConfig.map((loc) => {
+    // Flatten all 27 club locations from locationHierarchy
+    const allLocationNodes: Array<{ cluster: string; province: string; city: string }> = [];
+    Object.entries(locationHierarchy).forEach(([cluster, reg]) => {
+      Object.entries(reg.provinces).forEach(([province, cities]) => {
+        cities.forEach((city) => {
+          allLocationNodes.push({ cluster, province, city });
+        });
+      });
+    });
+
+    // Filter locations based on global cluster / province / city filters
+    const filteredNodes = allLocationNodes.filter((node: { cluster: string; province: string; city: string }) => {
+      if (clusterFilter !== "ALL" && node.cluster !== clusterFilter && node.city !== clusterFilter) return false;
+      if (provinceFilter !== "ALL" && node.province !== provinceFilter) return false;
+      if (cityFilter !== "ALL" && node.city !== cityFilter) return false;
+      return true;
+    });
+
+    return filteredNodes.map((node: { cluster: string; province: string; city: string }) => {
+      const cityKey = node.city;
+      const ctx = cityContextMap[cityKey] || {
+        driver: "Career Growth",
+        context: `${node.city} regional club operations and retention tracking.`,
+        baseEnps: 52.0,
+        baseTurnover: 42.0,
+        baseEarlyExit: 50.0,
+        baseHeadcount: 80,
+      };
+
       // Find cohorts matching this location and active role filter
       const locCohorts = cohorts.filter((c) => {
-        const matchesLoc = matchLocationHierarchy(c.location_name, loc.cluster, loc.province, loc.name);
+        const matchesLoc = matchLocationHierarchy(c.location_name, node.cluster, node.province, node.city);
         const matchesR = matchesRole(c.role_name);
         return matchesLoc && matchesR;
       });
 
       const totalLocHeadcount = locCohorts.reduce((acc, c) => acc + c.headcount, 0);
-      const headcount = totalLocHeadcount || (loc.id === "bali" ? 140 : loc.id === "surabaya" ? 185 : loc.id === "jaksel" ? 320 : loc.id === "jakbar" ? 275 : 210);
+      const headcount = totalLocHeadcount || ctx.baseHeadcount;
 
-      const avgTurnover =
-        locCohorts.length > 0
-          ? Math.round((locCohorts.reduce((acc, c) => acc + c.annualized_turnover_pct, 0) / locCohorts.length) * 10) / 10
-          : (loc.id === "bali" ? 62.5 : loc.id === "surabaya" ? 48.2 : loc.id === "jaksel" ? 34.0 : loc.id === "jakbar" ? 41.5 : 44.0);
+      const turnover = locCohorts.length > 0
+        ? Math.round((locCohorts.reduce((acc, c) => acc + c.annualized_turnover_pct, 0) / locCohorts.length) * 10) / 10
+        : ctx.baseTurnover;
 
-      const avgEarlyAttrition =
-        locCohorts.length > 0
-          ? Math.round((locCohorts.reduce((acc, c) => acc + c.early_attrition_pct, 0) / locCohorts.length) * 10) / 10
-          : (loc.id === "bali" ? 68.4 : loc.id === "surabaya" ? 54.0 : loc.id === "jaksel" ? 46.0 : loc.id === "jakbar" ? 52.0 : 56.0);
+      const earlyAttrition = locCohorts.length > 0
+        ? Math.round((locCohorts.reduce((acc, c) => acc + c.early_attrition_pct, 0) / locCohorts.length) * 10) / 10
+        : ctx.baseEarlyExit;
 
-      const weightedEnps =
-        totalLocHeadcount > 0
-          ? Math.round(
-              (locCohorts.reduce((acc, c) => acc + (c.segment_enps ?? 50) * c.headcount, 0) / totalLocHeadcount) * 10
-            ) / 10
-          : (loc.id === "bali" ? 37.8 : loc.id === "surabaya" ? 48.2 : loc.id === "jaksel" ? 62.4 : loc.id === "jakbar" ? 54.2 : 55.0);
+      const enps = totalLocHeadcount > 0
+        ? Math.round((locCohorts.reduce((acc, c) => acc + (c.segment_enps ?? ctx.baseEnps) * c.headcount, 0) / totalLocHeadcount) * 10) / 10
+        : ctx.baseEnps;
 
-      // Determine primary friction dimension from the standardized 6 dimensions
-      let frictionDim = loc.defaultFriction;
+      // Determine primary exit driver strictly from the 6 standardized dimensions
+      let primaryDriver = ctx.driver;
+      let operationalReason = ctx.context;
+
       if (locCohorts.length > 0) {
         const driverCounts: Record<string, number> = {};
         locCohorts.forEach((c) => {
@@ -772,24 +950,29 @@ function TeamContent() {
         });
         const sorted = Object.entries(driverCounts).sort((a, b) => b[1] - a[1]);
         if (sorted.length > 0) {
-          frictionDim = sorted[0][0];
+          primaryDriver = sorted[0][0];
+        }
+        if (locCohorts[0]?.location_specific_factor) {
+          operationalReason = locCohorts[0].location_specific_factor;
         }
       }
 
       const isSelected =
-        clusterFilter === loc.cluster ||
-        clusterFilter === loc.name ||
-        cityFilter === loc.name ||
-        cityFilter === loc.city ||
-        provinceFilter === loc.province;
+        cityFilter === node.city ||
+        (cityFilter === "ALL" && provinceFilter === node.province) ||
+        (cityFilter === "ALL" && provinceFilter === "ALL" && clusterFilter === node.cluster);
 
       return {
-        ...loc,
+        id: `${node.cluster}-${node.province}-${node.city}`,
+        name: node.city,
+        cluster: node.cluster,
+        province: node.province,
         headcount,
-        turnover: avgTurnover,
-        earlyAttrition: avgEarlyAttrition,
-        enps: weightedEnps,
-        frictionDimension: frictionDim,
+        turnover,
+        earlyAttrition,
+        enps,
+        primaryDriver,
+        operationalReason,
         isSelected,
       };
     });
@@ -2358,20 +2541,71 @@ function TeamContent() {
                 />
               </div>
 
-              <div className="p-4 rounded-xl bg-surface-soft/60 border border-border-default/60">
-                <span className="label-xs text-ink-secondary block mb-3">Dimension Scores (Out of 6.00 Scale)</span>
-                <ColoredBar
-                  data={dynamicEngagement.dimensionScores}
-                  dataKey="value"
-                  categoryKey="label"
-                  horizontal={true}
-                  height={180}
-                  unit="/ 6.0"
-                />
+              <div className="p-4 rounded-xl bg-surface-soft/60 border border-border-default/60 flex flex-col justify-between">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="label-xs text-ink-secondary">Dimension Scores (Out of 6.00 Scale)</span>
+                  <span className="text-[10px] font-mono font-bold text-brand-teal px-2 py-0.5 rounded bg-brand-teal/10 border border-brand-teal/20">
+                    Scale 0.00 – 6.00
+                  </span>
+                </div>
+
+                {/* Gradient Dimension Tracks (0.00 to 6.00 scale) */}
+                <div className="space-y-2.5 my-auto">
+                  {dynamicEngagement.dimensionScores.map((dim) => {
+                    const score = dim.value;
+                    const pct = Math.min(100, Math.max(0, (score / 6.0) * 100));
+                    const isFriction = score < 5.0;
+                    const isHigh = score >= 5.5;
+
+                    return (
+                      <div key={dim.label} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="font-medium text-ink-primary truncate pr-2">{dim.label}</span>
+                          <span className={`font-mono font-bold text-[11px] ${
+                            isFriction ? "text-status-danger" : isHigh ? "text-brand-teal" : "text-ink-primary"
+                          }`}>
+                            {score.toFixed(2)} <span className="text-ink-tertiary font-normal">/ 6.00</span>
+                          </span>
+                        </div>
+                        <div className="h-2.5 w-full bg-surface-ground rounded-full overflow-hidden p-0.5 border border-surface-border">
+                          <div
+                            className={`h-full rounded-full transition-all duration-500 shadow-sm ${
+                              isFriction
+                                ? "bg-gradient-to-r from-status-danger via-rose-500 to-amber-500"
+                                : isHigh
+                                ? "bg-gradient-to-r from-brand-teal via-teal-400 to-emerald-400"
+                                : "bg-gradient-to-r from-brand-teal via-cyan-400 to-sky-400"
+                            }`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Calibrated X-Axis Scale Grid (0.00 to 6.00 Scale) */}
+                <div className="pt-2 mt-3 border-t border-surface-border/60">
+                  <div className="flex justify-between text-[10px] text-ink-tertiary font-mono">
+                    <span>0.0</span>
+                    <span>1.5</span>
+                    <span>3.0</span>
+                    <span>4.5</span>
+                    <span className="font-bold text-ink-primary">6.0 Max</span>
+                  </div>
+                  <div className="relative h-1 mt-1">
+                    <div className="absolute inset-x-0 top-0 h-px bg-surface-border" />
+                    <div className="absolute left-0 top-0 w-px h-1 bg-surface-border" />
+                    <div className="absolute left-1/4 top-0 w-px h-1 bg-surface-border" />
+                    <div className="absolute left-2/4 top-0 w-px h-1 bg-surface-border" />
+                    <div className="absolute left-3/4 top-0 w-px h-1 bg-surface-border" />
+                    <div className="absolute right-0 top-0 w-px h-1 bg-surface-border" />
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* 6 Engagement Dimensions Grid (Clean without Action recommendation) */}
+            {/* 6 Engagement Dimensions Grid */}
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-ink-tertiary mb-3">
                 6 Core Workplace Dimensions (Out of 6.00 Scale)
@@ -2424,10 +2658,10 @@ function TeamContent() {
           </div>
 
           {/* LAYER 2: Frontline Role Sentiment Divergence */}
-          <div className="p-6 rounded-xl bg-surface-card border border-surface-border space-y-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-surface-border pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-brand-teal/20 flex items-center justify-center text-brand-teal text-xs font-bold font-mono">
+          <div className="p-6 rounded-xl bg-surface-card border border-surface-border space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-surface-border pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-brand-teal/20 flex items-center justify-center text-brand-teal text-xs font-bold font-mono">
                   2
                 </div>
                 <div>
@@ -2435,17 +2669,40 @@ function TeamContent() {
                     Layer 2: Frontline Role Sentiment Divergence
                   </h3>
                   <p className="text-[11px] text-ink-secondary">
-                    Segmented eNPS, headcount weight, and critical friction drivers across the 4 key frontline operational roles
+                    Role-specific eNPS, headcount sample, and primary friction drivers across all 12 operational roles
                   </p>
                 </div>
               </div>
-              <span className="text-xs text-ink-tertiary font-medium">
-                Comparative Frontline Cuts
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-ink-tertiary hidden sm:inline">
+                  Showing all {dynamicRoleSentiments.length} roles
+                </span>
+                <button
+                  type="button"
+                  onClick={() => scrollRoleCarousel("left")}
+                  className="p-1.5 rounded-lg border border-surface-border bg-surface-ground hover:bg-surface-elevated text-ink-secondary hover:text-ink-primary transition-colors active:scale-95"
+                  aria-label="Scroll left"
+                  title="Scroll left"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => scrollRoleCarousel("right")}
+                  className="p-1.5 rounded-lg border border-surface-border bg-surface-ground hover:bg-surface-elevated text-ink-secondary hover:text-ink-primary transition-colors active:scale-95"
+                  aria-label="Scroll right"
+                  title="Scroll right"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
 
-            {/* 4 Frontline Role Comparison Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+            {/* All 12 Roles in a horizontally scrollable carousel */}
+            <div
+              ref={roleCarouselRef}
+              className="flex gap-4 overflow-x-auto scrollbar-thin scroll-smooth pb-3 snap-x snap-mandatory"
+            >
               {dynamicRoleSentiments.map((roleItem) => {
                 const IconComponent = roleItem.icon;
                 const isCritical = roleItem.enps < 40;
@@ -2454,7 +2711,7 @@ function TeamContent() {
                 return (
                   <div
                     key={roleItem.id}
-                    className={`p-4 rounded-xl border flex flex-col justify-between transition-all ${
+                    className={`min-w-[280px] sm:min-w-[310px] max-w-[330px] flex-shrink-0 snap-start p-4 rounded-xl border flex flex-col justify-between transition-all ${
                       isCritical
                         ? "bg-status-danger/5 border-status-danger/30"
                         : isAttention
@@ -2463,7 +2720,7 @@ function TeamContent() {
                     }`}
                   >
                     <div>
-                      {/* Role Header & eNPS Badge */}
+                      {/* Role Header & Role-Specific eNPS Badge */}
                       <div className="flex items-start justify-between gap-2 mb-3">
                         <div className="flex items-center gap-2">
                           <div className="w-8 h-8 rounded-lg bg-surface-card border border-surface-border flex items-center justify-center text-brand-teal">
@@ -2548,40 +2805,40 @@ function TeamContent() {
             </div>
           </div>
 
-          {/* LAYER 3: Regional Club Sentiment & Friction Matrix */}
-          <div className="p-6 rounded-xl bg-surface-card border border-surface-border space-y-6">
+          {/* LAYER 3: Regional Club Sentiment & Location Matrix */}
+          <div className="p-6 rounded-xl bg-surface-card border border-surface-border space-y-5">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-surface-border pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-md bg-brand-teal/20 flex items-center justify-center text-brand-teal text-xs font-bold font-mono">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-md bg-brand-teal/20 flex items-center justify-center text-brand-teal text-xs font-bold font-mono">
                   3
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-ink-primary font-display">
-                    Layer 3: Regional Club Sentiment &amp; Friction Matrix
+                    Layer 3: Regional Club Sentiment &amp; Location Matrix
                   </h3>
                   <p className="text-[11px] text-ink-secondary">
-                    Geographic sentiment distribution correlated with localized turnover and primary workplace exit friction
+                    Geographic sentiment distribution correlated with localized turnover and the primary workplace exit driver (1 of 6 core dimensions)
                   </p>
                 </div>
               </div>
-              <span className="text-xs text-ink-tertiary font-medium">
-                Cross-Regional Correlation
+              <span className="text-xs font-mono text-ink-tertiary px-2.5 py-1 rounded-md bg-surface-ground border border-surface-border">
+                {dynamicLocationSentiments.length} Hubs Available • Scroll Table
               </span>
             </div>
 
-            {/* Regional Sentiment Table & Matrix */}
-            <div className="overflow-x-auto">
+            {/* Scrollable Regional Sentiment Table */}
+            <div className="max-h-[500px] overflow-y-auto overflow-x-auto rounded-xl border border-surface-border scrollbar-thin">
               <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="bg-surface-ground/70 border-b border-surface-border text-ink-secondary font-semibold">
+                <thead className="sticky top-0 bg-surface-ground/95 backdrop-blur z-10 border-b border-surface-border text-ink-secondary font-semibold shadow-sm">
+                  <tr>
                     <th className="py-3 px-4 whitespace-nowrap">Location / Hub</th>
+                    <th className="py-3 px-3 text-center whitespace-nowrap">Cluster / Region</th>
                     <th className="py-3 px-3 text-center whitespace-nowrap">Active Headcount</th>
                     <th className="py-3 px-3 text-center whitespace-nowrap">Turnover Rate</th>
                     <th className="py-3 px-3 text-center whitespace-nowrap">Early Exit (&lt;12M)</th>
                     <th className="py-3 px-3 text-center whitespace-nowrap">Segment eNPS</th>
-                    <th className="py-3 px-4 whitespace-nowrap">Primary Friction Dimension</th>
-                    <th className="py-3 px-4 min-w-[240px]">Localized Context &amp; Root Cause</th>
-                    <th className="py-3 px-4 min-w-[140px]">Relative Sentiment Index</th>
+                    <th className="py-3 px-4 whitespace-nowrap">Primary Exit Driver (6 Dimensions)</th>
+                    <th className="py-3 px-4 min-w-[280px]">Localized Context &amp; Root Cause</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-surface-border">
@@ -2607,6 +2864,10 @@ function TeamContent() {
                               </span>
                             )}
                           </div>
+                        </td>
+
+                        <td className="py-3.5 px-3 text-center text-ink-tertiary whitespace-nowrap">
+                          {loc.cluster}
                         </td>
 
                         <td className="py-3.5 px-3 text-center font-mono font-bold text-ink-primary">
@@ -2639,43 +2900,20 @@ function TeamContent() {
 
                         <td className="py-3.5 px-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-semibold border ${
-                            loc.frictionDimension === "Compensation & Benefit"
+                            loc.primaryDriver === "Compensation & Benefit"
                               ? "bg-status-danger/10 text-status-danger border-status-danger/30"
-                              : loc.frictionDimension === "Career Growth"
+                              : loc.primaryDriver === "Career Growth"
                               ? "bg-brand-yellow/10 text-brand-yellow border-brand-yellow/30"
-                              : loc.frictionDimension === "Fair Performance"
+                              : loc.primaryDriver === "Fair Performance"
                               ? "bg-status-attention/10 text-status-attention border-status-attention/30"
                               : "bg-surface-ground text-ink-primary border-surface-border"
                           }`}>
-                            {loc.frictionDimension}
+                            {loc.primaryDriver}
                           </span>
                         </td>
 
                         <td className="py-3.5 px-4 text-xs text-ink-secondary leading-relaxed">
-                          {loc.frictionDetail}
-                        </td>
-
-                        <td className="py-3.5 px-4 whitespace-nowrap">
-                          {/* Themed horizontal progress visualizer */}
-                          <div className="w-28 space-y-1">
-                            <div className="h-2 rounded-full bg-surface-ground overflow-hidden border border-surface-border">
-                              <div
-                                className={`h-full rounded-full transition-all ${
-                                  loc.enps < 40
-                                    ? "bg-status-danger"
-                                    : loc.enps <= 55
-                                    ? "bg-status-attention"
-                                    : "bg-brand-teal"
-                                }`}
-                                style={{ width: `${Math.min(100, Math.max(15, ((loc.enps + 20) / 100) * 100))}%` }}
-                              />
-                            </div>
-                            <div className="flex justify-between text-[9px] text-ink-tertiary font-mono">
-                              <span>Low</span>
-                              <span>Bench</span>
-                              <span>High</span>
-                            </div>
-                          </div>
+                          {loc.operationalReason}
                         </td>
                       </tr>
                     );
