@@ -45,6 +45,8 @@ import {
   fallbackRoadmapHorizons,
   fallbackMetricDefinitions,
   dataProvenanceRegistry,
+  EarlyTenureJoinerPulse,
+  fallbackEarlyTenureJoiners,
 } from "./fixtures";
 
 // ponytail: Unified data access with automatic fallback to pre-bundled typed fixtures.
@@ -1021,6 +1023,24 @@ export async function saveCapabilityRoadmaps(
     return { success: true, count: data?.length || roadmaps.length };
   } catch (err: any) {
     return { success: false, error: err.message || "Failed to save roadmaps" };
+  }
+}
+
+export async function getEarlyTenurePulse(): Promise<{ data: EarlyTenureJoinerPulse[]; isLive: boolean }> {
+  if (!supabase) {
+    return { data: fallbackEarlyTenureJoiners, isLive: false };
+  }
+  try {
+    const { data, error } = await withTimeout(
+      supabase.from("mart_early_tenure_pulse").select("*"),
+      1500
+    );
+    if (error || !data || data.length === 0) {
+      return { data: fallbackEarlyTenureJoiners, isLive: false };
+    }
+    return { data: data as EarlyTenureJoinerPulse[], isLive: true };
+  } catch {
+    return { data: fallbackEarlyTenureJoiners, isLive: false };
   }
 }
 
