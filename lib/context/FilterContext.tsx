@@ -289,6 +289,7 @@ export interface FilterContextType {
   setIsSupabaseLive: (live: boolean) => void;
   hideGlobalFilters: boolean;
   setHideGlobalFilters: (hide: boolean) => void;
+  resetFilters: () => void;
 }
 
 const FilterContext = createContext<FilterContextType | undefined>(undefined);
@@ -324,6 +325,15 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         setRoleFilter(role);
       }
     }
+  };
+
+  const resetFilters = () => {
+    setPeriod("ALL_TIME");
+    setJobFamilyFilterState("ALL");
+    setRoleFilter("ALL");
+    setClusterFilter("ALL");
+    setProvinceFilter("ALL");
+    setCityFilter("ALL");
   };
 
   // All available roles across all families
@@ -480,6 +490,7 @@ export function FilterProvider({ children }: { children: React.ReactNode }) {
         setIsSupabaseLive,
         hideGlobalFilters,
         setHideGlobalFilters,
+        resetFilters,
       }}
     >
       {children}

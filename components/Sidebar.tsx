@@ -3,7 +3,7 @@
 import React, { Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useFilters } from "@/lib/context/FilterContext";
 import {
   LayoutDashboard,
@@ -11,159 +11,53 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
-  TrendingUp,
-  TrendingDown,
-  Target,
-  Sparkles,
-  GitBranch,
   Radio,
-  Award,
-  HeartHandshake,
-  Repeat,
-  Layers,
 } from "lucide-react";
 
 function SidebarNavItems() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const currentTab = searchParams ? searchParams.get("tab") : null;
   const { sidebarCollapsed, setMobileMenuOpen } = useFilters();
 
-  const isItemActive = (href: string) => {
-    if (href === "/") {
-      return pathname === "/";
-    }
-
-    const [itemPath, itemQuery] = href.split("?");
-
-    if (href === "/vacancy?tab=overview") {
-      if (pathname === "/vacancy/intake") return true;
-      if (pathname === "/vacancy") {
-        return !currentTab || currentTab === "overview";
-      }
-    }
-
-    if (pathname !== itemPath) {
-      // Sub-routes like /team/capability/framework, /team/engagement/survey, /team/exit-survey
-      if (itemPath !== "/vacancy" && itemPath !== "/team") {
-        return pathname.startsWith(itemPath);
-      }
-      return false;
-    }
-
-    // Both on itemPath (e.g. pathname === '/vacancy')
-    if (!itemQuery) {
-      return !currentTab || currentTab === "overview";
-    }
-
-    const itemTab = new URLSearchParams(itemQuery).get("tab");
-    if (!itemTab || itemTab === "overview") {
-      return !currentTab || currentTab === "overview";
-    }
-    return currentTab === itemTab;
-  };
-
-  const navSections = [
+  const navItems = [
     {
-      title: "OVERVIEW",
-      items: [
-        {
-          label: "Executive Home",
-          href: "/",
-          icon: <LayoutDashboard className="w-5 h-5 flex-shrink-0" />,
-        },
-      ],
+      label: "Executive Dashboard",
+      href: "/",
+      icon: <LayoutDashboard className="w-5 h-5 flex-shrink-0" />,
+      isActive: pathname === "/",
     },
     {
-      title: "VACANCY (PRE-HIRE)",
-      items: [
-        {
-          label: "Requisition Health",
-          href: "/vacancy?tab=overview",
-          icon: <Briefcase className="w-5 h-5 flex-shrink-0" />,
-        },
-        {
-          label: "Sourcing & Funnel",
-          href: "/vacancy?tab=funnel",
-          icon: <TrendingUp className="w-5 h-5 flex-shrink-0" />,
-        },
-        {
-          label: "Frontline Ready Pool",
-          href: "/vacancy?tab=talent-pool",
-          icon: <Sparkles className="w-5 h-5 flex-shrink-0 text-status-attention" />,
-        },
-        {
-          label: "Quality & SLA Outcomes",
-          href: "/vacancy?tab=outcomes",
-          icon: <Layers className="w-5 h-5 flex-shrink-0" />,
-        },
-      ],
+      label: "Vacancy",
+      href: "/vacancy",
+      icon: <Briefcase className="w-5 h-5 flex-shrink-0" />,
+      isActive: pathname.startsWith("/vacancy"),
     },
     {
-      title: "TEAM (POST-HIRE)",
-      items: [
-        {
-          label: "Retention & Cohorts",
-          href: "/team?tab=overview",
-          icon: <GitBranch className="w-5 h-5 flex-shrink-0" />,
-        },
-        {
-          label: "Tenure Cliff Curve",
-          href: "/team?tab=cliff",
-          icon: <TrendingDown className="w-5 h-5 flex-shrink-0" />,
-        },
-        {
-          label: "Voice of Employee & eNPS",
-          href: "/team?tab=engagement",
-          icon: <HeartHandshake className="w-5 h-5 flex-shrink-0" />,
-        },
-        {
-          label: "Internal Mobility Match",
-          href: "/team?tab=mobility",
-          icon: <Sparkles className="w-5 h-5 flex-shrink-0 text-status-attention" />,
-        },
-        {
-          label: "Capability Framework",
-          href: "/team/capability/framework",
-          icon: <Award className="w-5 h-5 flex-shrink-0" />,
-        },
-      ],
+      label: "Team",
+      href: "/team",
+      icon: <Users className="w-5 h-5 flex-shrink-0" />,
+      isActive: pathname.startsWith("/team"),
     },
   ];
 
   return (
-    <nav className="p-3 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)]">
-      {navSections.map((section) => (
-        <div key={section.title} className="space-y-1">
-          {!sidebarCollapsed && (
-            <p className="px-3 text-[10px] font-bold tracking-wider text-ink-muted uppercase mb-2">
-              {section.title}
-            </p>
-          )}
-
-          {section.items.map((item) => {
-            const isActive = isItemActive(item.href);
-
-            return (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={() => setMobileMenuOpen(false)}
-                title={sidebarCollapsed ? item.label : undefined}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
-                  isActive
-                    ? "bg-brand-teal/10 text-ink-primary border-l-4 border-brand-teal font-semibold shadow-sm"
-                    : "text-ink-secondary hover:bg-surface-soft hover:text-ink-primary border-l-4 border-transparent"
-                }`}
-              >
-                <div className={isActive ? "text-brand-teal" : "text-ink-muted"}>
-                  {item.icon}
-                </div>
-                {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
-              </Link>
-            );
-          })}
-        </div>
+    <nav className="p-3 space-y-1 overflow-y-auto max-h-[calc(100vh-140px)]">
+      {navItems.map((item) => (
+        <Link
+          key={item.label}
+          href={item.href}
+          onClick={() => setMobileMenuOpen(false)}
+          title={sidebarCollapsed ? item.label : undefined}
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+            item.isActive
+              ? "bg-brand-teal/10 text-ink-primary border-l-4 border-brand-teal font-semibold shadow-sm"
+              : "text-ink-secondary hover:bg-surface-soft hover:text-ink-primary border-l-4 border-transparent"
+          }`}
+        >
+          <div className={item.isActive ? "text-brand-teal" : "text-ink-muted"}>
+            {item.icon}
+          </div>
+          {!sidebarCollapsed && <span className="truncate">{item.label}</span>}
+        </Link>
       ))}
     </nav>
   );
