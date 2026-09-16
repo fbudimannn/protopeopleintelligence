@@ -195,7 +195,7 @@ function TeamContent() {
   useEffect(() => {
     async function loadData() {
       setLoading(true);
-      const [cohortRes, engRes, mobRes, exitRes, bandRes, voiceRes, reqRes, roleReqsRes] = await Promise.all([
+      const [cohortRes, engRes, mobRes, exitRes, bandRes, voiceRes, reqRes, roleReqsRes, pulseRes] = await Promise.all([
         getRetentionCohorts(),
         getEngagementSummaries(),
         getInternalMobilityMatches(),
