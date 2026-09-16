@@ -3876,14 +3876,6 @@ ORDER BY match_rate_pct DESC;`}
               </div>
 
               <div className="flex items-center gap-3">
-                <Link
-                  href="/team/exit-survey"
-                  className="px-3.5 py-2 rounded-xl bg-status-critical text-white text-xs font-bold hover:bg-status-critical/90 transition-all flex items-center gap-1.5 shadow-sm"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>New Exit Interview</span>
-                </Link>
-
                 <DataProvenanceBadge
                   provenance="DERIVED"
                   domain="Lifecycle Loop"

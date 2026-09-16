@@ -66,20 +66,6 @@ export default function TopHeader() {
         provenance: "DERIVED",
       };
     }
-    if (pathname.startsWith("/team/engagement/survey")) {
-      return {
-        title: "eNPS Survey Builder",
-        section: "Employee Voice",
-        provenance: "OBSERVED",
-      };
-    }
-    if (pathname.startsWith("/team/exit-survey")) {
-      return {
-        title: "Exit Interview Form",
-        section: "Retention Closed-Loop",
-        provenance: "HYBRID",
-      };
-    }
     if (pathname.startsWith("/team")) {
       return {
         title: "Team, Retention & Mobility",

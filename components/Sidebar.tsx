@@ -127,21 +127,6 @@ function SidebarNavItems() {
           href: "/team?tab=exits",
           icon: <Repeat className="w-5 h-5 flex-shrink-0" />,
         },
-      ],
-    },
-    {
-      title: "INTERACTIVE TOOLS",
-      items: [
-        {
-          label: "eNPS Survey Builder",
-          href: "/team/engagement/survey",
-          icon: <HeartHandshake className="w-5 h-5 flex-shrink-0" />,
-        },
-        {
-          label: "Exit Interview Form",
-          href: "/team/exit-survey",
-          icon: <Repeat className="w-5 h-5 flex-shrink-0" />,
-        },
         {
           label: "Capability Framework",
           href: "/team/capability/framework",
