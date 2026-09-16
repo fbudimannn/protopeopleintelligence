@@ -123,11 +123,6 @@ function SidebarNavItems() {
           icon: <Sparkles className="w-5 h-5 flex-shrink-0 text-status-attention" />,
         },
         {
-          label: "Exit-to-Vacancy Loop",
-          href: "/team?tab=exits",
-          icon: <Repeat className="w-5 h-5 flex-shrink-0" />,
-        },
-        {
           label: "Capability Framework",
           href: "/team/capability/framework",
           icon: <Award className="w-5 h-5 flex-shrink-0" />,

@@ -2576,12 +2576,16 @@ function VacancyContent() {
                                 </div>
                               </td>
                               <td className="py-3 px-3 max-w-[280px]">
-                                <p className="text-ink-secondary text-xs truncate">
+                                <p className="text-ink-secondary text-xs truncate font-medium">
                                   {req.urgency_reason || "Standard headcount replacement"}
                                 </p>
-                                {req.linked_exit_code && (
-                                  <span className="text-[10px] text-status-critical font-mono font-semibold block mt-0.5">
-                                    Linked Exit: {req.linked_exit_code}
+                                {req.linked_exit_code ? (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-status-danger/10 text-status-danger border border-status-danger/25 mt-1">
+                                    <span>🔄 Auto-Triggered by Exit ({req.linked_exit_code})</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono text-ink-tertiary bg-surface-ground border border-surface-border mt-1">
+                                    <span>Direct Line Requisition</span>
                                   </span>
                                 )}
                               </td>

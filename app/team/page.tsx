@@ -80,7 +80,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-type TeamTab = "overview" | "cliff" | "engagement" | "mobility" | "exits";
+type TeamTab = "overview" | "cliff" | "engagement" | "mobility";
 
 function TeamContent() {
   const searchParams = useSearchParams();
@@ -176,7 +176,7 @@ function TeamContent() {
 
   useEffect(() => {
     const tabParam = searchParams.get("tab") as TeamTab;
-    if (tabParam && ["overview", "cliff", "engagement", "mobility", "exits"].includes(tabParam)) {
+    if (tabParam && ["overview", "cliff", "engagement", "mobility"].includes(tabParam)) {
       setActiveTab(tabParam);
     }
   }, [searchParams]);
@@ -202,7 +202,6 @@ function TeamContent() {
     if (activeTab === "overview" || activeTab === "cliff") return "onboarding";
     if (activeTab === "engagement") return "engagement";
     if (activeTab === "mobility") return "mobility";
-    if (activeTab === "exits") return "exit";
     return "onboarding";
   }, [activeTab]);
 
@@ -1534,7 +1533,7 @@ function TeamContent() {
       <LifecycleStrip
         activeStep={currentLifecycleStep}
         onSelectStep={(stepId, targetTab) => {
-          if (targetTab && ["overview", "cliff", "engagement", "mobility", "exits"].includes(targetTab)) {
+          if (targetTab && ["overview", "cliff", "engagement", "mobility"].includes(targetTab)) {
             handleTabChange(targetTab as TeamTab);
           }
         }}
@@ -1791,18 +1790,6 @@ function TeamContent() {
             <span className="px-1.5 py-0.5 rounded-full text-[10px] bg-brand-teal text-surface-ground font-bold">
               {rawDynamicMatches.filter((m) => m.readiness_status === "Ready").length} Ready
             </span>
-          </button>
-
-          <button
-            onClick={() => handleTabChange("exits")}
-            className={`px-4 py-3 text-sm font-semibold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap ${
-              activeTab === "exits"
-                ? "border-brand-teal text-brand-teal"
-                : "border-transparent text-ink-secondary hover:text-ink-primary"
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            <span>Exit-to-Vacancy Continuity</span>
           </button>
         </div>
 
@@ -2462,6 +2449,31 @@ function TeamContent() {
                   );
                 })}
               </div>
+            </div>
+
+            {/* Seamless Exit-to-Vacancy Continuity Cross-Link */}
+            <div className="mt-6 p-4 rounded-xl bg-surface-ground border border-surface-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-brand-teal/15 border border-brand-teal/30 flex items-center justify-center text-brand-teal flex-shrink-0">
+                  <Briefcase className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-ink-primary">
+                    Frontline Turnover &rarr; Automated Vacancy Intake Pipeline
+                  </h4>
+                  <p className="text-[11px] text-ink-secondary">
+                    Every frontline departure automatically spawns a replacement requisition in Vacancy Intake awaiting sourcing allocation.
+                  </p>
+                </div>
+              </div>
+
+              <Link
+                href="/vacancy?tab=intake"
+                className="px-3.5 py-2 rounded-lg bg-brand-teal text-surface-ground text-xs font-bold hover:bg-brand-teal/90 transition-all whitespace-nowrap inline-flex items-center gap-1.5 self-start sm:self-auto shadow-subtle hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <span>View Pending Intake Queue</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
             </div>
           </div>
         </div>
@@ -3860,118 +3872,7 @@ ORDER BY match_rate_pct DESC;`}
         </div>
       )}
 
-      {/* 8. TAB 5: Exit-to-Vacancy Continuity */}
-      {activeTab === "exits" && (
-        <div className="space-y-6">
-          <div className="p-6 rounded-xl bg-surface-card border border-surface-border">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-base font-bold text-ink-primary font-display flex items-center gap-2">
-                  <Layers className="w-4 h-4 text-brand-teal" />
-                  <span>Exit-to-Vacancy Continuity Registry</span>
-                </h2>
-                <p className="text-xs text-ink-secondary mt-0.5">
-                  PRD Section 27.2: Illustrating how every frontline employee departure automatically generates a replacement requisition in Vacancy.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <DataProvenanceBadge
-                  provenance="DERIVED"
-                  domain="Lifecycle Loop"
-                  metricOrEntity="Exit to Requisition Binding"
-                  originalSource="Turnover sheet + Hiring sheet"
-                  governanceRule="Synchronized exit code to requisition code mapping"
-                  impactOnDecision="Demonstrates closed-loop lifecycle intelligence"
-                />
-              </div>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="bg-surface-ground border-b border-surface-border text-ink-secondary font-semibold">
-                    <th className="py-3 px-4">Exit Code</th>
-                    <th className="py-3 px-4">Staff Code & Role</th>
-                    <th className="py-3 px-4">Location</th>
-                    <th className="py-3 px-3 text-center">Tenure</th>
-                    <th className="py-3 px-3 text-center">Type</th>
-                    <th className="py-3 px-3 text-center">Regrettable</th>
-                    <th className="py-3 px-4">Primary Reason</th>
-                    <th className="py-3 px-4">Triggered Vacancy</th>
-                    <th className="py-3 px-3 text-center">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-surface-border">
-                  {filteredExitEvents.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-8 text-center text-ink-tertiary">
-                        No exit interview records match the active location ({locationDisplay}), role ({roleDisplay}), and period ({formatPeriodLabel(selectedPeriod)}) filters.
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredExitEvents.map((evt) => (
-                    <tr key={evt.exit_code} className="hover:bg-surface-elevated/70 transition-colors">
-                      <td className="py-3 px-4 font-mono font-bold text-status-danger">
-                        {evt.exit_code}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-semibold text-ink-primary block">
-                          {evt.role_name}
-                        </span>
-                        <span className="text-[11px] text-ink-tertiary font-mono">
-                          {evt.employee_code}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-surface-ground border border-surface-border text-ink-secondary">
-                          {evt.location_name}
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center font-mono">
-                        {evt.tenure_months}m
-                      </td>
-                      <td className="py-3 px-3 text-center font-medium">
-                        {evt.resignation_type}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        {evt.is_regrettable ? (
-                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-status-danger/20 text-status-danger">
-                            YES
-                          </span>
-                        ) : (
-                          <span className="text-ink-tertiary">No</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-ink-secondary">
-                        {evt.primary_reason}
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="font-mono font-bold text-brand-teal block">
-                          {evt.triggered_requisition_code}
-                        </span>
-                        <span className="text-[10px] text-ink-tertiary">
-                          Replacement Requisition
-                        </span>
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        <Link
-                          href="/vacancy"
-                          className="px-2.5 py-1 rounded-md bg-surface-ground border border-surface-border text-[11px] font-semibold text-brand-teal hover:bg-brand-teal hover:text-surface-ground transition-all whitespace-nowrap"
-                        >
-                          View Requisition &rarr;
-                        </Link>
-                      </td>
-                    </tr>
-                  )))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 9. Dynamic Promotion & Requisition Assignment Modal */}
+      {/* 8. Dynamic Promotion & Requisition Assignment Modal */}
       {selectedDynamicCandidate && (
         <div className="fixed inset-0 bg-ink-primary/70 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="bg-surface-card border border-surface-border rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden animate-fadeIn my-8">
